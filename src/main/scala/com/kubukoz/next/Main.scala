@@ -54,19 +54,31 @@ object Main extends CommandIOApp(name = "spotify-next", header = "Gather great m
       makeProgram.use(_.apply(choice))
     }
 
-  val runRepl: IO[Nothing] = makeProgram.use { program =>
-    val replCommand = Command("REPL", "")(Choice.opts).map(program)
+  val runRepl: IO[Unit] = {
+    val input = fs2
+      .Stream
+      .repeatEval(putStr("next> ") *> readLn.map(Option(_)))
+      .map(_.map(_.trim))
+      .filter(_.forall(_.nonEmpty))
+      .unNoneTerminate
+      .map(_.split("\\s+").toList)
+      .onComplete(fs2.Stream.eval_(putStrLn("Bye!")))
 
-    putStrLn("Welcome to the spotify-next REPL! Type in a command to begin") *>
-      (putStr("next> ") *> readLn)
-        .map(_.split("\\s+").toSeq)
-        .flatMap(replCommand.parse(_, sys.env).leftMap(_.toString).fold(putStrLn(_), identity))
-        .foreverM
-  }
+    fs2.Stream.eval_(putStrLn("Loading REPL...")) ++
+      fs2
+        .Stream
+        .resource(makeProgram)
+        .evalTap(_ => putStrLn("Welcome to the spotify-next REPL! Type in a command to begin"))
+        .map(Command("", "")(Choice.opts).map(_))
+        .flatMap { command =>
+          input
+            .evalMap(command.parse(_, sys.env).leftMap(_.toString).fold(putStrLn(_), identity))
+        }
+  }.compile.drain
 
   val repl: Opts[Unit] = Opts
     .subcommand("repl", "Run application in interactive mode")(Opts.unit)
 
   val main: Opts[IO[ExitCode]] =
-    mainOpts.map(_.as(ExitCode.Success)) <+> repl.as(runRepl)
+    (mainOpts <+> repl.as(runRepl)).map(_.as(ExitCode.Success))
 }
