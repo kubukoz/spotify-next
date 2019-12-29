@@ -5,7 +5,6 @@ import io.circe.syntax._
 import io.circe.Printer
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
-import cats.mtl.ApplicativeAsk
 import cats.tagless.finalAlg
 
 @finalAlg
