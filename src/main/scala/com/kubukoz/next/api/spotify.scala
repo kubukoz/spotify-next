@@ -40,27 +40,4 @@ object spotify {
     implicit def entityCodec[F[_]: Sync]: EntityDecoder[F, Anything] = EntityDecoder.void[F].map(_ => anything)
   }
 
-  // final case class Page[T](items: List[T], offset: Int, total: Int, next: Option[Uri])
-
-  // object Page {
-  //   implicit def codec[T: Codec]: Codec[Page[T]] = deriveConfiguredCodec
-  // }
-
-  // final case class Track(name: String)
-
-  // object Track {
-  //   implicit val codec: Codec[Track] = deriveConfiguredCodec
-  // }
-
-  // final case class Item(track: Track)
-
-  // object Item {
-  //   implicit val codec: Codec[Item] = deriveConfiguredCodec
-  // }
-
-  // final case class Playlist(tracks: Page[Item])
-
-  // object Playlist {
-  //   implicit val codec: Codec[Playlist] = deriveConfiguredCodec
-  // }
 }
