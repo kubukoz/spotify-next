@@ -58,12 +58,10 @@ object Main extends CommandIOApp(name = "spotify-next", header = "Gather great m
         makeLoader[F].map { implicit loader =>
           implicit val configAsk = loader.loadAsk
 
-          val askToRetry = Console[F].putStrLn("Received unauthorized response, login to retry")
-
           // This order of composition will cause the retry to reload the token from cache
           implicit val client =
             (middlewares.implicitHost[F]("api.spotify.com") _)
-              .compose((middlewares.retryUnauthorizedWith(askToRetry *> loginUser[F]) _))
+              .compose((middlewares.retryUnauthorizedWith(loginUser[F]) _))
               .compose(middlewares.withToken[F] _)
               .apply(rawClient)
 

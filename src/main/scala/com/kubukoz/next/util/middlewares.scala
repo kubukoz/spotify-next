@@ -13,11 +13,19 @@ import org.http4s.Status
 object middlewares {
   type BracketThrow[F[_]] = Bracket[F, Throwable]
 
-  def retryUnauthorizedWith[F[_]: BracketThrow: Console](beforeRetry: F[Unit])(underlying: Client[F]): Client[F] =
+  def retryUnauthorizedWith[F[_]: Sync: Console](beforeRetry: F[Unit])(underlying: Client[F]): Client[F] =
     Client { req =>
       underlying.run(req).flatMap {
-        case response if response.status === Status.Unauthorized => Resource.liftF(beforeRetry) *> underlying.run(req)
-        case response                                            => Resource.pure(response)
+        case response if response.status === Status.Unauthorized =>
+          val showBody = response.bodyAsText.compile.string.flatMap(Console[F].putStrLn)
+
+          Resource.liftF(
+            Console[F].putStrLn("Received unauthorized response") *>
+              showBody *>
+              Console[F].putStrLn("Login to retry") *>
+              beforeRetry
+          ) *> underlying.run(req)
+        case response => Resource.pure(response)
       }
     }
 
