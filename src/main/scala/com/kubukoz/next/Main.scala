@@ -11,6 +11,8 @@ import java.nio.file.Paths
 import cats.mtl.ApplicativeAsk
 import java.lang.System
 import org.http4s.client.middleware.FollowRedirect
+import org.http4s.client.middleware.RequestLogger
+import org.http4s.client.middleware.ResponseLogger
 
 sealed trait Choice extends Product with Serializable
 
@@ -27,26 +29,31 @@ final case class FastForward(percentage: Int) extends Choice
 object Main extends CommandIOApp(name = "spotify-next", header = "Gather great music") {
 
   val makeClient =
-    (BlazeClientBuilder[IO](ExecutionContext.global).resource.map(FollowRedirect(maxRedirects = 5)), Blocker[IO])
-      .tupled
-      .evalMap {
-        case (client, blocker) =>
-          implicit val http4sClient = client
+    (
+      BlazeClientBuilder[IO](ExecutionContext.global)
+        .resource
+        .map(FollowRedirect(maxRedirects = 5))
+        .map(RequestLogger[IO](logHeaders = true, logBody = true))
+        .map(ResponseLogger[IO](logHeaders = true, logBody = true)),
+      Blocker[IO]
+    ).tupled.evalMap {
+      case (client, blocker) =>
+        implicit val http4sClient = client
 
-          fs2
-            .io
-            .file
-            .readAll[IO](Paths.get(System.getProperty("user.home") + "/.spotify-next.json"), blocker, 4096)
-            .through(io.circe.fs2.byteStreamParser[IO])
-            .through(io.circe.fs2.decoder[IO, Config])
-            .compile
-            .lastOrError
-            .map { config =>
-              implicit val tokenAsk: Config.Token.Ask[IO] = ApplicativeAsk.const(config.token)
+        fs2
+          .io
+          .file
+          .readAll[IO](Paths.get(System.getProperty("user.home") + "/.spotify-next.json"), blocker, 4096)
+          .through(io.circe.fs2.byteStreamParser[IO])
+          .through(io.circe.fs2.decoder[IO, Config])
+          .compile
+          .lastOrError
+          .map { config =>
+            implicit val tokenAsk: Config.Token.Ask[IO] = ApplicativeAsk.const(config.token)
 
-              Spotify.instance[IO]
-            }
-      }
+            Spotify.instance[IO]
+          }
+    }
 
   val runApp: Choice => Spotify[IO] => IO[Unit] = {
     case NextTrack      => _.nextTrack

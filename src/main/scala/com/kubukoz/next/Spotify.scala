@@ -20,23 +20,9 @@ object Spotify {
 
   val scopes = Set(
     "playlist-read-private",
-    "playlist-read-collaborative",
-    "playlist-modify-public",
     "playlist-modify-private",
     "streaming",
-    "ugc-image-upload",
-    "user-follow-modify",
-    "user-follow-read",
-    "user-library-read",
-    "user-library-modify",
-    "user-read-private",
-    "user-read-birthdate",
-    "user-read-email",
-    "user-top-read",
-    "user-read-playback-state",
-    "user-modify-playback-state",
-    "user-read-currently-playing",
-    "user-read-recently-played"
+    "user-read-playback-state"
   )
 
   def instance[F[_]: Client: Console: Sync: Token.Ask]: Spotify[F] = new Spotify[F] {
@@ -48,18 +34,11 @@ object Spotify {
           val newReq =
             req
               .withUri(
-                req
-                  .uri
-                  .copy(authority =
-                    Some(Uri.Authority(None, RegName(CaseInsensitiveString("api.spotify.com")), port = None))
-                  )
+                req.uri.copy(authority = Some(Uri.Authority(None, RegName(CaseInsensitiveString("api.spotify.com")))))
               )
               .withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, token.value)))
 
-          println(newReq)
-          implicitly[Client[F]].run(
-            newReq
-          )
+          implicitly[Client[F]].run(newReq)
         }
       }
 
