@@ -6,6 +6,7 @@ import com.monovore.decline.effect._
 
 import cats.data.NonEmptyList
 import ConfigLoader.deriveAskFromLoader
+import com.kubukoz.next.util.Config
 
 sealed trait Choice extends Product with Serializable
 
@@ -31,22 +32,41 @@ object Main extends CommandIOApp(name = "spotify-next", header = "Gather great m
 
   import Program._
 
-  def runApp[F[_]: ConfigLoader: Login: Console: Monad]: Choice => Spotify[F] => F[Unit] = {
-    case Choice.Login          => _ => loginUser[F]
-    case Choice.NextTrack      => _.nextTrack
-    case Choice.DropTrack      => _.dropTrack
-    case Choice.FastForward(p) => _.fastForward(p)
+  def runApp[F[_]: ConfigLoader: Login: Console: Monad]: Spotify[F] => Choice => F[Unit] = spotify => {
+    case Choice.Login          => loginUser[F]
+    case Choice.NextTrack      => spotify.nextTrack
+    case Choice.DropTrack      => spotify.dropTrack
+    case Choice.FastForward(p) => spotify.fastForward(p)
   }
 
-  val main: Opts[IO[ExitCode]] =
-    Choice
-      .opts
-      .map { choice =>
-        makeLoader[IO].use { implicit loader =>
-          implicit val login: Login[IO] = Login.blaze[IO]
+  implicit def login[F[_]: ConcurrentEffect: Timer: Console: Config.Ask]: Login[F] = Login.blaze[F]
 
-          makeClient[IO].map(makeSpotify[IO](_)).use(runApp[IO].apply(choice))
-        }
-      }
-      .map(_.as(ExitCode.Success))
+  import Console.io._
+
+  val makeProgram = makeLoader[IO]
+    .flatMap { implicit loader =>
+      makeClient[IO].map(makeSpotify[IO](_)).map(runApp[IO])
+    }
+
+  val mainOpts: Opts[IO[Unit]] = Choice
+    .opts
+    .map { choice =>
+      makeProgram.use(_.apply(choice))
+    }
+
+  val runRepl: IO[Nothing] = makeProgram.use { program =>
+    val replCommand = Command("REPL", "")(Choice.opts).map(program)
+
+    putStrLn("Welcome to the spotify-next REPL! Type in a command to begin") *>
+      (putStr("next> ") *> readLn)
+        .map(_.split("\\s+").toSeq)
+        .flatMap(replCommand.parse(_, sys.env).leftMap(_.toString).fold(putStrLn(_), identity))
+        .foreverM
+  }
+
+  val repl: Opts[Unit] = Opts
+    .subcommand("repl", "Run application in interactive mode")(Opts.unit)
+
+  val main: Opts[IO[ExitCode]] =
+    mainOpts.map(_.as(ExitCode.Success)) <+> repl.as(runRepl)
 }
