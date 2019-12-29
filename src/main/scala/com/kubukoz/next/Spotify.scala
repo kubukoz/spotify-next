@@ -60,7 +60,7 @@ object Spotify {
         val trackUri = player.item.uri
         val playlistId = player.context.uri.playlist
 
-        removeTrack(trackUri, playlistId)
+        putStrLn("Removing track " + trackUri + " from playlist " + playlistId) *> removeTrack(trackUri, playlistId)
       } *> nextTrack
 
     def fastForward(percentage: Int): F[Unit] = ???
