@@ -40,7 +40,7 @@ object Login {
         .withQueryParam("redirect_uri", s"http://localhost:${config.loginPort}/login")
         .withQueryParam("response_type", "token")
 
-      Console[F].putStrLn(s"Go to $uri(config)")
+      Console[F].putStrLn(s"Go to $uri")
     }
 
     def mkServer(tokenPromise: Deferred[F, Token]) = Resource.suspend {
