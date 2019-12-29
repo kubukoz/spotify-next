@@ -6,7 +6,6 @@ import cats.tagless.finalAlg
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.Uri
 import org.http4s.implicits._
-import scala.concurrent.duration._
 import org.http4s.HttpRoutes
 import org.http4s.dsl.Http4sDsl
 import org.http4s.MediaType
@@ -21,8 +20,6 @@ trait Login[F[_]] {
 object Login {
 
   def blaze[F[_]: ConcurrentEffect: Timer: Console: Config.Ask]: Login[F] = new Login[F] {
-    val loginTimeout = 20.minutes
-    // val loginTimeout = 20.seconds
 
     val scopes = Set(
       "playlist-read-private",
@@ -55,9 +52,7 @@ object Login {
     val server: F[Token] =
       Deferred[F, Token].flatMap { tokenPromise =>
         mkServer(tokenPromise).use { _ =>
-          showUri *> tokenPromise.get.timeout(loginTimeout).onError {
-            case _ => Console[F].putError(s"Didn't login in $loginTimeout, exiting.")
-          }
+          showUri *> tokenPromise.get
         }
       }
   }
