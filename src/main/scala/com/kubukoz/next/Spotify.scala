@@ -4,7 +4,6 @@ import util.Config.Token
 import org.http4s.client.Client
 import org.http4s.circe.CirceEntityCodec._
 import org.http4s.Status
-import scala.util.control.NoStackTrace
 import com.kubukoz.next.api.spotify.PlayerContext
 import org.http4s.Uri
 import org.http4s.Method.POST
@@ -24,7 +23,7 @@ trait Spotify[F[_]] {
 
 object Spotify {
 
-  trait Error extends NoStackTrace
+  trait Error extends Throwable
   case object NotPlaying extends Error
   case object NoContext extends Error
   case object NoItem extends Error

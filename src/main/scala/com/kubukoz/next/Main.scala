@@ -31,7 +31,7 @@ object Choice {
         ),
         Opts.subcommand("n", "Alias for `next`")(Opts(NextTrack)),
         Opts.subcommand("d", "Alias for `drop`")(Opts(DropTrack)),
-        Opts.subcommand("ff", "Alias for `forward`")(ffOpts)
+        Opts.subcommand("f", "Alias for `forward`")(ffOpts)
       )
       .reduceK
 }
