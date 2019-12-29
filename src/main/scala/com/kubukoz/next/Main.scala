@@ -72,6 +72,9 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
       .map(_.split("\\s+").toList)
       .onComplete(fs2.Stream.eval_(putStrLn("Bye!")))
 
+    def reportError(e: Throwable): IO[Unit] =
+      putError("Command failed with exception: ") *> IO(e.printStackTrace())
+
     fs2.Stream.eval_(putStrLn("Loading REPL...")) ++
       fs2
         .Stream
@@ -80,7 +83,8 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
         .map(Command("", "")(Choice.opts).map(_))
         .flatMap { command =>
           input
-            .evalMap(command.parse(_, sys.env).leftMap(_.toString).fold(putStrLn(_), identity))
+            .map(command.parse(_, sys.env).leftMap(_.toString))
+            .evalMap(_.fold(putStrLn(_), _.handleErrorWith(reportError)))
         }
   }.compile.drain
 
