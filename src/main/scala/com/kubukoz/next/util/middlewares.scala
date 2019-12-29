@@ -9,46 +9,59 @@ import org.http4s.Credentials
 import org.http4s.AuthScheme
 import org.http4s.headers.Authorization
 import org.http4s.Status
+import org.http4s.Response
+import org.http4s.Request
 
 object middlewares {
   type BracketThrow[F[_]] = Bracket[F, Throwable]
 
-  def retryUnauthorizedWith[F[_]: Sync: Console](beforeRetry: F[Unit])(underlying: Client[F]): Client[F] =
-    Client { req =>
-      underlying.run(req).flatMap {
-        case response if response.status === Status.Unauthorized =>
-          val showBody = response.bodyAsText.compile.string.flatMap(Console[F].putStrLn)
+  def retryUnauthorizedWith[F[_]: Sync: Console](beforeRetry: F[Unit]): Client[F] => Client[F] = {
+    def doBeforeRetry(response: Response[F]) = {
+      val showBody = response.bodyAsText.compile.string.flatMap(Console[F].putStrLn)
 
-          Resource.liftF(
-            Console[F].putStrLn("Received unauthorized response") *>
-              showBody *>
-              Console[F].putStrLn("Login to retry") *>
-              beforeRetry
-          ) *> underlying.run(req)
-        case response => Resource.pure(response)
-      }
+      Resource.liftF(
+        Console[F].putStrLn("Received unauthorized response") *>
+          showBody *>
+          Console[F].putStrLn("Login to retry") *>
+          beforeRetry
+      )
     }
 
-  def implicitHost[F[_]: BracketThrow](hostname: String)(client: Client[F]): Client[F] = Client { req =>
-    val newRequest = req.withUri(
-      req.uri.copy(authority = Some(Uri.Authority(None, RegName(CaseInsensitiveString(hostname)))))
-    )
-
-    client.run(newRequest)
+    client =>
+      Client { req =>
+        client.run(req).flatMap {
+          case response if response.status === Status.Unauthorized => doBeforeRetry(response) *> client.run(req)
+          case response                                            => Resource.pure(response)
+        }
+      }
   }
 
-  def withToken[F[_]: Token.Ask: BracketThrow: Console](client: Client[F]): Client[F] =
-    Client[F] { req =>
-      val warnEmptyToken =
-        Console[F].putStrLn("Loaded token is empty, any API calls will probably have to be retried...")
+  def implicitHost[F[_]: BracketThrow](hostname: String): Client[F] => Client[F] = {
+    val newAuthority = Some(Uri.Authority(None, RegName(CaseInsensitiveString(hostname))))
 
-      Resource.liftF(Token.ask[F]).map(_.value.trim).flatMap {
-        case "" =>
-          Resource.liftF(warnEmptyToken) *> client.run(req)
+    client =>
+      Client { req =>
+        val newRequest = req.withUri(req.uri.copy(authority = newAuthority))
 
-        case token =>
-          val newReq = req.withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, token)))
-          client.run(newReq)
+        client.run(newRequest)
       }
-    }
+  }
+
+  def withToken[F[_]: Token.Ask: BracketThrow: Console]: Client[F] => Client[F] = {
+    val loadToken = Resource.liftF(Token.ask[F]).map(_.value.trim)
+
+    val warnEmptyToken =
+      Console[F].putStrLn("Loaded token is empty, any API calls will probably have to be retried...")
+
+    def withToken(token: String): Request[F] => Request[F] =
+      _.withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, token)))
+
+    client =>
+      Client[F] { req =>
+        loadToken.flatMap {
+          case ""    => Resource.liftF(warnEmptyToken) *> client.run(req)
+          case token => client.run(withToken(token)(req))
+        }
+      }
+  }
 }

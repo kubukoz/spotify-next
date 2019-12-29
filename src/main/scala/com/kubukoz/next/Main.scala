@@ -60,9 +60,10 @@ object Main extends CommandIOApp(name = "spotify-next", header = "Gather great m
 
           // This order of composition will cause the retry to reload the token from cache
           implicit val client =
-            (middlewares.implicitHost[F]("api.spotify.com") _)
-              .compose((middlewares.retryUnauthorizedWith(loginUser[F]) _))
-              .compose(middlewares.withToken[F] _)
+            middlewares
+              .implicitHost[F]("api.spotify.com")
+              .compose(middlewares.retryUnauthorizedWith(loginUser[F]))
+              .compose(middlewares.withToken[F])
               .apply(rawClient)
 
           Spotify.instance[F]
