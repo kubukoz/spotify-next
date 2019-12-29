@@ -9,9 +9,10 @@ import io.circe.Encoder
 import org.http4s.EntityDecoder
 import scala.reflect.ClassTag
 import com.kubukoz.next.Spotify.InvalidContext
+import com.kubukoz.next.Spotify.InvalidItem
 
 object spotify {
-  implicit val circeConfig = Configuration.default.withDiscriminator("type")
+  implicit val circeConfig = Configuration.default.withDiscriminator("type").withSnakeCaseMemberNames
 
   implicit def optionCodec[A: Codec]: Codec[Option[A]] = Codec.from(Decoder.decodeOption[A], Encoder.encodeOption[A])
 
@@ -20,37 +21,54 @@ object spotify {
     Encoder[String].contramap(_.renderString)
   )
 
-  final case class Item(uri: String)
+  sealed trait Item extends Product with Serializable
 
   object Item {
+    final case class track(uri: String, durationMs: Int) extends Item
+
     implicit val codec: Codec[Item] = deriveConfiguredCodec
   }
 
-  final case class Player[Ctx](context: Ctx, item: Item) {
+  final case class Player[_Ctx, _Item](context: _Ctx, item: _Item, progressMs: Int) {
 
-    def narrowContext[DesiredContext <: Ctx: ClassTag]: Either[InvalidContext[Ctx], Player[DesiredContext]] =
+    def narrowContext[DesiredContext <: _Ctx: ClassTag]: Either[InvalidContext[_Ctx], Player[DesiredContext, _Item]] =
       Player.traverseByContext.traverse(this) {
         case desired: DesiredContext => desired.asRight
         case other                   => InvalidContext(other).asLeft
       }
 
-    def sequenceContext[F[_], A](implicit isF: Player[Ctx] <:< Player[F[A]], apply: Apply[F]): F[Player[A]] =
-      Player.traverseByContext.nonEmptySequence[F, A](isF(this))
+    def narrowItem[DesiredItem <: _Item: ClassTag]: Either[InvalidItem[_Item], Player[_Ctx, DesiredItem]] =
+      Player.traverseByItem.traverse(this) {
+        case desired: DesiredItem => desired.asRight
+        case other                => InvalidItem(other).asLeft
+      }
   }
 
   object Player {
 
-    val traverseByContext: NonEmptyTraverse[Player] = new NonEmptyTraverse[Player] {
-      def foldLeft[A, B](fa: Player[A], b: B)(f: (B, A) => B): B = f(b, fa.context)
-      def foldRight[A, B](fa: Player[A], lb: Eval[B])(f: (A, Eval[B]) => Eval[B]): Eval[B] = f(fa.context, lb)
-      def reduceLeftTo[A, B](fa: Player[A])(f: A => B)(g: (B, A) => B): B = f(fa.context)
-      def reduceRightTo[A, B](fa: Player[A])(f: A => B)(g: (A, Eval[B]) => Eval[B]): Eval[B] = Eval.later(f(fa.context))
+    import cats.tagless.syntax.invariantK._
+    import com.kubukoz.next.util.traverse._
 
-      def nonEmptyTraverse[G[_]: Apply, A, B](fa: Player[A])(f: A => G[B]): G[Player[B]] =
-        f(fa.context).map(ctx => fa.copy(context = ctx))
-    }
+    // Just some Traverse derivations based on nested tuples, nothing to see here...
+    // As long as you follow the types you'll be fine
+    def traverseByContext[Item_]: NonEmptyTraverse[Player[*, Item_]] =
+      NonEmptyTraverse[((Int, Item_), *)]
+        .imapK(
+          λ[((Int, Item_), *) ~> Player[*, Item_]] { case ((progress, item), ctx) => Player(ctx, item, progress) }
+        )(
+          λ[Player[*, Item_] ~> ((Int, Item_), *)](p => ((p.progressMs, p.item), p.context))
+        )
 
-    implicit def codec[Ctx: Codec]: Codec[Player[Ctx]] = deriveConfiguredCodec
+    def traverseByItem[Ctx_]: NonEmptyTraverse[Player[Ctx_, *]] =
+      NonEmptyTraverse[((Int, Ctx_), *)]
+        .imapK(λ[((Int, Ctx_), *) ~> Player[Ctx_, *]] {
+          case ((progress, ctx), item) =>
+            Player(ctx, item, progress)
+        })(
+          λ[Player[Ctx_, *] ~> ((Int, Ctx_), *)](p => ((p.progressMs, p.context), p.item))
+        )
+
+    implicit def codec[_Ctx: Codec, _Item: Codec]: Codec[Player[_Ctx, _Item]] = deriveConfiguredCodec
   }
 
   sealed trait PlayerContext extends Product with Serializable

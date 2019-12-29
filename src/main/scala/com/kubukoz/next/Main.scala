@@ -16,6 +16,8 @@ object Choice {
   case object DropTrack extends Choice
   final case class FastForward(percentage: Int) extends Choice
 
+  val ffOpts = Opts.argument[Int]("step").map(FastForward).withDefault(FastForward(10))
+
   val opts: Opts[Choice] =
     NonEmptyList
       .of[Opts[Choice]](
@@ -24,13 +26,17 @@ object Choice {
         Opts.subcommand("drop", "Drop current track from the current playlist and skip to the next track")(
           Opts(DropTrack)
         ),
+        Opts.subcommand("forward", "Fast forward the current track by a percentage of its length (10% by default)")(
+          ffOpts
+        ),
         Opts.subcommand("n", "Alias for `next`")(Opts(NextTrack)),
-        Opts.subcommand("d", "Alias for `drop`")(Opts(DropTrack))
+        Opts.subcommand("d", "Alias for `drop`")(Opts(DropTrack)),
+        Opts.subcommand("ff", "Alias for `forward`")(ffOpts)
       )
       .reduceK
 }
 
-object Main extends CommandIOApp(name = "spotify-next", header = "Gather great music") {
+object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: Gather great music.") {
 
   import Program._
 
