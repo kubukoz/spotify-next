@@ -22,6 +22,7 @@ import org.http4s.Uri
 import scala.concurrent.duration._
 import org.http4s.MediaType
 import org.http4s.Charset
+import java.lang.ClassLoader
 
 sealed trait Choice extends Product with Serializable
 
@@ -40,47 +41,22 @@ object Main extends CommandIOApp(name = "spotify-next", header = "Gather great m
 
   val configPath = Paths.get(System.getProperty("user.home") + "/.spotify-next.json")
 
-  import org.http4s.implicits._
+  def makeLoader[F[_]: Sync: ContextShift] =
+    Blocker[F].map(ConfigLoader.default[F](configPath, _)).evalMap(ConfigLoader.cached(_))
 
-  def saveToken(token: Token): IO[Unit] =
-    putStrLn("Received token " + token.value.take(5) + "... dalej nie zobaczysz, nie dla psa, dla pana xD")
+  def loginUser[F[_]: Console: ConcurrentEffect: Timer: ContextShift] =
+    makeLoader[F].use { implicit loader =>
+      implicit val configAsk = loader.loadAsk
+      implicit val login: Login[F] = Login.blaze[F]
 
-  def loginServer(config: Config): IO[Token] = {
-    val loginTimeout = 20.minutes
-    // val loginTimeout = 20.seconds
-    val uri =
-      Uri
-        .uri("https://accounts.spotify.com/authorize")
-        .withQueryParam("client_id", config.clientId)
-        .withQueryParam("client_secret", config.clientSecret)
-        .withQueryParam("scopes", Spotify.scopes.mkString(" "))
-        .withQueryParam("redirect_uri", s"http://localhost:${config.loginPort}/login")
-        .withQueryParam("response_type", "token")
-
-    def server(tokenPromise: Deferred[IO, Token]) =
-      BlazeServerBuilder[IO]
-        .withHttpApp(LoginApp.routes(tokenPromise.complete).orNotFound)
-        .bindHttp(port = config.loginPort)
-        .resource
-
-    Deferred[IO, Token].flatMap { tokenPromise =>
-      server(tokenPromise).use { _ =>
-        putStrLn(s"Go to $uri") *> tokenPromise.get.timeout(loginTimeout).onError {
-          case _ => putError(s"Didn't login in $loginTimeout, exiting.")
-        }
-      }
+      for {
+        token <- Login[F].server
+        config <- ConfigLoader[F].loadConfig
+        newConfig = config.copy(token = token)
+        _ <- ConfigLoader[F].saveConfig(newConfig)
+        _ <- Console[F].putStrLn("Saved token to file")
+      } yield ()
     }
-  }
-
-  val loginUser = Blocker[IO].map(Files.instance[IO](configPath, _)).use { files =>
-    for {
-      config <- files.loadConfig.flatMap(_.ask)
-      token <- loginServer(config)
-      newConfig = config.copy(token = token)
-      _ <- files.saveConfig(newConfig)
-      _ <- putStrLn("Saved token to file")
-    } yield ()
-  }
 
   def makeClient[F[_]: ConcurrentEffect: ContextShift: Console]: Resource[F, Spotify[F]] =
     BlazeClientBuilder[F](ExecutionContext.global)
@@ -89,7 +65,7 @@ object Main extends CommandIOApp(name = "spotify-next", header = "Gather great m
       .map(RequestLogger[F](logHeaders = true, logBody = true))
       .map(ResponseLogger[F](logHeaders = true, logBody = true))
       .flatMap { implicit client =>
-        Blocker[F].map(Files.instance[F](configPath, _)).evalMap(_.loadConfig).map { implicit configAsk =>
+        makeLoader[F].map(_.loadAsk).map { implicit configAsk =>
           import com.olegpy.meow.hierarchy.deriveApplicativeAsk
           Spotify.instance[F]
         }
@@ -101,36 +77,9 @@ object Main extends CommandIOApp(name = "spotify-next", header = "Gather great m
     case FastForward(p) => _.fastForward(p)
   }
 
-  val loginCommand = Opts.subcommand("login", "Request login URL")(Opts(loginUser))
+  val loginCommand =
+    Opts.subcommand("login", "Request login URL")(Opts(loginUser))
 
   val main: Opts[IO[ExitCode]] =
     (loginCommand <+> Choice.opts.map(runApp).map(makeClient[IO].use)).map(_.as(ExitCode.Success))
-}
-
-object LoginApp {
-
-  def routes[F[_]: Sync](saveToken: Token => F[Unit]): HttpRoutes[F] = {
-    val dsl = new Http4sDsl[F] {}
-    import dsl._
-
-    val html = `Content-Type`(MediaType.text.html, Charset.`UTF-8`)
-
-    HttpRoutes.of {
-      case GET -> Root / "login" =>
-        // Servers aren't allowed to read query fragments. So we do it on the client!
-        Ok("""<!doctype html><html>
-             |<script>
-             |window.location = "/login_server?" + window.location.hash.slice(1)
-             |</script>
-             |</html>""".stripMargin).map(_.withContentType(html))
-      case req @ GET -> Root / "login_server" =>
-        val tokenF = req.uri.params.get("access_token").map(Token(_)).liftTo[F](new Throwable("No token in URI!"))
-
-        tokenF.flatMap { token =>
-          Ok("Login successful, you can get back to the application").map { response =>
-            response.withEntity(response.body.onFinalize(saveToken(token)))
-          }
-        }
-    }
-  }
 }

@@ -18,13 +18,6 @@ trait Spotify[F[_]] {
 
 object Spotify {
 
-  val scopes = Set(
-    "playlist-read-private",
-    "playlist-modify-private",
-    "streaming",
-    "user-read-playback-state"
-  )
-
   def instance[F[_]: Client: Console: Sync: Token.Ask]: Spotify[F] = new Spotify[F] {
     def putStrLn(a: String) = Console[F].putStrLn(a)
 
