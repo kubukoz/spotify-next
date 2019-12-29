@@ -35,6 +35,8 @@ $ ./target/universal/stage/bin/spotify-next --help
 Usage:
     spotify-next login
     spotify-next next
+    spotify-next drop
+    spotify-next repl
 
 Gather great music
 
@@ -44,9 +46,13 @@ Options and flags:
 
 Subcommands:
     login
-        Request login URL
+        Log into Spotify
     next
         Skip to next track without any changes
+    drop
+        Drop current track from the current playlist and skip to the next track
+    repl
+        Run application in interactive mode
 ```
 
 You can run the login command to be prompted for authorization, or you can rely on the fallback mechanism of all API calls - when one fails with 401 Unauthorized, you'll see the response and be prompted to log in. The call will be retried once after you successfully log in.
