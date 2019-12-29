@@ -23,7 +23,9 @@ object Choice {
         Opts.subcommand("next", "Skip to next track without any changes")(Opts(NextTrack)),
         Opts.subcommand("drop", "Drop current track from the current playlist and skip to the next track")(
           Opts(DropTrack)
-        )
+        ),
+        Opts.subcommand("n", "Alias for `next`")(Opts(NextTrack)),
+        Opts.subcommand("d", "Alias for `drop`")(Opts(DropTrack))
       )
       .reduceK
 }
