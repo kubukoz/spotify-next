@@ -19,7 +19,10 @@ object Choice {
     NonEmptyList
       .of[Opts[Choice]](
         Opts.subcommand("login", "Log into Spotify")(Opts(Login)),
-        Opts.subcommand("next", "Skip to next track without any changes")(Opts(NextTrack))
+        Opts.subcommand("next", "Skip to next track without any changes")(Opts(NextTrack)),
+        Opts.subcommand("drop", "Drop current track from the current playlist and skip to the next track")(
+          Opts(DropTrack)
+        )
       )
       .reduceK
 }

@@ -6,8 +6,9 @@ import io.circe.Codec
 import org.http4s.Uri
 import io.circe.Decoder
 import io.circe.Encoder
-import io.circe.Json
 import org.http4s.EntityDecoder
+import scala.reflect.ClassTag
+import com.kubukoz.next.Spotify.InvalidContext
 
 object spotify {
   implicit val circeConfig = Configuration.default.withDiscriminator("type")
@@ -16,16 +17,39 @@ object spotify {
     Decoder[String].emap(s => Uri.fromString(s).leftMap(failure => failure.details)),
     Encoder[String].contramap(_.renderString)
   )
-  final case class Player(context: PlayerContext)
+
+  final case class Player[Ctx <: PlayerContext](context: Ctx) {
+
+    def narrowContext[DesiredContext <: Ctx: ClassTag]: Either[InvalidContext, Player[DesiredContext]] = context match {
+      case desired: DesiredContext => copy(context = desired).asRight
+      case other                   => InvalidContext(other).asLeft
+
+    }
+  }
 
   object Player {
-    implicit val codec: Codec[Player] = deriveConfiguredCodec
+    implicit def codec[Ctx <: PlayerContext: Codec]: Codec[Player[Ctx]] = deriveConfiguredCodec
   }
 
   sealed trait PlayerContext extends Product with Serializable
 
+  final case class PlaylistUri(user: String, playlist: String)
+
+  object PlaylistUri {
+
+    implicit val codec: Codec[PlaylistUri] = Codec.from(
+      Decoder[String].emap {
+        case s"spotify:user:$userId:playlist:$playlistId" => PlaylistUri(userId, playlistId).asRight
+        case literallyAnythingElse                        => (literallyAnythingElse + " is not a playlist URI").asLeft
+      },
+      Encoder[String].contramap { uri =>
+        show"spotify:user:${uri.user}:playlist:${uri.playlist}"
+      }
+    )
+  }
+
   object PlayerContext {
-    final case class playlist(href: Uri) extends PlayerContext
+    final case class playlist(href: Uri, uri: PlaylistUri) extends PlayerContext
     final case class album(href: Uri) extends PlayerContext
     final case class artist(href: Uri) extends PlayerContext
 
