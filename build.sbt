@@ -42,6 +42,8 @@ val commonSettings = Seq(
   libraryDependencies ++= Seq(
     "dev.profunktor" %% "console4cats" % "0.8.1",
     "com.monovore" %% "decline-effect" % "1.0.0",
+    "org.http4s" %% "http4s-dsl" % "0.21.0-M6",
+    "org.http4s" %% "http4s-blaze-server" % "0.21.0-M6",
     "org.http4s" %% "http4s-blaze-client" % "0.21.0-M6",
     "org.http4s" %% "http4s-circe" % "0.21.0-M6",
     "ch.qos.logback" % "logback-classic" % "1.2.3",
