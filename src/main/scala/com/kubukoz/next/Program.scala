@@ -30,6 +30,7 @@ object Program {
       .map(middlewares.withToken)
       .map(middlewares.retryUnauthorizedWith(loginUser[F]))
       .map(middlewares.implicitHost("api.spotify.com"))
+      .map(middlewares.logFailedResponse)
 
   // Do NOT move this into Spotify, it'll vastly increase the range of its responsibilities!
   def loginUser[F[_]: Console: Login: ConfigLoader: Monad]: F[Unit] =

@@ -6,6 +6,9 @@ import org.http4s.circe.CirceEntityCodec._
 import org.http4s.Status
 import scala.util.control.NoStackTrace
 import com.kubukoz.next.api.spotify.PlayerContext
+import org.http4s.Uri
+import org.http4s.Method.POST
+import org.http4s.Request
 
 trait Spotify[F[_]] {
   def nextTrack: F[Unit]
@@ -24,17 +27,21 @@ object Spotify {
 
     def putStrLn(a: String) = Console[F].putStrLn(a)
 
-    private val playlist = client
+    private val currentPlaylist = client
       .expectOr[api.spotify.Player]("/v1/me/player") {
         case response if response.status === Status.NoContent => NotPlaying.pure[F].widen
       }
       .map(_.context)
       .flatMap {
         case PlayerContext.playlist(ctx) => ctx.pure[F]
-        case other                       => InvalidContext(other).raiseError[F, String]
+        case other                       => InvalidContext(other).raiseError[F, Uri]
       }
 
-    val nextTrack: F[Unit] = putStrLn("Switching to next track") *> playlist.map(_.toString).flatMap(putStrLn)
+    val nextTrack: F[Unit] =
+      putStrLn("Switching to next track") *>
+        client
+          .expect[api.spotify.Anything](Request[F](POST, Uri.uri("/v1/me/player/next")))
+          .void
 
     def dropTrack: F[Unit] = ???
     def fastForward(percentage: Int): F[Unit] = ???

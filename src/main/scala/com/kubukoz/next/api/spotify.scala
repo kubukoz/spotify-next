@@ -3,10 +3,19 @@ package com.kubukoz.next.api
 import io.circe.generic.extras.Configuration
 import io.circe.generic.extras.semiauto._
 import io.circe.Codec
+import org.http4s.Uri
+import io.circe.Decoder
+import io.circe.Encoder
+import io.circe.Json
+import org.http4s.EntityDecoder
 
 object spotify {
   implicit val circeConfig = Configuration.default.withDiscriminator("type")
 
+  implicit val uriCodec: Codec[Uri] = Codec.from(
+    Decoder[String].emap(s => Uri.fromString(s).leftMap(failure => failure.details)),
+    Encoder[String].contramap(_.renderString)
+  )
   final case class Player(context: PlayerContext)
 
   object Player {
@@ -16,10 +25,42 @@ object spotify {
   sealed trait PlayerContext extends Product with Serializable
 
   object PlayerContext {
-    final case class playlist(href: String) extends PlayerContext
-    final case class album(href: String) extends PlayerContext
-    final case class artist(href: String) extends PlayerContext
+    final case class playlist(href: Uri) extends PlayerContext
+    final case class album(href: Uri) extends PlayerContext
+    final case class artist(href: Uri) extends PlayerContext
 
     implicit val codec: Codec[PlayerContext] = deriveConfiguredCodec
   }
+
+  sealed trait Anything extends Product with Serializable
+  case object Void extends Anything
+  val anything: Anything = Void
+
+  object Anything {
+    implicit def entityCodec[F[_]: Sync]: EntityDecoder[F, Anything] = EntityDecoder.void[F].map(_ => anything)
+  }
+
+  // final case class Page[T](items: List[T], offset: Int, total: Int, next: Option[Uri])
+
+  // object Page {
+  //   implicit def codec[T: Codec]: Codec[Page[T]] = deriveConfiguredCodec
+  // }
+
+  // final case class Track(name: String)
+
+  // object Track {
+  //   implicit val codec: Codec[Track] = deriveConfiguredCodec
+  // }
+
+  // final case class Item(track: Track)
+
+  // object Item {
+  //   implicit val codec: Codec[Item] = deriveConfiguredCodec
+  // }
+
+  // final case class Playlist(tracks: Page[Item])
+
+  // object Playlist {
+  //   implicit val codec: Codec[Playlist] = deriveConfiguredCodec
+  // }
 }

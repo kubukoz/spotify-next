@@ -41,10 +41,25 @@ object middlewares {
 
     client =>
       Client { req =>
-        val newRequest = req.withUri(req.uri.copy(authority = newAuthority))
+        val newRequest = req.withUri(req.uri.copy(authority = newAuthority, scheme = Some(Uri.Scheme.https)))
 
         client.run(newRequest)
       }
+  }
+
+  def logFailedResponse[F[_]: Console: Sync]: Client[F] => Client[F] = { client =>
+    Client[F] { req =>
+      client.run(req).evalMap {
+        case response if response.status.isSuccess => response.pure[F]
+        case response =>
+          response
+            .bodyAsText
+            .compile
+            .string
+            .flatTap(text => Console[F].putError("Request failed, response: " + text))
+            .map(response.withEntity(_))
+      }
+    }
   }
 
   def withToken[F[_]: Token.Ask: BracketThrow: Console]: Client[F] => Client[F] = {
