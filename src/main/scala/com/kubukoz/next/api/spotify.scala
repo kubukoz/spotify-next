@@ -17,8 +17,8 @@ object spotify {
 
   object PlayerContext {
     final case class playlist(href: String) extends PlayerContext
-
     final case class album(href: String) extends PlayerContext
+    final case class artist(href: String) extends PlayerContext
 
     implicit val codec: Codec[PlayerContext] = deriveConfiguredCodec
   }

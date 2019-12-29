@@ -13,20 +13,28 @@ import org.http4s.client.middleware.FollowRedirect
 import org.http4s.client.middleware.RequestLogger
 import org.http4s.client.middleware.ResponseLogger
 
+import cats.data.NonEmptyList
+import org.http4s.client.Client
+import com.kubukoz.next.util.Config
 import com.olegpy.meow.hierarchy.deriveApplicativeAsk
+import ConfigLoader.deriveAskFromLoader
 
 sealed trait Choice extends Product with Serializable
 
 object Choice {
-  val nextTrack: Opts[Choice] = Opts.subcommand("next", "Skip to next track without any changes")(Opts(NextTrack))
+  case object Login extends Choice
+  case object NextTrack extends Choice
+  case object DropTrack extends Choice
+  final case class FastForward(percentage: Int) extends Choice
 
   val opts: Opts[Choice] =
-    nextTrack
+    NonEmptyList
+      .of[Opts[Choice]](
+        Opts.subcommand("login", "Log into Spotify")(Opts(Login)),
+        Opts.subcommand("next", "Skip to next track without any changes")(Opts(NextTrack))
+      )
+      .reduceK
 }
-
-case object NextTrack extends Choice
-case object DropTrack extends Choice
-final case class FastForward(percentage: Int) extends Choice
 
 object Main extends CommandIOApp(name = "spotify-next", header = "Gather great music") {
 
@@ -36,7 +44,6 @@ object Main extends CommandIOApp(name = "spotify-next", header = "Gather great m
     Blocker[F].map(ConfigLoader.default[F](configPath, _)).evalMap(ConfigLoader.cached(_))
 
   def loginUser[F[_]: Console: ConcurrentEffect: Timer: ConfigLoader]: F[Unit] = {
-    implicit val configAsk = ConfigLoader[F].loadAsk
     implicit val login: Login[F] = Login.blaze[F]
 
     for {
@@ -48,37 +55,38 @@ object Main extends CommandIOApp(name = "spotify-next", header = "Gather great m
     } yield ()
   }
 
-  def makeClient[F[_]: ConcurrentEffect: ContextShift: Timer: Console]: Resource[F, Spotify[F]] =
-    BlazeClientBuilder[F](ExecutionContext.global)
+  def makeClient[F[_]: ConcurrentEffect: ContextShift: Timer: Console: ConfigLoader]: Resource[F, Client[F]] =
+    BlazeClientBuilder(ExecutionContext.global)
       .resource
       .map(FollowRedirect(maxRedirects = 5))
-      .map(RequestLogger[F](logHeaders = true, logBody = true))
-      .map(ResponseLogger[F](logHeaders = true, logBody = true))
-      .flatMap { rawClient =>
-        makeLoader[F].map { implicit loader =>
-          implicit val configAsk = loader.loadAsk
+      .map(RequestLogger(logHeaders = true, logBody = true))
+      .map(ResponseLogger(logHeaders = true, logBody = true))
+      .map(middlewares.withToken)
+      .map(middlewares.retryUnauthorizedWith(loginUser[F]))
+      .map(middlewares.implicitHost("api.spotify.com"))
 
-          // This order of composition will cause the retry to reload the token from cache
-          implicit val client =
-            middlewares
-              .implicitHost[F]("api.spotify.com")
-              .compose(middlewares.retryUnauthorizedWith(loginUser[F]))
-              .compose(middlewares.withToken[F])
-              .apply(rawClient)
+  def makeSpotify[F[_]: Console: Sync: Config.Ask](client: Client[F]) = {
+    implicit val theClient = client
 
-          Spotify.instance[F]
-        }
-      }
+    Spotify.instance[F]
+  }
 
-  val runApp: Choice => Spotify[IO] => IO[Unit] = {
+  import Choice._
+
+  def runApp(implicit loader: ConfigLoader[IO]): Choice => Spotify[IO] => IO[Unit] = {
+    case Login          => _ => loginUser[IO]
     case NextTrack      => _.nextTrack
     case DropTrack      => _.dropTrack
     case FastForward(p) => _.fastForward(p)
   }
 
-  val loginCommand =
-    Opts.subcommand("login", "Request login URL")(Opts(makeLoader[IO].use(implicit loader => loginUser)))
-
   val main: Opts[IO[ExitCode]] =
-    (loginCommand <+> Choice.opts.map(runApp).map(makeClient[IO].use)).map(_.as(ExitCode.Success))
+    Choice
+      .opts
+      .map { choice =>
+        makeLoader[IO].use { implicit loader =>
+          makeClient[IO].map(makeSpotify[IO](_)).use(runApp(loader)(choice))
+        }
+      }
+      .map(_.as(ExitCode.Success))
 }

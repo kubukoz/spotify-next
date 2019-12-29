@@ -12,17 +12,15 @@ import cats.tagless.finalAlg
 trait ConfigLoader[F[_]] {
   def saveConfig(config: Config): F[Unit]
   def loadConfig: F[Config]
-  def loadAsk: ApplicativeAsk[F, Config]
 }
 
-object ConfigLoader {
+object ConfigLoader extends LowPriority {
 
   def cached[F[_]: Sync](underlying: ConfigLoader[F]): F[ConfigLoader[F]] =
     underlying.loadConfig.flatMap(Ref.of(_)).map { ref =>
       new ConfigLoader[F] {
         def saveConfig(config: Config): F[Unit] = underlying.saveConfig(config) *> ref.set(config)
         val loadConfig: F[Config] = ref.get
-        val loadAsk: ApplicativeAsk[F, Config] = Config.askLiftF(loadConfig)
       }
     }
 
@@ -52,8 +50,13 @@ object ConfigLoader {
         .through(io.circe.fs2.decoder[F, Config])
         .compile
         .lastOrError
-
-    val loadAsk: ApplicativeAsk[F, Config] = Config.askLiftF(loadConfig)
   }
+
+}
+
+trait LowPriority {
+
+  implicit def deriveAskFromLoader[F[_]: ConfigLoader: Applicative]: Config.Ask[F] =
+    Config.askLiftF(ConfigLoader[F].loadConfig)
 
 }
