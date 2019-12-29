@@ -23,7 +23,9 @@ Create an application in the Spotify API dashboard. Add a redirect URI pointing 
   }
   ```
 
-The token can be empty for now, it'll be replaced with a real one later.
+The token can be empty for now, it'll be replaced with a real one when you log in.
+
+A server will start on the configured port only when the login flow is triggered.
 
 ## How to use
 

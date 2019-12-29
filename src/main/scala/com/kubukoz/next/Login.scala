@@ -24,6 +24,7 @@ object Login {
     val scopes = Set(
       "playlist-read-private",
       "playlist-modify-private",
+      "playlist-modify-public",
       "streaming",
       "user-read-playback-state"
     )

@@ -13,22 +13,44 @@ import com.kubukoz.next.Spotify.InvalidContext
 object spotify {
   implicit val circeConfig = Configuration.default.withDiscriminator("type")
 
+  implicit def optionCodec[A: Codec]: Codec[Option[A]] = Codec.from(Decoder.decodeOption[A], Encoder.encodeOption[A])
+
   implicit val uriCodec: Codec[Uri] = Codec.from(
     Decoder[String].emap(s => Uri.fromString(s).leftMap(failure => failure.details)),
     Encoder[String].contramap(_.renderString)
   )
 
-  final case class Player[Ctx <: PlayerContext](context: Ctx) {
+  final case class Item(uri: String)
 
-    def narrowContext[DesiredContext <: Ctx: ClassTag]: Either[InvalidContext, Player[DesiredContext]] = context match {
-      case desired: DesiredContext => copy(context = desired).asRight
-      case other                   => InvalidContext(other).asLeft
+  object Item {
+    implicit val codec: Codec[Item] = deriveConfiguredCodec
+  }
 
-    }
+  final case class Player[Ctx](context: Ctx, item: Item) {
+
+    def narrowContext[DesiredContext <: Ctx: ClassTag]: Either[InvalidContext[Ctx], Player[DesiredContext]] =
+      Player.traverseByContext.traverse(this) {
+        case desired: DesiredContext => desired.asRight
+        case other                   => InvalidContext(other).asLeft
+      }
+
+    def sequenceContext[F[_], A](implicit isF: Player[Ctx] <:< Player[F[A]], apply: Apply[F]): F[Player[A]] =
+      Player.traverseByContext.nonEmptySequence[F, A](isF(this))
   }
 
   object Player {
-    implicit def codec[Ctx <: PlayerContext: Codec]: Codec[Player[Ctx]] = deriveConfiguredCodec
+
+    val traverseByContext: NonEmptyTraverse[Player] = new NonEmptyTraverse[Player] {
+      def foldLeft[A, B](fa: Player[A], b: B)(f: (B, A) => B): B = f(b, fa.context)
+      def foldRight[A, B](fa: Player[A], lb: Eval[B])(f: (A, Eval[B]) => Eval[B]): Eval[B] = f(fa.context, lb)
+      def reduceLeftTo[A, B](fa: Player[A])(f: A => B)(g: (B, A) => B): B = f(fa.context)
+      def reduceRightTo[A, B](fa: Player[A])(f: A => B)(g: (A, Eval[B]) => Eval[B]): Eval[B] = Eval.later(f(fa.context))
+
+      def nonEmptyTraverse[G[_]: Apply, A, B](fa: Player[A])(f: A => G[B]): G[Player[B]] =
+        f(fa.context).map(ctx => fa.copy(context = ctx))
+    }
+
+    implicit def codec[Ctx: Codec]: Codec[Player[Ctx]] = deriveConfiguredCodec
   }
 
   sealed trait PlayerContext extends Product with Serializable
