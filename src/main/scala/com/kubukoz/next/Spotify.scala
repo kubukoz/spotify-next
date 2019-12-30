@@ -16,14 +16,14 @@ import com.kubukoz.next.api.spotify.Item
 import cats.data.Kleisli
 
 trait Spotify[F[_]] {
-  def nextTrack: F[Unit]
+  def skipTrack: F[Unit]
   def dropTrack: F[Unit]
   def fastForward(percentage: Int): F[Unit]
 }
 
 object Spotify {
 
-  trait Error extends Throwable
+  sealed trait Error extends Throwable
   case object NotPlaying extends Error
   case object NoContext extends Error
   case object NoItem extends Error
@@ -50,7 +50,7 @@ object Spotify {
         .liftTo[F](NoItem)
         .flatMap(_.narrowItem[Item.track].liftTo[F])
 
-    val nextTrack: F[Unit] =
+    val skipTrack: F[Unit] =
       putStrLn("Switching to next track") *>
         methods.nextTrack[F].run(client)
 
@@ -61,7 +61,7 @@ object Spotify {
 
         putStrLn("Removing track " + trackUri + " from playlist " + playlistId) *>
           methods.removeTrack[F](trackUri, playlistId).run(client)
-      } *> nextTrack
+      } *> skipTrack
 
     def fastForward(percentage: Int): F[Unit] =
       methods

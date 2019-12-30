@@ -34,10 +34,10 @@ $ ./target/universal/stage/bin/spotify-next --help
 
 Usage:
     spotify-next login
-    spotify-next next
+    spotify-next skip
     spotify-next drop
     spotify-next forward
-    spotify-next n
+    spotify-next s
     spotify-next d
     spotify-next f
     spotify-next repl
@@ -51,14 +51,14 @@ Options and flags:
 Subcommands:
     login
         Log into Spotify
-    next
+    skip
         Skip to next track without any changes
     drop
         Drop current track from the current playlist and skip to the next track
     forward
         Fast forward the current track by a percentage of its length (10% by default)
-    n
-        Alias for `next`
+    s
+        Alias for `skip`
     d
         Alias for `drop`
     f

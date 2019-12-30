@@ -12,7 +12,7 @@ sealed trait Choice extends Product with Serializable
 
 object Choice {
   case object Login extends Choice
-  case object NextTrack extends Choice
+  case object SkipTrack extends Choice
   case object DropTrack extends Choice
   final case class FastForward(percentage: Int) extends Choice
 
@@ -22,14 +22,14 @@ object Choice {
     NonEmptyList
       .of[Opts[Choice]](
         Opts.subcommand("login", "Log into Spotify")(Opts(Login)),
-        Opts.subcommand("next", "Skip to next track without any changes")(Opts(NextTrack)),
+        Opts.subcommand("skip", "Skip to next track without any changes")(Opts(SkipTrack)),
         Opts.subcommand("drop", "Drop current track from the current playlist and skip to the next track")(
           Opts(DropTrack)
         ),
         Opts.subcommand("forward", "Fast forward the current track by a percentage of its length (10% by default)")(
           ffOpts
         ),
-        Opts.subcommand("n", "Alias for `next`")(Opts(NextTrack)),
+        Opts.subcommand("s", "Alias for `skip`")(Opts(SkipTrack)),
         Opts.subcommand("d", "Alias for `drop`")(Opts(DropTrack)),
         Opts.subcommand("f", "Alias for `forward`")(ffOpts)
       )
@@ -42,7 +42,7 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
 
   def runApp[F[_]: ConfigLoader: Login: Console: Monad]: Spotify[F] => Choice => F[Unit] = spotify => {
     case Choice.Login          => loginUser[F]
-    case Choice.NextTrack      => spotify.nextTrack
+    case Choice.SkipTrack      => spotify.skipTrack
     case Choice.DropTrack      => spotify.dropTrack
     case Choice.FastForward(p) => spotify.fastForward(p)
   }
