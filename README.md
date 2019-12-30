@@ -17,7 +17,6 @@ Create an application in the Spotify API dashboard. Add a redirect URI pointing 
   ```json
   {
     "clientId": "(your app's client id)",
-    "clientSecret": "(your app's secret)",
     "loginPort": 4321,
     "token": ""
   }

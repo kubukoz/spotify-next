@@ -22,19 +22,18 @@ object Login {
   def blaze[F[_]: ConcurrentEffect: Timer: Console: Config.Ask]: Login[F] = new Login[F] {
 
     val scopes = Set(
-      "playlist-read-private",
-      "playlist-modify-private",
       "playlist-modify-public",
-      "streaming",
-      "user-read-playback-state"
+      "playlist-modify-private",
+      "playlist-read-private",
+      "user-read-playback-state",
+      "user-modify-playback-state"
     )
 
     private val showUri = Config.ask[F].flatMap { config =>
       val uri = Uri
         .uri("https://accounts.spotify.com/authorize")
         .withQueryParam("client_id", config.clientId)
-        .withQueryParam("client_secret", config.clientSecret)
-        .withQueryParam("scopes", scopes.mkString(" "))
+        .withQueryParam("scope", scopes.mkString(" "))
         .withQueryParam("redirect_uri", s"http://localhost:${config.loginPort}/login")
         .withQueryParam("response_type", "token")
 
