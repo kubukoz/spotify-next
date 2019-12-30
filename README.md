@@ -4,7 +4,7 @@
 
 A small program making it easier to filter out music on Spotify.
 
-[![asciicast](https://asciinema.org/a/LuppXgCyKwvpRAtO14yTh8Y2A.svg)](https://asciinema.org/a/LuppXgCyKwvpRAtO14yTh8Y2A)
+[![asciicast](demo.gif)](https://asciinema.org/a/LuppXgCyKwvpRAtO14yTh8Y2A)
 
 ## Usage
 
