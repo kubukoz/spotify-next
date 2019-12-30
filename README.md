@@ -6,11 +6,9 @@ A small program making it easier to filter out music on Spotify.
 
 [![asciicast](demo.gif)](https://asciinema.org/a/LuppXgCyKwvpRAtO14yTh8Y2A)
 
-## Usage
-
-Create an application in the Spotify API dashboard. Add a redirect URI pointing to `http://localhost:port`, where `port` is a port of your choice. You'll need to configure the port in the config file.
-
 ## Installation
+
+1. Create an application in the Spotify API dashboard. Add a redirect URI pointing to `http://localhost:port`, where `port` is a port of your choice. You'll need to configure the port in the config file.
 
 1. `sbt stage`
 
@@ -29,7 +27,7 @@ The token can be empty for now, it'll be replaced with a real one when you log i
 
 A server will start on the configured port only when the login flow is triggered.
 
-## How to use
+## Usage
 
 ```
 $ ./target/universal/stage/bin/spotify-next --help
