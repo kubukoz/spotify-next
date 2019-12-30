@@ -36,9 +36,13 @@ Usage:
     spotify-next login
     spotify-next next
     spotify-next drop
+    spotify-next forward
+    spotify-next n
+    spotify-next d
+    spotify-next f
     spotify-next repl
 
-Gather great music
+spotify-next: Gather great music.
 
 Options and flags:
     --help
@@ -51,6 +55,14 @@ Subcommands:
         Skip to next track without any changes
     drop
         Drop current track from the current playlist and skip to the next track
+    forward
+        Fast forward the current track by a percentage of its length (10% by default)
+    n
+        Alias for `next`
+    d
+        Alias for `drop`
+    f
+        Alias for `forward`
     repl
         Run application in interactive mode
 ```
