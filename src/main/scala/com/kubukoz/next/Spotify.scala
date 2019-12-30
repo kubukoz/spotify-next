@@ -71,14 +71,15 @@ object Spotify {
         .fproduct { player =>
           val currentLength = player.progressMs
           val totalLength = player.item.durationMs
-          val desiredProgressPercent = ((currentLength * 100 / totalLength) + percentage)
-          desiredProgressPercent * totalLength / 100
+          ((currentLength * 100 / totalLength) + percentage)
         }
         .flatMap {
-          case (player, progress) if progress >= player.item.durationMs =>
-            putStrLn("Too close to song's ending, rewinding to beginning") *>
-              methods.seek[F](0).run(client)
-          case (_, desiredProgressMs) => methods.seek[F](desiredProgressMs).run(client)
+          case (_, desiredProgressPercent) if desiredProgressPercent >= 100 =>
+            putStrLn("Too close to song's ending, rewinding to beginning") *> methods.seek[F](0).run(client)
+
+          case (player, desiredProgressPercent) =>
+            val desiredProgressMs = desiredProgressPercent * player.item.durationMs / 100
+            putStrLn("Seeking to " + desiredProgressPercent + "%") *> methods.seek[F](desiredProgressMs).run(client)
         }
   }
 
