@@ -4,6 +4,8 @@
 
 A small program making it easier to filter out music on Spotify.
 
+[![asciicast](https://asciinema.org/a/LuppXgCyKwvpRAtO14yTh8Y2A.svg)](https://asciinema.org/a/LuppXgCyKwvpRAtO14yTh8Y2A)
+
 ## Usage
 
 Create an application in the Spotify API dashboard. Add a redirect URI pointing to `http://localhost:port`, where `port` is a port of your choice. You'll need to configure the port in the config file.
