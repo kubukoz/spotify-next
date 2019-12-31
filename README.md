@@ -8,7 +8,7 @@ A small program making it easier to filter out music on Spotify.
 
 ## Installation
 
-1. Create an application in the Spotify API dashboard. Add a redirect URI pointing to `http://localhost:port`, where `port` is a port of your choice. You'll need to configure the port in the config file.
+1. Create an application in the Spotify API dashboard. Add a redirect URI pointing to `http://localhost:port/login`, where `port` is a port of your choice. You'll need to configure the port in the config file.
 
 1. `sbt stage`
 
