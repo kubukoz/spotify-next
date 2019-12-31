@@ -34,7 +34,7 @@ object Login {
         .uri("https://accounts.spotify.com/authorize")
         .withQueryParam("client_id", config.clientId)
         .withQueryParam("client_secret", config.clientSecret)
-        .withQueryParam("scopes", scopes.mkString(" "))
+        .withQueryParam("scope", scopes.mkString(" "))
         .withQueryParam("redirect_uri", s"http://localhost:${config.loginPort}/login")
         .withQueryParam("response_type", "token")
 
