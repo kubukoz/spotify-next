@@ -11,6 +11,17 @@ A small program making it easier to filter out music on Spotify.
 1. Create an application in the Spotify API dashboard. Add a redirect URI pointing to `http://localhost:4321/login`.
 The port `4321` is configured in the `.spotify-next.json` config file (see [usage](#usage)).
 
+1. If you have [coursier](https://get-coursier.io), this will install the app in your current working directory:
+
+```bash
+coursier bootstrap com.kubukoz:spotify-next_2.13:1.0.1 -o spotify-next
+
+# now you can run the app like this:
+./spotify-next --help
+```
+
+Or, if you want a fresh-out-of-the-oven version, you can build it from source:
+
 1. `sbt stage`
 
 ## Usage
@@ -22,7 +33,7 @@ When you first run the application, or if that file is deleted, the application 
 The configuration defines the port for the embedded HTTP server used for authentication. The server server will only start when the login flow is triggered, and stop afterwards.
 
 ```
-$ ./target/universal/stage/bin/spotify-next --help
+$ ./spotify-next --help
 
 Usage:
     spotify-next login
