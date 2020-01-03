@@ -6,7 +6,6 @@ import com.monovore.decline.effect._
 
 import cats.data.NonEmptyList
 import ConfigLoader.deriveAskFromLoader
-import com.kubukoz.next.util.Config
 
 sealed trait Choice extends Product with Serializable
 
@@ -40,21 +39,25 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
 
   import Program._
 
-  def runApp[F[_]: ConfigLoader: Login: Console: Monad]: Spotify[F] => Choice => F[Unit] = spotify => {
+  def runApp[F[_]: Spotify: ConfigLoader: Login: Console: Monad]: Choice => F[Unit] = {
     case Choice.Login          => loginUser[F]
-    case Choice.SkipTrack      => spotify.skipTrack
-    case Choice.DropTrack      => spotify.dropTrack
-    case Choice.FastForward(p) => spotify.fastForward(p)
+    case Choice.SkipTrack      => Spotify[F].skipTrack
+    case Choice.DropTrack      => Spotify[F].dropTrack
+    case Choice.FastForward(p) => Spotify[F].fastForward(p)
   }
-
-  implicit def login[F[_]: ConcurrentEffect: Timer: Console: Config.Ask]: Login[F] = Login.blaze[F]
 
   import Console.io._
 
-  val makeProgram = makeLoader[IO]
-    .flatMap { implicit loader =>
-      makeClient[IO].map(makeSpotify[IO](_)).map(runApp[IO])
-    }
+  val makeProgram: Resource[IO, Choice => IO[Unit]] =
+    makeLoader[IO]
+      .flatMap { implicit loader =>
+        makeBasicClient[IO].map { rawClient =>
+          implicit val login: Login[IO] = Login.blaze[IO](rawClient)
+          implicit val spotify: Spotify[IO] = makeSpotify(apiClient[IO].apply(rawClient))
+
+          runApp[IO]
+        }
+      }
 
   val mainOpts: Opts[IO[Unit]] = Choice
     .opts

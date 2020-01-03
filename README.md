@@ -26,6 +26,8 @@ Alternatively, if you want a fresh-out-of-the-oven version, you can build it fro
 
 1. `sbt stage`
 
+This will create a launcher at `./target/universal/stage/bin/spotify-next`.
+
 ## Usage
 
 The application requires some configuration (e.g. the client ID for the Spotify Web API).
