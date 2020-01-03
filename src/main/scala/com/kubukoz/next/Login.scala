@@ -79,9 +79,15 @@ object Login {
           val finishLogin: Code => F[Unit] = code => getTokens(code, config).flatMap(tokensPromise.complete)
           val route = Login.routes[F](finishLogin, finishServer.complete(()))
 
+          // start server
+          // user visits spotify website
+          // finishLogin is called and the tokens promise is fulfilled
+          // user gets response
+          // server shuts down
+          // tokens are returned
           mkServer(config, route).use { _ =>
-            showUri *> finishServer.get *> tokensPromise.get
-          }
+            showUri *> finishServer.get
+          } *> tokensPromise.get
       }
   }
 
