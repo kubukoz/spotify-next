@@ -40,7 +40,7 @@ object ConfigLoader extends LowPriority {
           _ <- Console[F].readLn.map(_.trim).ensure(originalException)(_.equalsIgnoreCase(validInput))
           clientId <- ConsoleRead.readWithPrompt[F, String]("Client ID")
           clientSecret <- ConsoleRead.readWithPrompt[F, String]("Client secret")
-        } yield Config(clientId, clientSecret, Config.defaultPort, Config.Token.empty)
+        } yield Config(clientId, clientSecret, Config.defaultPort, Config.Token.empty, Config.RefreshToken.empty)
       }
 
       new ConfigLoader[F] {

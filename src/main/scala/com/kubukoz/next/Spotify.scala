@@ -14,7 +14,9 @@ import io.circe.literal._
 import com.kubukoz.next.api.spotify.Player
 import com.kubukoz.next.api.spotify.Item
 import cats.data.Kleisli
+import cats.tagless.finalAlg
 
+@finalAlg
 trait Spotify[F[_]] {
   def skipTrack: F[Unit]
   def dropTrack: F[Unit]

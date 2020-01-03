@@ -1,6 +1,5 @@
 package com.kubukoz.next
 
-import com.kubukoz.next.util.Config.Token
 import com.kubukoz.next.util.Config
 import cats.tagless.finalAlg
 import org.http4s.server.blaze.BlazeServerBuilder
@@ -8,18 +7,28 @@ import org.http4s.Uri
 import org.http4s.implicits._
 import org.http4s.HttpRoutes
 import org.http4s.dsl.Http4sDsl
-import org.http4s.MediaType
-import org.http4s.headers.`Content-Type`
-import org.http4s.Charset
+import com.kubukoz.next.util.Config.Token
+import org.http4s.client.Client
+import org.http4s.Request
+import org.http4s.Method.POST
+import org.http4s.Request
+import com.kubukoz.next.api.spotify.TokenResponse
+import org.http4s.circe.CirceEntityCodec._
+import org.http4s.UrlForm
+import com.kubukoz.next.util.Config.RefreshToken
+import com.kubukoz.next.Login.Tokens
 
 @finalAlg
 trait Login[F[_]] {
-  def server: F[Token]
+  def server: F[Tokens]
 }
 
 object Login {
+  final case class Tokens(access: Token, refresh: RefreshToken)
 
-  def blaze[F[_]: ConcurrentEffect: Timer: Console: Config.Ask]: Login[F] = new Login[F] {
+  final case class Code(value: String)
+
+  def blaze[F[_]: ConcurrentEffect: Timer: Console: Config.Ask](client: Client[F]): Login[F] = new Login[F] {
 
     val scopes = Set(
       "playlist-read-private",
@@ -35,49 +44,55 @@ object Login {
         .withQueryParam("client_id", config.clientId)
         .withQueryParam("client_secret", config.clientSecret)
         .withQueryParam("scope", scopes.mkString(" "))
-        .withQueryParam("redirect_uri", s"http://localhost:${config.loginPort}/login")
-        .withQueryParam("response_type", "token")
+        .withQueryParam("redirect_uri", config.redirectUri)
+        .withQueryParam("response_type", "code")
 
       Console[F].putStrLn(s"Go to $uri")
     }
 
-    def mkServer(tokenPromise: Deferred[F, Token]) = Resource.suspend {
-      Config.ask[F].map { config =>
-        BlazeServerBuilder[F]
-          .withHttpApp(Login.routes(tokenPromise.complete).orNotFound)
-          .bindHttp(port = config.loginPort)
-          .resource
-      }
+    def mkServer(config: Config, codePromise: Deferred[F, Code]) =
+      BlazeServerBuilder[F]
+        .withHttpApp(Login.routes(codePromise.complete).orNotFound)
+        .bindHttp(port = config.loginPort)
+        .resource
+
+    def getTokens(config: Config)(code: Code): F[Tokens] = {
+      val body = UrlForm(
+        "grant_type" -> "authorization_code",
+        "code" -> code.value,
+        "redirect_uri" -> config.redirectUri,
+        "client_id" -> config.clientId,
+        "client_secret" -> config.clientSecret
+      )
+
+      client
+        .expect[TokenResponse](Request[F](POST, Uri.uri("https://accounts.spotify.com/api/token")).withEntity(body))
+    }.map { response =>
+      Tokens(Token(response.accessToken), RefreshToken(response.refreshToken))
     }
 
-    val server: F[Token] =
-      Deferred[F, Token].flatMap { tokenPromise =>
-        mkServer(tokenPromise).use { _ =>
-          showUri *> tokenPromise.get
+    val server: F[Tokens] = Config.ask[F].flatMap { config =>
+      Deferred[F, Code]
+        .flatMap { codePromise =>
+          mkServer(config, codePromise).use { _ =>
+            showUri *> codePromise.get
+          }
         }
-      }
+        .flatMap(getTokens(config))
+    }
   }
 
-  def routes[F[_]: Sync](saveToken: Token => F[Unit]): HttpRoutes[F] = {
+  def routes[F[_]: Sync](saveCode: Code => F[Unit]): HttpRoutes[F] = {
     val dsl = new Http4sDsl[F] {}
     import dsl._
 
-    val html = `Content-Type`(MediaType.text.html, Charset.`UTF-8`)
-
     HttpRoutes.of {
-      case GET -> Root / "login" =>
-        // Servers aren't allowed to read query fragments. So we do it on the client!
-        Ok("""<!doctype html><html>
-             |<script>
-             |window.location = "/login_server?" + window.location.hash.slice(1)
-             |</script>
-             |</html>""".stripMargin).map(_.withContentType(html))
-      case req @ GET -> Root / "login_server" =>
-        val tokenF = req.uri.params.get("access_token").map(Token(_)).liftTo[F](new Throwable("No token in URI!"))
+      case req @ GET -> Root / "login" =>
+        val codeF = req.uri.params.get("code").map(Code(_)).liftTo[F](new Throwable("No code in URI!"))
 
-        tokenF.flatMap { token =>
+        codeF.flatMap { code =>
           Ok("Login successful, you can get back to the application").map { response =>
-            response.withEntity(response.body.onFinalize(saveToken(token)))
+            response.withEntity(response.body.onFinalize(saveCode(code)))
           }
         }
     }

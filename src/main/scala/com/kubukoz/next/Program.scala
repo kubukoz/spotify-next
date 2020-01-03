@@ -25,23 +25,26 @@ object Program {
       .apply(ConfigLoader.default[F](configPath, blocker))
   }
 
-  def makeClient[F[_]: ConcurrentEffect: ContextShift: Timer: Console: ConfigLoader: Login]: Resource[F, Client[F]] =
+  def makeBasicClient[F[_]: ConcurrentEffect: ContextShift: Timer]: Resource[F, Client[F]] =
     BlazeClientBuilder(ExecutionContext.global)
       .resource
       .map(FollowRedirect(maxRedirects = 5))
       .map(RequestLogger(logHeaders = true, logBody = true))
       .map(ResponseLogger(logHeaders = true, logBody = true))
-      .map(middlewares.withToken)
-      .map(middlewares.retryUnauthorizedWith(loginUser[F]))
-      .map(middlewares.implicitHost("api.spotify.com"))
-      .map(middlewares.logFailedResponse)
+
+  def apiClient[F[_]: Sync: Console: ConfigLoader: Login]: Client[F] => Client[F] =
+    middlewares
+      .logFailedResponse[F]
+      .compose(middlewares.implicitHost("api.spotify.com"))
+      .compose(middlewares.retryUnauthorizedWith(loginUser[F]))
+      .compose(middlewares.withToken[F])
 
   // Do NOT move this into Spotify, it'll vastly increase the range of its responsibilities!
   def loginUser[F[_]: Console: Login: ConfigLoader: Monad]: F[Unit] =
     for {
-      token <- Login[F].server
+      tokens <- Login[F].server
       config <- ConfigLoader[F].loadConfig
-      newConfig = config.copy(token = token)
+      newConfig = config.copy(token = tokens.access, refreshToken = tokens.refresh)
       _ <- ConfigLoader[F].saveConfig(newConfig)
       _ <- Console[F].putStrLn("Saved token to file")
     } yield ()
