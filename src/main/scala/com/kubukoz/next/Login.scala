@@ -49,13 +49,13 @@ object Login {
       Console[F].putStrLn(s"Go to $uri")
     }
 
-    def mkServer(config: Config, codePromise: Deferred[F, Code]) =
+    def mkServer(config: Config, route: HttpRoutes[F]) =
       BlazeServerBuilder[F]
-        .withHttpApp(Login.routes(codePromise.complete).orNotFound)
+        .withHttpApp(route.orNotFound)
         .bindHttp(port = config.loginPort)
         .resource
 
-    def getTokens(config: Config)(code: Code): F[Tokens] = {
+    def getTokens(code: Code, config: Config): F[Tokens] = {
       import org.http4s.circe.CirceEntityCodec._
 
       val body = UrlForm(
@@ -72,18 +72,19 @@ object Login {
       Tokens(Token(response.accessToken), RefreshToken(response.refreshToken))
     }
 
-    val server: F[Tokens] = Config.ask[F].flatMap { config =>
-      Deferred[F, Code]
-        .flatMap { codePromise =>
-          mkServer(config, codePromise).use { _ =>
-            showUri *> codePromise.get
+    val server: F[Tokens] =
+      (Config.ask[F], Deferred[F, Tokens], Deferred[F, Unit]).tupled.flatMap {
+        case (config, tokensPromise, finishServer) =>
+          val finishLogin: Code => F[Unit] = code => getTokens(code, config).flatMap(tokensPromise.complete)
+          val route = Login.routes[F](finishLogin, finishServer.complete(()))
+
+          mkServer(config, route).use { _ =>
+            showUri *> finishServer.get *> tokensPromise.get
           }
-        }
-        .flatMap(getTokens(config))
-    }
+      }
   }
 
-  def routes[F[_]: Sync](saveCode: Code => F[Unit]): HttpRoutes[F] = {
+  def routes[F[_]: Sync](saveCode: Code => F[Unit], finishServer: F[Unit]): HttpRoutes[F] = {
     val dsl = new Http4sDsl[F] {}
     import dsl._
 
@@ -91,11 +92,10 @@ object Login {
       case req @ GET -> Root / "login" =>
         val codeF = req.uri.params.get("code").map(Code(_)).liftTo[F](new Throwable("No code in URI!"))
 
-        codeF.flatMap { code =>
+        codeF.flatMap(saveCode) *>
           Ok("Login successful, you can get back to the application").map { response =>
-            response.withEntity(response.body.onFinalize(saveCode(code)))
+            response.withEntity(response.body.onFinalize(finishServer))
           }
-        }
     }
   }
 }
