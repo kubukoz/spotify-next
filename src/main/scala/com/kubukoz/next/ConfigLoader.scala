@@ -1,12 +1,14 @@
 package com.kubukoz.next
 
 import com.kubukoz.next.util.Config
+import com.kubukoz.next.util.types._
 import io.circe.syntax._
 import io.circe.Printer
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import cats.tagless.finalAlg
 import java.nio.file.NoSuchFileException
+import com.kubukoz.next.util.ConsoleRead
 
 @finalAlg
 trait ConfigLoader[F[_]] {
@@ -15,7 +17,6 @@ trait ConfigLoader[F[_]] {
 }
 
 object ConfigLoader extends LowPriority {
-  type MonadThrow[F[_]] = MonadError[F, Throwable]
 
   def cached[F[_]: Sync]: ConfigLoader[F] => F[ConfigLoader[F]] =
     underlying =>
@@ -28,20 +29,25 @@ object ConfigLoader extends LowPriority {
 
   def withCreateFileIfMissing[F[_]: Console: MonadThrow](configPath: Path): ConfigLoader[F] => ConfigLoader[F] =
     underlying => {
-      def askToCreateFile(originalException: NoSuchFileException): F[Unit] = {
+      def askToCreateFile(originalException: NoSuchFileException): F[Config] = {
         implicit val showPath: Show[Path] = Show.fromToString
-        val validInput = "Y"
 
-        Console[F].putStrLn(show"Didn't find config file at $configPath. Should I create one? ($validInput/n)") *>
-          Console[F].readLn.map(_.trim).ensure(originalException)(_.equalsIgnoreCase("Y")).void
+        val validInput = "Y"
+        val askMessage = show"Didn't find config file at $configPath. Should I create one? ($validInput/n)"
+
+        for {
+          _ <- Console[F].putStrLn(askMessage)
+          _ <- Console[F].readLn.map(_.trim).ensure(originalException)(_.equalsIgnoreCase("Y"))
+          clientId <- ConsoleRead.readWithPrompt[F, String]("Client ID")
+          clientSecret <- ConsoleRead.readWithPrompt[F, String]("Client secret")
+        } yield Config(clientId, clientSecret, Config.defaultPort, Config.Token.empty)
       }
 
       new ConfigLoader[F] {
         val loadConfig: F[Config] = underlying.loadConfig.recoverWith {
           case e: NoSuchFileException =>
-            askToCreateFile(e) *> Config.initial.pure[F].flatTap(saveConfig) <*
-              Console[F]
-                .putStrLn(s"Created file at $configPath, remember to fill in your Spotify API application's data")
+            askToCreateFile(e).flatTap(saveConfig) <*
+              Console[F].putStrLn(s"Saved config to new file at $configPath")
         }
 
         def saveConfig(config: Config): F[Unit] = underlying.saveConfig(config)

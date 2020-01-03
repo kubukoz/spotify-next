@@ -9,12 +9,14 @@ final case class Config(clientId: String, clientSecret: String, loginPort: Int, 
 object Config extends AskFor[Config] {
   implicit val config = Configuration.default
 
-  val initial: Config = Config("your-client-id", "your-client-secret", 4321, Token(""))
+  val defaultPort: Int = 4321
 
   final case class Token(value: String) extends AnyVal
 
   object Token extends AskFor[Token] {
     implicit val codec: Codec[Token] = deriveUnwrappedCodec
+
+    val empty: Token = Token("")
   }
 
   implicit val codec: Codec[Config] = deriveConfiguredCodec
