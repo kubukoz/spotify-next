@@ -13,7 +13,6 @@ import org.http4s.Request
 import org.http4s.Method.POST
 import org.http4s.Request
 import com.kubukoz.next.api.spotify.TokenResponse
-import org.http4s.circe.CirceEntityCodec._
 import org.http4s.UrlForm
 import com.kubukoz.next.util.Config.RefreshToken
 import com.kubukoz.next.Login.Tokens
@@ -57,6 +56,8 @@ object Login {
         .resource
 
     def getTokens(config: Config)(code: Code): F[Tokens] = {
+      import org.http4s.circe.CirceEntityCodec._
+
       val body = UrlForm(
         "grant_type" -> "authorization_code",
         "code" -> code.value,
