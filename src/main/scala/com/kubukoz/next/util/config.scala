@@ -9,6 +9,8 @@ final case class Config(clientId: String, clientSecret: String, loginPort: Int, 
 object Config extends AskFor[Config] {
   implicit val config = Configuration.default
 
+  val initial: Config = Config("your-client-id", "your-client-secret", 4321, Token(""))
+
   final case class Token(value: String) extends AnyVal
 
   object Token extends AskFor[Token] {
