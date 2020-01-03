@@ -37,7 +37,7 @@ object ConfigLoader extends LowPriority {
 
         for {
           _ <- Console[F].putStrLn(askMessage)
-          _ <- Console[F].readLn.map(_.trim).ensure(originalException)(_.equalsIgnoreCase("Y"))
+          _ <- Console[F].readLn.map(_.trim).ensure(originalException)(_.equalsIgnoreCase(validInput))
           clientId <- ConsoleRead.readWithPrompt[F, String]("Client ID")
           clientSecret <- ConsoleRead.readWithPrompt[F, String]("Client secret")
         } yield Config(clientId, clientSecret, Config.defaultPort, Config.Token.empty)
