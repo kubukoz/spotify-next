@@ -68,8 +68,9 @@ object Login {
 
       client
         .expect[TokenResponse](Request[F](POST, Uri.uri("https://accounts.spotify.com/api/token")).withEntity(body))
-    }.map { response =>
-      Tokens(Token(response.accessToken), RefreshToken(response.refreshToken))
+        .map { response =>
+          Tokens(Token(response.accessToken), RefreshToken(response.refreshToken))
+        }
     }
 
     val server: F[Tokens] =
