@@ -61,4 +61,4 @@ val commonSettings = Seq(
 )
 
 val next =
-  project.in(file(".")).settings(commonSettings).settings(skip in publish := true).enablePlugins(JavaAppPackaging)
+  project.in(file(".")).settings(commonSettings).enablePlugins(JavaAppPackaging)

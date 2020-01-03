@@ -25,3 +25,5 @@ jobs:
     # stage="test" if no stage is specified
     - script:
       - sbt test:compile test
+    - stage: release
+      script: sbt ci-release
