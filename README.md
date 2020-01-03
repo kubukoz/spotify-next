@@ -20,7 +20,9 @@ coursier bootstrap com.kubukoz:spotify-next_2.13:1.0.1 -o spotify-next
 ./spotify-next --help
 ```
 
-Or, if you want a fresh-out-of-the-oven version, you can build it from source:
+## Build from source
+
+Alternatively, if you want a fresh-out-of-the-oven version, you can build it from source:
 
 1. `sbt stage`
 
