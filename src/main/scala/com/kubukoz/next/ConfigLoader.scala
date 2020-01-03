@@ -1,11 +1,14 @@
 package com.kubukoz.next
 
 import com.kubukoz.next.util.Config
+import com.kubukoz.next.util.types._
 import io.circe.syntax._
 import io.circe.Printer
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import cats.tagless.finalAlg
+import java.nio.file.NoSuchFileException
+import com.kubukoz.next.util.ConsoleRead
 
 @finalAlg
 trait ConfigLoader[F[_]] {
@@ -15,11 +18,39 @@ trait ConfigLoader[F[_]] {
 
 object ConfigLoader extends LowPriority {
 
-  def cached[F[_]: Sync](underlying: ConfigLoader[F]): F[ConfigLoader[F]] =
-    underlying.loadConfig.flatMap(Ref.of(_)).map { ref =>
+  def cached[F[_]: Sync]: ConfigLoader[F] => F[ConfigLoader[F]] =
+    underlying =>
+      underlying.loadConfig.flatMap(Ref.of(_)).map { ref =>
+        new ConfigLoader[F] {
+          def saveConfig(config: Config): F[Unit] = underlying.saveConfig(config) *> ref.set(config)
+          val loadConfig: F[Config] = ref.get
+        }
+      }
+
+  def withCreateFileIfMissing[F[_]: Console: MonadThrow](configPath: Path): ConfigLoader[F] => ConfigLoader[F] =
+    underlying => {
+      def askToCreateFile(originalException: NoSuchFileException): F[Config] = {
+        implicit val showPath: Show[Path] = Show.fromToString
+
+        val validInput = "Y"
+        val askMessage = show"Didn't find config file at $configPath. Should I create one? ($validInput/n)"
+
+        for {
+          _ <- Console[F].putStrLn(askMessage)
+          _ <- Console[F].readLn.map(_.trim).ensure(originalException)(_.equalsIgnoreCase(validInput))
+          clientId <- ConsoleRead.readWithPrompt[F, String]("Client ID")
+          clientSecret <- ConsoleRead.readWithPrompt[F, String]("Client secret")
+        } yield Config(clientId, clientSecret, Config.defaultPort, Config.Token.empty)
+      }
+
       new ConfigLoader[F] {
-        def saveConfig(config: Config): F[Unit] = underlying.saveConfig(config) *> ref.set(config)
-        val loadConfig: F[Config] = ref.get
+        val loadConfig: F[Config] = underlying.loadConfig.recoverWith {
+          case e: NoSuchFileException =>
+            askToCreateFile(e).flatTap(saveConfig) <*
+              Console[F].putStrLn(s"Saved config to new file at $configPath")
+        }
+
+        def saveConfig(config: Config): F[Unit] = underlying.saveConfig(config)
       }
     }
 

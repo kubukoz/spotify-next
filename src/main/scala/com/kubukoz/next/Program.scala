@@ -16,10 +16,14 @@ import com.olegpy.meow.hierarchy.deriveApplicativeAsk
 import ConfigLoader.deriveAskFromLoader
 
 object Program {
-  val configPath = Paths.get(System.getProperty("user.home") + "/.spotify-next.json")
+  val configPath = Paths.get(System.getProperty("user.home")).resolve(".spotify-next.json")
 
-  def makeLoader[F[_]: Sync: ContextShift] =
-    Blocker[F].map(ConfigLoader.default[F](configPath, _)).evalMap(ConfigLoader.cached(_))
+  def makeLoader[F[_]: Sync: ContextShift: Console] = Blocker[F].evalMap { blocker =>
+    ConfigLoader
+      .cached[F]
+      .compose(ConfigLoader.withCreateFileIfMissing[F](configPath))
+      .apply(ConfigLoader.default[F](configPath, blocker))
+  }
 
   def makeClient[F[_]: ConcurrentEffect: ContextShift: Timer: Console: ConfigLoader: Login]: Resource[F, Client[F]] =
     BlazeClientBuilder(ExecutionContext.global)

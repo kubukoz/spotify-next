@@ -8,26 +8,18 @@ A small program making it easier to filter out music on Spotify.
 
 ## Installation
 
-1. Create an application in the Spotify API dashboard. Add a redirect URI pointing to `http://localhost:4321/login`. The port `4321` is configured in the `.spotify-next.json` config file.
+1. Create an application in the Spotify API dashboard. Add a redirect URI pointing to `http://localhost:4321/login`.
+The port `4321` is configured in the `.spotify-next.json` config file (see [usage](#usage)).
 
 1. `sbt stage`
 
-1. Create a file in your home directory, named `.spotify-next.json`:
-
-  ```json
-  {
-    "clientId": "(your app's client id)",
-    "clientSecret": "(your app's secret)",
-    "loginPort": 4321,
-    "token": ""
-  }
-  ```
-
-The token can be empty for now, it'll be replaced with a real one when you log in.
-
-A server will start on the configured port only when the login flow is triggered.
-
 ## Usage
+
+The application requires some configuration (e.g. the client ID for the Spotify Web API).
+It's stored in a file at `~/.spotify-next.json`.
+When you first run the application, or if that file is deleted, the application will ask and attempt to create one.
+
+The configuration defines the port for the embedded HTTP server used for authentication. The server server will only start when the login flow is triggered, and stop afterwards.
 
 ```
 $ ./target/universal/stage/bin/spotify-next --help
