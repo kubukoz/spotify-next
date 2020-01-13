@@ -77,3 +77,7 @@ Subcommands:
 You can run the login command to be prompted for authorization, or you can rely on the fallback mechanism of all API calls - when one fails with 401 Unauthorized, you'll see the response and be prompted to log in. The call will be retried once after you successfully log in.
 
 The application automatically saves the token to the configuration file after successful logins.
+
+## Limitations
+
+Currently, it's impossible to control the playback on some devices (e.g. Sonos speakers) through the Spotify Web API. Because of that, requests to switch tracks (in `skip` / `drop`) will fail if such a device is currently playing.
