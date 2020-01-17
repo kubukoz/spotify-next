@@ -49,7 +49,7 @@ val commonSettings = Seq(
     "org.http4s" %% "http4s-circe" % "0.21.0-M6",
     "ch.qos.logback" % "logback-classic" % "1.2.3",
     "io.chrisdavenport" %% "log4cats-slf4j" % "1.0.1",
-    "org.typelevel" %% "cats-tagless-macros" % "0.10",
+    "org.typelevel" %% "cats-tagless-macros" % "0.11",
     "io.circe" %% "circe-fs2" % "0.12.0",
     "io.circe" %% "circe-literal" % "0.12.3",
     "io.circe" %% "circe-generic-extras" % "0.12.2",
