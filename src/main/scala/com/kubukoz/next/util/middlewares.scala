@@ -31,7 +31,7 @@ object middlewares {
       Client { req =>
         client.run(req).flatMap {
           case response if response.status === Status.Unauthorized => doBeforeRetry(response) *> client.run(req)
-          case response                                            => Resource.pure(response)
+          case response                                            => Resource.pure[F, Response[F]](response)
         }
       }
   }
