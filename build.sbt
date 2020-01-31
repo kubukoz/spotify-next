@@ -24,7 +24,7 @@ val compilerPlugins = List(
 
 val commonSettings = Seq(
   scalaVersion := "2.13.1",
-  scalacOptions --= Seq("-Xfatal-warnings"),
+  scalacOptions -= "-Xfatal-warnings",
   scalacOptions ++= Seq(
     "-Ymacro-annotations",
     "-Yimports:" ++ List(
@@ -44,15 +44,15 @@ val commonSettings = Seq(
     "dev.profunktor" %% "console4cats" % "0.8.1",
     "com.monovore" %% "decline-effect" % "1.0.0",
     "org.typelevel" %% "cats-effect" % "2.1.0",
-    "org.http4s" %% "http4s-dsl" % "0.21.0-M6",
-    "org.http4s" %% "http4s-blaze-server" % "0.21.0-M6",
-    "org.http4s" %% "http4s-blaze-client" % "0.21.0-M6",
-    "org.http4s" %% "http4s-circe" % "0.21.0-M6",
+    "org.http4s" %% "http4s-dsl" % "0.21.0-RC2",
+    "org.http4s" %% "http4s-blaze-server" % "0.21.0-RC2",
+    "org.http4s" %% "http4s-blaze-client" % "0.21.0-RC2",
+    "org.http4s" %% "http4s-circe" % "0.21.0-RC2",
     "ch.qos.logback" % "logback-classic" % "1.2.3",
     "io.chrisdavenport" %% "log4cats-slf4j" % "1.0.1",
     "org.typelevel" %% "cats-tagless-macros" % "0.11",
-    "io.circe" %% "circe-fs2" % "0.12.0",
-    "io.circe" %% "circe-literal" % "0.12.3",
+    "com.kubukoz" %% "circe-fs2" % "0.13.0-M2", //todo switch to official release once published
+    "io.circe" %% "circe-literal" % "0.13.0-RC1",
     "io.circe" %% "circe-generic-extras" % "0.12.2",
     "com.olegpy" %% "meow-mtl-core" % "0.4.0",
     "com.olegpy" %% "meow-mtl-effects" % "0.4.0",
