@@ -53,7 +53,7 @@ val commonSettings = Seq(
     "org.typelevel" %% "cats-tagless-macros" % "0.11",
     "com.kubukoz" %% "circe-fs2" % "0.13.0-M2", //todo switch to official release once published
     "io.circe" %% "circe-literal" % "0.13.0",
-    "io.circe" %% "circe-generic-extras" % "0.12.2",
+    "io.circe" %% "circe-generic-extras" % "0.13.0",
     "com.olegpy" %% "meow-mtl-core" % "0.4.0",
     "com.olegpy" %% "meow-mtl-effects" % "0.4.0",
     "io.estatico" %% "newtype" % "0.4.3",
