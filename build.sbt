@@ -62,4 +62,4 @@ val commonSettings = Seq(
 )
 
 val next =
-  project.in(file(".")).settings(commonSettings).enablePlugins(JavaAppPackaging)
+  project.in(file(".")).settings(commonSettings).enablePlugins(JavaAppPackaging).enablePlugins(GraalVMNativeImagePlugin)
