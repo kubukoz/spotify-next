@@ -20,7 +20,6 @@ import com.kubukoz.next.Login.Tokens
 import org.http4s.circe.CirceEntityCodec._
 import org.http4s.headers.Authorization
 import org.http4s.BasicCredentials
-import org.http4s.client.middleware.RequestLogger
 
 @finalAlg
 trait Login[F[_]] {
