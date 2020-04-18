@@ -38,7 +38,7 @@ object Spotify {
     val console = Console[F]
     import console._
 
-    private def playlist[A](player: Player[Option[PlayerContext], A]): F[Player[PlayerContext.playlist, A]] =
+    private def requirePlaylist[A](player: Player[Option[PlayerContext], A]): F[Player[PlayerContext.playlist, A]] =
       player
         .byContext
         .sequence
@@ -46,7 +46,7 @@ object Spotify {
         .liftTo[F](NoContext)
         .flatMap(_.narrowContext[PlayerContext.playlist].liftTo[F])
 
-    private def withTrack[A](player: Player[A, Option[Item]]): F[Player[A, Item.track]] =
+    private def requireTrack[A](player: Player[A, Option[Item]]): F[Player[A, Item.track]] =
       player
         .sequence
         .liftTo[F](NoItem)
@@ -57,11 +57,11 @@ object Spotify {
         methods.nextTrack[F].run(client)
 
     val dropTrack: F[Unit] =
-      methods.player[F].run(client).flatMap(playlist(_)).flatMap(withTrack).flatMap { player =>
+      methods.player[F].run(client).flatMap(requirePlaylist(_)).flatMap(requireTrack).flatMap { player =>
         val trackUri = player.item.uri
         val playlistId = player.context.uri.playlist
 
-        putStrLn("Removing track " + trackUri + " from playlist " + playlistId) *>
+        putStrLn(show"Removing track $trackUri from playlist $playlistId") *>
           methods.removeTrack[F](trackUri, playlistId).run(client)
       } *> skipTrack
 
@@ -69,7 +69,7 @@ object Spotify {
       methods
         .player[F]
         .run(client)
-        .flatMap(withTrack)
+        .flatMap(requireTrack)
         .fproduct { player =>
           val currentLength = player.progressMs
           val totalLength = player.item.durationMs
@@ -81,7 +81,7 @@ object Spotify {
 
           case (player, desiredProgressPercent) =>
             val desiredProgressMs = desiredProgressPercent * player.item.durationMs / 100
-            putStrLn("Seeking to " + desiredProgressPercent + "%") *> methods.seek[F](desiredProgressMs).run(client)
+            putStrLn(show"Seeking to $desiredProgressPercent%") *> methods.seek[F](desiredProgressMs).run(client)
         }
   }
 
