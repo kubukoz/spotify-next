@@ -11,7 +11,6 @@ import scala.reflect.ClassTag
 import com.kubukoz.next.Spotify.InvalidContext
 import com.kubukoz.next.Spotify.InvalidItem
 import io.estatico.newtype.macros.newtype
-import cats.tagless.Derive
 
 object spotify {
   implicit val circeConfig = Configuration.default.withDiscriminator("type").withSnakeCaseMemberNames
@@ -116,5 +115,11 @@ object spotify {
 
   object TokenResponse {
     implicit val codec: Codec[TokenResponse] = deriveConfiguredCodec
+  }
+
+  final case class RefreshedTokenResponse(accessToken: String)
+
+  object RefreshedTokenResponse {
+    implicit val codec: Codec[RefreshedTokenResponse] = deriveConfiguredCodec
   }
 }

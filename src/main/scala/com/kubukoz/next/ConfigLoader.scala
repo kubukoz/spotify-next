@@ -27,22 +27,21 @@ object ConfigLoader extends LowPriority {
         }
       }
 
-  def withCreateFileIfMissing[F[_]: Console: MonadThrow](configPath: Path): ConfigLoader[F] => ConfigLoader[F] =
-    underlying => {
-      def askToCreateFile(originalException: NoSuchFileException): F[Config] = {
-        implicit val showPath: Show[Path] = Show.fromToString
+  def withCreateFileIfMissing[F[_]: Console: MonadThrow](configPath: Path): ConfigLoader[F] => ConfigLoader[F] = {
+    implicit val showPath: Show[Path] = Show.fromToString
 
-        val validInput = "Y"
-        val askMessage = show"Didn't find config file at $configPath. Should I create one? ($validInput/n)"
+    val validInput = "Y"
+    val askMessage = show"Didn't find config file at $configPath. Should I create one? ($validInput/n)"
 
-        for {
-          _ <- Console[F].putStrLn(askMessage)
-          _ <- Console[F].readLn.map(_.trim).ensure(originalException)(_.equalsIgnoreCase(validInput))
-          clientId <- ConsoleRead.readWithPrompt[F, String]("Client ID")
-          clientSecret <- ConsoleRead.readWithPrompt[F, String]("Client secret")
-        } yield Config(clientId, clientSecret, Config.defaultPort, Config.Token.empty, Config.RefreshToken.empty)
-      }
+    def askToCreateFile(originalException: NoSuchFileException): F[Config] =
+      for {
+        _ <- Console[F].putStrLn(askMessage)
+        _ <- Console[F].readLn.map(_.trim).ensure(originalException)(_.equalsIgnoreCase(validInput))
+        clientId <- ConsoleRead.readWithPrompt[F, String]("Client ID")
+        clientSecret <- ConsoleRead.readWithPrompt[F, String]("Client secret")
+      } yield Config(clientId, clientSecret, Config.defaultPort, none, none)
 
+    underlying =>
       new ConfigLoader[F] {
         val loadConfig: F[Config] = underlying.loadConfig.recoverWith {
           case e: NoSuchFileException =>
@@ -52,7 +51,7 @@ object ConfigLoader extends LowPriority {
 
         def saveConfig(config: Config): F[Unit] = underlying.saveConfig(config)
       }
-    }
+  }
 
   def default[F[_]: Sync: ContextShift](configPath: Path, blocker: Blocker): ConfigLoader[F] = new ConfigLoader[F] {
 

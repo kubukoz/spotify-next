@@ -14,6 +14,7 @@ import org.http4s.client.Client
 import com.kubukoz.next.util.Config
 import com.olegpy.meow.hierarchy.deriveApplicativeAsk
 import ConfigLoader.deriveAskFromLoader
+import com.kubukoz.next.util.Config.RefreshToken
 
 object Program {
   val configPath = Paths.get(System.getProperty("user.home")).resolve(".spotify-next.json")
@@ -32,21 +33,42 @@ object Program {
       .map(RequestLogger(logHeaders = true, logBody = true))
       .map(ResponseLogger(logHeaders = true, logBody = true))
 
-  def apiClient[F[_]: Sync: Console: ConfigLoader: Login]: Client[F] => Client[F] =
+  def apiClient[F[_]: Sync: Console: ConfigLoader: Login]: Client[F] => Client[F] = {
+    val loginOrRefreshToken: F[Unit] =
+      Config
+        .ask[F]
+        .map(_.refreshToken)
+        .flatMap {
+          case None               => loginUser
+          case Some(refreshToken) => refreshUserToken(refreshToken)
+        }
+
     middlewares
       .logFailedResponse[F]
       .compose(middlewares.implicitHost("api.spotify.com"))
-      .compose(middlewares.retryUnauthorizedWith(loginUser[F]))
+      .compose(middlewares.retryUnauthorizedWith(loginOrRefreshToken))
       .compose(middlewares.withToken[F])
+  }
 
   // Do NOT move this into Spotify, it'll vastly increase the range of its responsibilities!
   def loginUser[F[_]: Console: Login: ConfigLoader: Monad]: F[Unit] =
     for {
       tokens <- Login[F].server
       config <- ConfigLoader[F].loadConfig
-      newConfig = config.copy(token = tokens.access, refreshToken = tokens.refresh)
+      newConfig = config.copy(token = tokens.access.some, refreshToken = tokens.refresh.some)
       _ <- ConfigLoader[F].saveConfig(newConfig)
       _ <- Console[F].putStrLn("Saved token to file")
+    } yield ()
+
+  def refreshUserToken[F[_]: Console: Login: ConfigLoader: MonadError[*[_], Throwable]](
+    refreshToken: RefreshToken
+  ): F[Unit] =
+    for {
+      newToken <- Login[F].refreshToken(refreshToken)
+      config <- ConfigLoader[F].loadConfig
+      newConfig = config.copy(token = newToken.some)
+      _ <- ConfigLoader[F].saveConfig(newConfig)
+      _ <- Console[F].putStrLn("Refreshed token") //todo debug level?
     } yield ()
 
   def makeSpotify[F[_]: Console: Sync: Config.Ask](client: Client[F]) = {

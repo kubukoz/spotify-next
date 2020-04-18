@@ -13,13 +13,19 @@ import org.http4s.Request
 import org.http4s.Method.POST
 import org.http4s.Request
 import com.kubukoz.next.api.spotify.TokenResponse
+import com.kubukoz.next.api.spotify.RefreshedTokenResponse
 import org.http4s.UrlForm
 import com.kubukoz.next.util.Config.RefreshToken
 import com.kubukoz.next.Login.Tokens
+import org.http4s.circe.CirceEntityCodec._
+import org.http4s.headers.Authorization
+import org.http4s.BasicCredentials
+import org.http4s.client.middleware.RequestLogger
 
 @finalAlg
 trait Login[F[_]] {
   def server: F[Tokens]
+  def refreshToken(token: RefreshToken): F[Token]
 }
 
 object Login {
@@ -29,6 +35,24 @@ object Login {
 
   def blaze[F[_]: ConcurrentEffect: Timer: Console: Config.Ask](client: Client[F]): Login[F] = new Login[F] {
 
+    def refreshToken(token: RefreshToken): F[Token] = {
+      val body = UrlForm(
+        "grant_type" -> "refresh_token",
+        "refresh_token" -> token.value
+      )
+
+      Config
+        .ask[F]
+        .map { config =>
+          Request[F](POST, Uri.uri("https://accounts.spotify.com/api/token"))
+            .withEntity(body)
+            .putHeaders(Authorization(BasicCredentials(config.clientId, config.clientSecret)))
+        }
+        .flatMap(client.fetchAs[RefreshedTokenResponse])
+        .map(_.accessToken)
+        .map(Token(_))
+    }
+
     val scopes = Set(
       "playlist-read-private",
       "playlist-modify-private",
@@ -37,17 +61,20 @@ object Login {
       "user-read-playback-state"
     )
 
-    private val showUri = Config.ask[F].flatMap { config =>
-      val uri = Uri
-        .uri("https://accounts.spotify.com/authorize")
-        .withQueryParam("client_id", config.clientId)
-        .withQueryParam("client_secret", config.clientSecret)
-        .withQueryParam("scope", scopes.mkString(" "))
-        .withQueryParam("redirect_uri", config.redirectUri)
-        .withQueryParam("response_type", "code")
-
-      Console[F].putStrLn(s"Go to $uri")
-    }
+    private val showUri = Config
+      .ask[F]
+      .map { config =>
+        Uri
+          .uri("https://accounts.spotify.com/authorize")
+          .withQueryParam("client_id", config.clientId)
+          .withQueryParam("client_secret", config.clientSecret)
+          .withQueryParam("scope", scopes.mkString(" "))
+          .withQueryParam("redirect_uri", config.redirectUri)
+          .withQueryParam("response_type", "code")
+      }
+      .flatMap { uri =>
+        Console[F].putStrLn(s"Go to $uri")
+      }
 
     def mkServer(config: Config, route: HttpRoutes[F]) =
       BlazeServerBuilder[F]
@@ -56,7 +83,6 @@ object Login {
         .resource
 
     def getTokens(code: Code, config: Config): F[Tokens] = {
-      import org.http4s.circe.CirceEntityCodec._
 
       val body = UrlForm(
         "grant_type" -> "authorization_code",
@@ -76,7 +102,7 @@ object Login {
     val server: F[Tokens] =
       (Config.ask[F], Deferred[F, Tokens], Deferred[F, Unit]).tupled.flatMap {
         case (config, tokensPromise, finishServer) =>
-          val finishLogin: Code => F[Unit] = code => getTokens(code, config).flatMap(tokensPromise.complete)
+          val finishLogin: Code => F[Unit] = getTokens(_, config).flatMap(tokensPromise.complete)
           val route = Login.routes[F](finishLogin, finishServer.complete(()))
 
           // start server

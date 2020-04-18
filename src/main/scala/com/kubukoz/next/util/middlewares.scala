@@ -22,7 +22,6 @@ object middlewares {
       Resource.liftF(
         Console[F].putStrLn("Received unauthorized response") *>
           showBody *>
-          Console[F].putStrLn("Login to retry") *>
           beforeRetry
       )
     }
@@ -56,14 +55,14 @@ object middlewares {
             .bodyAsText
             .compile
             .string
-            .flatTap(text => Console[F].putError("Request failed, response: " + text))
+            .flatTap(text => Console[F].putError(s"Request $req failed, response: " + text))
             .map(response.withEntity(_))
       }
     }
   }
 
   def withToken[F[_]: Token.Ask: BracketThrow: Console]: Client[F] => Client[F] = {
-    val loadToken = Resource.liftF(Token.ask[F]).map(_.value.trim)
+    val loadToken = Resource.liftF(Token.ask[F])
 
     val warnEmptyToken =
       Console[F].putStrLn("Loaded token is empty, any API calls will probably have to be retried...")
@@ -74,8 +73,8 @@ object middlewares {
     client =>
       Client[F] { req =>
         loadToken.flatMap {
-          case ""    => Resource.liftF(warnEmptyToken) *> client.run(req)
-          case token => client.run(withToken(token)(req))
+          case None        => Resource.liftF(warnEmptyToken) *> client.run(req)
+          case Some(token) => client.run(withToken(token.value.trim)(req))
         }
       }
   }

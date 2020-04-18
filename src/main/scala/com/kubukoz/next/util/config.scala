@@ -8,8 +8,8 @@ final case class Config(
   clientId: String,
   clientSecret: String,
   loginPort: Int,
-  token: Config.Token,
-  refreshToken: Config.RefreshToken
+  token: Option[Config.Token],
+  refreshToken: Option[Config.RefreshToken]
 ) {
   def redirectUri: String = show"http://localhost:$loginPort/login"
 }
@@ -21,18 +21,14 @@ object Config extends AskFor[Config] {
 
   final case class Token(value: String) extends AnyVal
 
-  object Token extends AskFor[Token] {
+  object Token extends AskFor[Option[Token]] {
     implicit val codec: Codec[Token] = deriveUnwrappedCodec
-
-    val empty: Token = Token("")
   }
 
   final case class RefreshToken(value: String) extends AnyVal
 
   object RefreshToken {
     implicit val codec: Codec[RefreshToken] = deriveUnwrappedCodec
-
-    val empty: RefreshToken = RefreshToken("")
   }
 
   implicit val codec: Codec[Config] = deriveConfiguredCodec
