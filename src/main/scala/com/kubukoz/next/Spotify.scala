@@ -39,16 +39,16 @@ object Spotify {
     import console._
 
     private def playlist[A](player: Player[Option[PlayerContext], A]): F[Player[PlayerContext.playlist, A]] =
-      Player
-        .traverseByContext
-        .sequence(player)
+      player
+        .byContext
+        .sequence
+        .map(_.value)
         .liftTo[F](NoContext)
         .flatMap(_.narrowContext[PlayerContext.playlist].liftTo[F])
 
     private def withTrack[A](player: Player[A, Option[Item]]): F[Player[A, Item.track]] =
-      Player
-        .traverseByItem
-        .sequence(player)
+      player
+        .sequence
         .liftTo[F](NoItem)
         .flatMap(_.narrowItem[Item.track].liftTo[F])
 

@@ -10,6 +10,8 @@ import org.http4s.EntityDecoder
 import scala.reflect.ClassTag
 import com.kubukoz.next.Spotify.InvalidContext
 import com.kubukoz.next.Spotify.InvalidItem
+import io.estatico.newtype.macros.newtype
+import cats.tagless.Derive
 
 object spotify {
   implicit val circeConfig = Configuration.default.withDiscriminator("type").withSnakeCaseMemberNames
@@ -31,14 +33,18 @@ object spotify {
 
   final case class Player[_Ctx, _Item](context: _Ctx, item: _Item, progressMs: Int) {
 
+    def byContext: Player.ByContext[_Item, _Ctx] = Player.ByContext(this)
+
     def narrowContext[DesiredContext <: _Ctx: ClassTag]: Either[InvalidContext[_Ctx], Player[DesiredContext, _Item]] =
-      Player.traverseByContext.traverse(this) {
-        case desired: DesiredContext => desired.asRight
-        case other                   => InvalidContext(other).asLeft
-      }
+      byContext
+        .traverse {
+          case desired: DesiredContext => desired.asRight
+          case other                   => InvalidContext(other).asLeft
+        }
+        .map(_.value)
 
     def narrowItem[DesiredItem <: _Item: ClassTag]: Either[InvalidItem[_Item], Player[_Ctx, DesiredItem]] =
-      Player.traverseByItem.traverse(this) {
+      this.traverse {
         case desired: DesiredItem => desired.asRight
         case other                => InvalidItem(other).asLeft
       }
@@ -46,27 +52,29 @@ object spotify {
 
   object Player {
 
-    import cats.tagless.syntax.invariantK._
-    import com.kubukoz.next.util.traverse._
+    @newtype
+    final case class ByContext[_Item, _Ctx](value: Player[_Ctx, _Item])
 
-    // Just some Traverse derivations based on nested tuples, nothing to see here...
-    // As long as you follow the types you'll be fine
-    def traverseByContext[Item_]: NonEmptyTraverse[Player[*, Item_]] =
-      NonEmptyTraverse[((Int, Item_), *)]
-        .imapK(
-          λ[((Int, Item_), *) ~> Player[*, Item_]] { case ((progress, item), ctx) => Player(ctx, item, progress) }
-        )(
-          λ[Player[*, Item_] ~> ((Int, Item_), *)](p => ((p.progressMs, p.item), p.context))
-        )
+    object ByContext {
+      import cats.tagless.syntax.invariantK._
+      import com.kubukoz.next.util.traverse._
 
-    def traverseByItem[Ctx_]: NonEmptyTraverse[Player[Ctx_, *]] =
-      NonEmptyTraverse[((Int, Ctx_), *)]
-        .imapK(λ[((Int, Ctx_), *) ~> Player[Ctx_, *]] {
-          case ((progress, ctx), item) =>
-            Player(ctx, item, progress)
-        })(
-          λ[Player[Ctx_, *] ~> ((Int, Ctx_), *)](p => ((p.progressMs, p.context), p.item))
-        )
+      implicit def traverse[_Item]: NonEmptyTraverse[ByContext[_Item, *]] =
+        NonEmptyTraverse[((Int, _Item), *)]
+          .imapK(
+            λ[((Int, _Item), *) ~> ByContext[_Item, *]] {
+              case ((progress, item), ctx) => Player(ctx, item, progress).byContext
+            }
+          )(
+            λ[ByContext[_Item, *] ~> ((Int, _Item), *)] { pp =>
+              val p = pp.value
+              ((p.progressMs, p.item), p.context)
+            }
+          )
+    }
+
+    implicit def traverse[_Context]: NonEmptyTraverse[Player[_Context, *]] =
+      cats.derived.semi.nonEmptyTraverse[Player[_Context, *]]
 
     implicit def codec[_Ctx: Codec, _Item: Codec]: Codec[Player[_Ctx, _Item]] = deriveConfiguredCodec
   }
