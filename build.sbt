@@ -58,7 +58,7 @@ val commonSettings = Seq(
     "io.circe" %% "circe-generic-extras" % "0.13.0",
     "com.olegpy" %% "meow-mtl-core" % "0.4.0",
     "com.olegpy" %% "meow-mtl-effects" % "0.4.0",
-    "io.estatico" %% "newtype" % "0.4.3",
+    "io.estatico" %% "newtype" % "0.4.4",
     "org.scalatest" %% "scalatest" % "3.1.1" % Test
   ) ++ compilerPlugins
 )
