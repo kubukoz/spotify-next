@@ -58,18 +58,14 @@ object spotify {
       import cats.tagless.syntax.invariantK._
       import com.kubukoz.next.util.traverse._
 
+      def lift[_Item]: Player[*, _Item] ~> ByContext[_Item, *] =
+        λ[Player[*, _Item] ~> ByContext[_Item, *]](ByContext(_))
+
+      def unlift[_Item]: ByContext[_Item, *] ~> Player[*, _Item] =
+        λ[ByContext[_Item, *] ~> Player[*, _Item]](_.value)
+
       implicit def traverse[_Item]: NonEmptyTraverse[ByContext[_Item, *]] =
-        NonEmptyTraverse[((Int, _Item), *)]
-          .imapK(
-            λ[((Int, _Item), *) ~> ByContext[_Item, *]] {
-              case ((progress, item), ctx) => Player(ctx, item, progress).byContext
-            }
-          )(
-            λ[ByContext[_Item, *] ~> ((Int, _Item), *)] { pp =>
-              val p = pp.value
-              ((p.progressMs, p.item), p.context)
-            }
-          )
+        cats.derived.semi.nonEmptyTraverse[Player[*, _Item]].imapK(lift)(unlift)
     }
 
     implicit def traverse[_Context]: NonEmptyTraverse[Player[_Context, *]] =
