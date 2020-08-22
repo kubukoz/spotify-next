@@ -59,7 +59,7 @@ val commonSettings = Seq(
     "com.olegpy" %% "meow-mtl-core" % "0.4.1",
     "com.olegpy" %% "meow-mtl-effects" % "0.4.1",
     "io.estatico" %% "newtype" % "0.4.4",
-    "org.scalatest" %% "scalatest" % "3.2.1" % Test
+    "org.scalatest" %% "scalatest" % "3.2.2" % Test
   ) ++ compilerPlugins
 )
 
