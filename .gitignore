@@ -6,4 +6,4 @@ target/
 **/secret.conf
 **/.DS_Store
 .vscode/
-./spotify-next
+spotify-next
