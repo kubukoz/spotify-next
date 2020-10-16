@@ -9,7 +9,6 @@ import org.http4s.HttpRoutes
 import org.http4s.dsl.Http4sDsl
 import com.kubukoz.next.util.Config.Token
 import org.http4s.client.Client
-import org.http4s.Request
 import org.http4s.Method.POST
 import org.http4s.Request
 import com.kubukoz.next.api.spotify.TokenResponse

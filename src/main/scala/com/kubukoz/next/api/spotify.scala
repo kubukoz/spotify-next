@@ -11,6 +11,7 @@ import scala.reflect.ClassTag
 import com.kubukoz.next.Spotify.InvalidContext
 import com.kubukoz.next.Spotify.InvalidItem
 import io.estatico.newtype.macros.newtype
+import cats.data.NonEmptyList
 
 object spotify {
   implicit val circeConfig = Configuration.default.withDiscriminator("type").withSnakeCaseMemberNames
@@ -77,22 +78,24 @@ object spotify {
 
   sealed trait PlayerContext extends Product with Serializable
 
-  final case class PlaylistUri(playlist: String, user: String = null)
+  final case class PlaylistUri(playlist: String, user: Option[String])
 
   object PlaylistUri {
 
     implicit val codec: Codec[PlaylistUri] = Codec.from(
       Decoder[String].emap {
-        case s"spotify:user:$userId:playlist:$playlistId" => PlaylistUri(playlistId, userId).asRight
-        case s"spotify:playlist:$playlistId" => PlaylistUri(playlistId).asRight
+        case s"spotify:user:$userId:playlist:$playlistId" => PlaylistUri(playlistId, userId.some).asRight
+        case s"spotify:playlist:$playlistId"              => PlaylistUri(playlistId, none).asRight
         case literallyAnythingElse                        => (literallyAnythingElse + " is not a playlist URI").asLeft
       },
       Encoder[String].contramap { uri =>
-        if (uri.user != null) {
-          show"spotify:user:${uri.user}:playlist:${uri.playlist}"
-        } else {
-          show"spotify:playlist:${uri.playlist}"
-        }
+        val parts = NonEmptyList.of(
+          "playlist" -> uri.playlist
+        ) ++ uri.user.tupleLeft("user").toList
+
+        parts
+          .map { case (k, v) => show"$k:$v" }
+          .mkString_("spotify:", ":", "")
       }
     )
 
