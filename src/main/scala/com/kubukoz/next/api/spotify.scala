@@ -77,17 +77,22 @@ object spotify {
 
   sealed trait PlayerContext extends Product with Serializable
 
-  final case class PlaylistUri(user: String, playlist: String)
+  final case class PlaylistUri(playlist: String, user: String = null)
 
   object PlaylistUri {
 
     implicit val codec: Codec[PlaylistUri] = Codec.from(
       Decoder[String].emap {
-        case s"spotify:user:$userId:playlist:$playlistId" => PlaylistUri(userId, playlistId).asRight
+        case s"spotify:user:$userId:playlist:$playlistId" => PlaylistUri(playlistId, userId).asRight
+        case s"spotify:playlist:$playlistId" => PlaylistUri(playlistId).asRight
         case literallyAnythingElse                        => (literallyAnythingElse + " is not a playlist URI").asLeft
       },
       Encoder[String].contramap { uri =>
-        show"spotify:user:${uri.user}:playlist:${uri.playlist}"
+        if (uri.user != null) {
+          show"spotify:user:${uri.user}:playlist:${uri.playlist}"
+        } else {
+          show"spotify:playlist:${uri.playlist}"
+        }
       }
     )
 
