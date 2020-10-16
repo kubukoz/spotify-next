@@ -17,7 +17,7 @@ object middlewares {
 
   def retryUnauthorizedWith[F[_]: Sync: Console](beforeRetry: F[Unit]): Client[F] => Client[F] = {
     def doBeforeRetry(response: Response[F]) = {
-      val showBody = response.bodyAsText.compile.string.flatMap(Console[F].putStrLn)
+      val showBody = response.bodyText.compile.string.flatMap(Console[F].putStrLn)
 
       Resource.liftF(
         Console[F].putStrLn("Received unauthorized response") *>
@@ -52,7 +52,7 @@ object middlewares {
         case response if response.status.isSuccess => response.pure[F]
         case response                              =>
           response
-            .bodyAsText
+            .bodyText
             .compile
             .string
             .flatTap(text => Console[F].putError(s"Request $req failed, response: " + text))
