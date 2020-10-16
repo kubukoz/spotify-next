@@ -33,6 +33,7 @@ object Choice {
         Opts.subcommand("f", "Alias for `forward`")(ffOpts)
       )
       .reduceK
+
 }
 
 object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: Gather great music.") {

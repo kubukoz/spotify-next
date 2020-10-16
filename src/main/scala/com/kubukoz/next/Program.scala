@@ -19,12 +19,13 @@ import com.kubukoz.next.util.Config.RefreshToken
 object Program {
   val configPath = Paths.get(System.getProperty("user.home")).resolve(".spotify-next.json")
 
-  def makeLoader[F[_]: Sync: ContextShift: Console] = Blocker[F].evalMap { blocker =>
-    ConfigLoader
-      .cached[F]
-      .compose(ConfigLoader.withCreateFileIfMissing[F](configPath))
-      .apply(ConfigLoader.default[F](configPath, blocker))
-  }
+  def makeLoader[F[_]: Sync: ContextShift: Console] =
+    Blocker[F].evalMap { blocker =>
+      ConfigLoader
+        .cached[F]
+        .compose(ConfigLoader.withCreateFileIfMissing[F](configPath))
+        .apply(ConfigLoader.default[F](configPath, blocker))
+    }
 
   def makeBasicClient[F[_]: ConcurrentEffect: ContextShift: Timer]: Resource[F, Client[F]] =
     BlazeClientBuilder(ExecutionContext.global)
@@ -56,8 +57,8 @@ object Program {
       tokens <- Login[F].server
       config <- ConfigLoader[F].loadConfig
       newConfig = config.copy(token = tokens.access.some, refreshToken = tokens.refresh.some)
-      _ <- ConfigLoader[F].saveConfig(newConfig)
-      _ <- Console[F].putStrLn("Saved token to file")
+      _      <- ConfigLoader[F].saveConfig(newConfig)
+      _      <- Console[F].putStrLn("Saved token to file")
     } yield ()
 
   def refreshUserToken[F[_]: Console: Login: ConfigLoader: MonadError[*[_], Throwable]](
@@ -65,10 +66,10 @@ object Program {
   ): F[Unit] =
     for {
       newToken <- Login[F].refreshToken(refreshToken)
-      config <- ConfigLoader[F].loadConfig
+      config   <- ConfigLoader[F].loadConfig
       newConfig = config.copy(token = newToken.some)
-      _ <- ConfigLoader[F].saveConfig(newConfig)
-      _ <- Console[F].putStrLn("Refreshed token") //todo debug level?
+      _        <- ConfigLoader[F].saveConfig(newConfig)
+      _        <- Console[F].putStrLn("Refreshed token") //todo debug level?
     } yield ()
 
   def makeSpotify[F[_]: Console: Sync: Config.Ask](client: Client[F]) = {

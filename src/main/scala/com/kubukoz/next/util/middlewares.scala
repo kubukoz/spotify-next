@@ -50,7 +50,7 @@ object middlewares {
     Client[F] { req =>
       client.run(req).evalMap {
         case response if response.status.isSuccess => response.pure[F]
-        case response =>
+        case response                              =>
           response
             .bodyAsText
             .compile
@@ -78,4 +78,5 @@ object middlewares {
         }
       }
   }
+
 }

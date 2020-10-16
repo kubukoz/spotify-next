@@ -35,9 +35,9 @@ object ConfigLoader extends LowPriority {
 
     def askToCreateFile(originalException: NoSuchFileException): F[Config] =
       for {
-        _ <- Console[F].putStrLn(askMessage)
-        _ <- Console[F].readLn.map(_.trim).ensure(originalException)(_.equalsIgnoreCase(validInput))
-        clientId <- ConsoleRead.readWithPrompt[F, String]("Client ID")
+        _            <- Console[F].putStrLn(askMessage)
+        _            <- Console[F].readLn.map(_.trim).ensure(originalException)(_.equalsIgnoreCase(validInput))
+        clientId     <- ConsoleRead.readWithPrompt[F, String]("Client ID")
         clientSecret <- ConsoleRead.readWithPrompt[F, String]("Client secret")
       } yield Config(clientId, clientSecret, Config.defaultPort, none, none)
 
@@ -53,33 +53,35 @@ object ConfigLoader extends LowPriority {
       }
   }
 
-  def default[F[_]: Sync: ContextShift](configPath: Path, blocker: Blocker): ConfigLoader[F] = new ConfigLoader[F] {
+  def default[F[_]: Sync: ContextShift](configPath: Path, blocker: Blocker): ConfigLoader[F] =
+    new ConfigLoader[F] {
 
-    private val createOrOverwriteFile = fs2
-      .io
-      .file
-      .writeAll[F](configPath, blocker, List(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING))
-
-    def saveConfig(config: Config): F[Unit] =
-      fs2
-        .Stream
-        .emit(config)
-        .map(_.asJson.printWith(Printer.spaces2.copy(colonLeft = "")))
-        .through(fs2.text.utf8Encode[F])
-        .through(createOrOverwriteFile)
-        .compile
-        .drain
-
-    val loadConfig: F[Config] =
-      fs2
+      private val createOrOverwriteFile = fs2
         .io
         .file
-        .readAll[F](configPath, blocker, 4096)
-        .through(io.circe.fs2.byteStreamParser[F])
-        .through(io.circe.fs2.decoder[F, Config])
-        .compile
-        .lastOrError
-  }
+        .writeAll[F](configPath, blocker, List(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING))
+
+      def saveConfig(config: Config): F[Unit] =
+        fs2
+          .Stream
+          .emit(config)
+          .map(_.asJson.printWith(Printer.spaces2.copy(colonLeft = "")))
+          .through(fs2.text.utf8Encode[F])
+          .through(createOrOverwriteFile)
+          .compile
+          .drain
+
+      val loadConfig: F[Config] =
+        fs2
+          .io
+          .file
+          .readAll[F](configPath, blocker, 4096)
+          .through(io.circe.fs2.byteStreamParser[F])
+          .through(io.circe.fs2.decoder[F, Config])
+          .compile
+          .lastOrError
+
+    }
 
 }
 

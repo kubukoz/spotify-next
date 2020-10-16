@@ -19,4 +19,5 @@ object ConsoleRead {
       .readLn
       .map(Option(_).getOrElse(""))
       .flatMap(ConsoleRead[A].read(_).liftTo[F])
+
 }

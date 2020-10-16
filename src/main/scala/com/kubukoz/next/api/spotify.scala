@@ -47,6 +47,7 @@ object spotify {
         case desired: DesiredItem => desired.asRight
         case other                => InvalidItem(other).asLeft
       }
+
   }
 
   object Player {
@@ -89,6 +90,7 @@ object spotify {
         show"spotify:user:${uri.user}:playlist:${uri.playlist}"
       }
     )
+
   }
 
   object PlayerContext {
@@ -118,4 +120,5 @@ object spotify {
   object RefreshedTokenResponse {
     implicit val codec: Codec[RefreshedTokenResponse] = deriveConfiguredCodec
   }
+
 }

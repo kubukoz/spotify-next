@@ -19,6 +19,7 @@ object traverse {
         def nonEmptyTraverse[H[_]: Apply, A, B](fa: G[A])(f: A => H[B]): H[G[B]] =
           af.nonEmptyTraverse(gk(fa))(a => f(a)).map(fk(_))
       }
+
   }
 
 }
