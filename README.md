@@ -14,7 +14,7 @@ The port `4321` is configured in the `.spotify-next.json` config file (see [usag
 1. If you have [coursier](https://get-coursier.io), this will install the app in your current working directory:
 
 ```bash
-coursier bootstrap com.kubukoz:spotify-next_2.13:1.1.0 -o spotify-next
+coursier bootstrap com.kubukoz:spotify-next_2.13:1.2.0 -o spotify-next
 
 # now you can run the app like this:
 ./spotify-next --help
