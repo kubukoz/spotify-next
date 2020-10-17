@@ -19,6 +19,7 @@ import com.kubukoz.next.Login.Tokens
 import org.http4s.circe.CirceEntityCodec._
 import org.http4s.headers.Authorization
 import org.http4s.BasicCredentials
+import scala.concurrent.ExecutionContext
 
 @finalAlg
 trait Login[F[_]] {
@@ -31,7 +32,7 @@ object Login {
 
   final case class Code(value: String)
 
-  def blaze[F[_]: ConcurrentEffect: Timer: Console: Config.Ask](client: Client[F]): Login[F] =
+  def blaze[F[_]: ConcurrentEffect: Timer: Console: Config.Ask](client: Client[F])(implicit executionContext: ExecutionContext): Login[F] =
     new Login[F] {
 
       def refreshToken(token: RefreshToken): F[Token] = {
@@ -76,7 +77,7 @@ object Login {
         }
 
       def mkServer(config: Config, route: HttpRoutes[F]) =
-        BlazeServerBuilder[F]
+        BlazeServerBuilder[F](executionContext)
           .withHttpApp(route.orNotFound)
           .bindHttp(port = config.loginPort)
           .resource
@@ -99,8 +100,9 @@ object Login {
       }
 
       val server: F[Tokens] =
-        (Config.ask[F], Deferred[F, Tokens], Deferred[F, Unit]).tupled.flatMap {
-          case (config, tokensPromise, finishServer) =>
+        (Config.ask[F], Deferred[F, Tokens], Deferred[F, Unit])
+          .tupled
+          .flatMap { case (config, tokensPromise, finishServer) =>
             val finishLogin: Code => F[Unit] = getTokens(_, config).flatMap(tokensPromise.complete)
             val route = Login.routes[F](finishLogin, finishServer.complete(()))
 
@@ -113,7 +115,7 @@ object Login {
             mkServer(config, route).use { _ =>
               showUri *> finishServer.get
             } *> tokensPromise.get
-        }
+          }
 
     }
 
@@ -121,14 +123,13 @@ object Login {
     val dsl = new Http4sDsl[F] {}
     import dsl._
 
-    HttpRoutes.of {
-      case req @ GET -> Root / "login" =>
-        val codeF = req.uri.params.get("code").map(Code(_)).liftTo[F](new Throwable("No code in URI!"))
+    HttpRoutes.of { case req @ GET -> Root / "login" =>
+      val codeF = req.uri.params.get("code").map(Code(_)).liftTo[F](new Throwable("No code in URI!"))
 
-        codeF.flatMap(saveCode) *>
-          Ok("Login successful, you can get back to the application").map { response =>
-            response.withEntity(response.body.onFinalize(finishServer))
-          }
+      codeF.flatMap(saveCode) *>
+        Ok("Login successful, you can get back to the application").map { response =>
+          response.withEntity(response.body.onFinalize(finishServer))
+        }
     }
   }
 

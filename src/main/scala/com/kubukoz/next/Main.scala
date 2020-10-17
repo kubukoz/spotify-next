@@ -53,6 +53,8 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
     makeLoader[IO]
       .flatMap { implicit loader =>
         makeBasicClient[IO].map { rawClient =>
+          import scala.concurrent.ExecutionContext.Implicits.global
+
           implicit val login: Login[IO] = Login.blaze[IO](rawClient)
           implicit val spotify: Spotify[IO] = makeSpotify(apiClient[IO].apply(rawClient))
 
