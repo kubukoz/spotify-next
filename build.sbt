@@ -41,7 +41,7 @@ val commonSettings = Seq(
   name := "spotify-next",
   updateOptions := updateOptions.value.withGigahorse(false),
   libraryDependencies ++= Seq(
-    "org.typelevel" %% "simulacrum" % "1.0.0",
+    "org.typelevel" %% "simulacrum" % "1.0.1",
     "dev.profunktor" %% "console4cats" % "0.8.1",
     "com.monovore" %% "decline-effect" % "1.3.0",
     "org.typelevel" %% "cats-effect" % "2.2.0",
