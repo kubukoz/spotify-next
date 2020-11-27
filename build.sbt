@@ -44,7 +44,7 @@ val commonSettings = Seq(
     "org.typelevel" %% "simulacrum" % "1.0.1",
     "dev.profunktor" %% "console4cats" % "0.8.1",
     "com.monovore" %% "decline-effect" % "1.3.0",
-    "org.typelevel" %% "cats-effect" % "2.2.0",
+    "org.typelevel" %% "cats-effect" % "2.3.0",
     "org.http4s" %% "http4s-dsl" % "0.21.13",
     "org.http4s" %% "http4s-blaze-server" % "0.21.13",
     "org.http4s" %% "http4s-blaze-client" % "0.21.13",
