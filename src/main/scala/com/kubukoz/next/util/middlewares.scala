@@ -74,7 +74,7 @@ object middlewares {
       Client[F] { req =>
         loadToken.flatMap {
           case None        => Resource.liftF(warnEmptyToken) *> client.run(req)
-          case Some(token) => client.run(withToken(token.value.trim)(req))
+          case Some(token) => client.run(withToken(token.stringValue)(req))
         }
       }
   }

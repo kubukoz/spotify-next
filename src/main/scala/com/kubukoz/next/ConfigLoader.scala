@@ -9,6 +9,7 @@ import java.nio.file.StandardOpenOption
 import cats.tagless.finalAlg
 import java.nio.file.NoSuchFileException
 import com.kubukoz.next.util.ConsoleRead
+import com.ocadotechnology.sttp.oauth2.Secret
 
 @finalAlg
 trait ConfigLoader[F[_]] {
@@ -38,15 +39,14 @@ object ConfigLoader extends LowPriority {
         _            <- Console[F].putStrLn(askMessage)
         _            <- Console[F].readLn.map(_.trim).ensure(originalException)(_.equalsIgnoreCase(validInput))
         clientId     <- ConsoleRead.readWithPrompt[F, String]("Client ID")
-        clientSecret <- ConsoleRead.readWithPrompt[F, String]("Client secret")
+        clientSecret <- ConsoleRead.readWithPrompt[F, Secret[String]]("Client secret")
       } yield Config(clientId, clientSecret, Config.defaultPort, none, none)
 
     underlying =>
       new ConfigLoader[F] {
-        val loadConfig: F[Config] = underlying.loadConfig.recoverWith {
-          case e: NoSuchFileException =>
-            askToCreateFile(e).flatTap(saveConfig) <*
-              Console[F].putStrLn(s"Saved config to new file at $configPath")
+        val loadConfig: F[Config] = underlying.loadConfig.recoverWith { case e: NoSuchFileException =>
+          askToCreateFile(e).flatTap(saveConfig) <*
+            Console[F].putStrLn(s"Saved config to new file at $configPath")
         }
 
         def saveConfig(config: Config): F[Unit] = underlying.saveConfig(config)

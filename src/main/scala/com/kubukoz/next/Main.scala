@@ -6,6 +6,8 @@ import com.monovore.decline.effect._
 
 import cats.data.NonEmptyList
 import ConfigLoader.deriveAskFromLoader
+import com.kubukoz.next.util.Config
+import sttp.client.http4s.Http4sBackend
 
 sealed trait Choice extends Product with Serializable
 
@@ -50,17 +52,29 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
   import Console.io._
 
   val makeProgram: Resource[IO, Choice => IO[Unit]] =
-    makeLoader[IO]
-      .flatMap { implicit loader =>
-        makeBasicClient[IO].map { rawClient =>
-          import scala.concurrent.ExecutionContext.Implicits.global
+    Blocker[IO].flatMap { blocker =>
+      Resource
+        .liftF(makeLoader[IO](blocker))
+        .flatMap { implicit loader =>
+          makeBasicClient[IO].evalMap { rawClient =>
+            import scala.concurrent.ExecutionContext.Implicits.global
 
-          implicit val login: Login[IO] = Login.blaze[IO](rawClient)
-          implicit val spotify: Spotify[IO] = makeSpotify(apiClient[IO].apply(rawClient))
+            Config
+              .buildTokenProvider(
+                Http4sBackend.usingClient(rawClient, blocker)
+              )
+              .map { implicit tp =>
+                implicit val login: Login[IO] = Login.blaze[IO]
 
-          runApp[IO]
+                implicit val spotify: Spotify[IO] = makeSpotify(apiClient[IO].apply(rawClient))
+
+                runApp[IO]
+              }
+
+          }
+
         }
-      }
+    }
 
   val mainOpts: Opts[IO[Unit]] = Choice
     .opts

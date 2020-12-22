@@ -1,25 +1,21 @@
 package com.kubukoz.next
 
-import com.kubukoz.next.util.Config
-import cats.tagless.finalAlg
-import org.http4s.server.blaze.BlazeServerBuilder
-import org.http4s.Uri
-import org.http4s.implicits._
-import org.http4s.HttpRoutes
-import org.http4s.dsl.Http4sDsl
-import com.kubukoz.next.util.Config.Token
-import org.http4s.client.Client
-import org.http4s.Method.POST
-import org.http4s.Request
-import com.kubukoz.next.api.spotify.TokenResponse
-import com.kubukoz.next.api.spotify.RefreshedTokenResponse
-import org.http4s.UrlForm
-import com.kubukoz.next.util.Config.RefreshToken
-import com.kubukoz.next.Login.Tokens
-import org.http4s.circe.CirceEntityCodec._
-import org.http4s.headers.Authorization
-import org.http4s.BasicCredentials
 import scala.concurrent.ExecutionContext
+
+import cats.tagless.finalAlg
+import com.kubukoz.next.Login.Tokens
+import com.kubukoz.next.util.Config
+import com.kubukoz.next.util.Config.RefreshToken
+import com.kubukoz.next.util.Config.Token
+import com.ocadotechnology.sttp.oauth2.AuthorizationCodeProvider
+import com.ocadotechnology.sttp.oauth2.ScopeSelection
+import com.ocadotechnology.sttp.oauth2.common.Scope
+import eu.timepit.refined.auto._
+import org.http4s.HttpRoutes
+import org.http4s.circe.CirceEntityCodec._
+import org.http4s.dsl.Http4sDsl
+import org.http4s.server.blaze.BlazeServerBuilder
+import sttp.model.Uri
 
 @finalAlg
 trait Login[F[_]] {
@@ -32,28 +28,17 @@ object Login {
 
   final case class Code(value: String)
 
-  def blaze[F[_]: ConcurrentEffect: Timer: Console: Config.Ask](client: Client[F])(implicit executionContext: ExecutionContext): Login[F] =
+  def blaze[F[_]: ConcurrentEffect: Timer: Console: Config.Ask: AuthorizationCodeProvider[Uri, *[_]]](
+    implicit executionContext: ExecutionContext
+  ): Login[F] =
     new Login[F] {
 
-      def refreshToken(token: RefreshToken): F[Token] = {
-        val body = UrlForm(
-          "grant_type" -> "refresh_token",
-          "refresh_token" -> token.value
-        )
+      def refreshToken(token: RefreshToken): F[Token] =
+        AuthorizationCodeProvider[Uri, F].refreshAccessToken(token.value, ScopeSelection.KeepExisting).map { response =>
+          Token(response.accessToken)
+        }
 
-        Config
-          .ask[F]
-          .map { config =>
-            Request[F](POST, Uri.uri("https://accounts.spotify.com/api/token"))
-              .withEntity(body)
-              .putHeaders(Authorization(BasicCredentials(config.clientId, config.clientSecret)))
-          }
-          .flatMap(client.fetchAs[RefreshedTokenResponse])
-          .map(_.accessToken)
-          .map(Token(_))
-      }
-
-      val scopes = Set(
+      val scopes = Set[Scope](
         "playlist-read-private",
         "playlist-modify-private",
         "playlist-modify-public",
@@ -61,43 +46,26 @@ object Login {
         "user-read-playback-state"
       )
 
-      private val showUri = Config
-        .ask[F]
-        .map { config =>
-          Uri
-            .uri("https://accounts.spotify.com/authorize")
-            .withQueryParam("client_id", config.clientId)
-            .withQueryParam("client_secret", config.clientSecret)
-            .withQueryParam("scope", scopes.mkString(" "))
-            .withQueryParam("redirect_uri", config.redirectUri)
-            .withQueryParam("response_type", "code")
-        }
-        .flatMap { uri =>
-          Console[F].putStrLn(s"Go to $uri")
-        }
+      private val showUri = {
+        // todo: https://github.com/ocadotechnology/sttp-oauth2/issues/9
+        val uri = AuthorizationCodeProvider[Uri, F].loginLink(scope = scopes).path("authorize")
 
-      def mkServer(config: Config, route: HttpRoutes[F]) =
+        Console[F].putStrLn(s"Go to $uri")
+      }
+
+      def mkServer(config: Config, route: HttpRoutes[F]) = {
+        import org.http4s.implicits._
+
         BlazeServerBuilder[F](executionContext)
           .withHttpApp(route.orNotFound)
           .bindHttp(port = config.loginPort)
           .resource
-
-      def getTokens(code: Code, config: Config): F[Tokens] = {
-
-        val body = UrlForm(
-          "grant_type" -> "authorization_code",
-          "code" -> code.value,
-          "redirect_uri" -> config.redirectUri,
-          "client_id" -> config.clientId,
-          "client_secret" -> config.clientSecret
-        )
-
-        client
-          .expect[TokenResponse](Request[F](POST, Uri.uri("https://accounts.spotify.com/api/token")).withEntity(body))
-          .map { response =>
-            Tokens(Token(response.accessToken), RefreshToken(response.refreshToken))
-          }
       }
+
+      def getTokens(code: Code, config: Config): F[Tokens] =
+        AuthorizationCodeProvider[Uri, F].authCodeToToken(code.value).map { response =>
+          Tokens(Token(response.accessToken), RefreshToken(response.refreshToken))
+        }
 
       val server: F[Tokens] =
         (Config.ask[F], Deferred[F, Tokens], Deferred[F, Unit])

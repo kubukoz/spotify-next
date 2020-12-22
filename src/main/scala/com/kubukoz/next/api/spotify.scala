@@ -117,16 +117,4 @@ object spotify {
     implicit def entityCodec[F[_]: Sync]: EntityDecoder[F, Anything] = EntityDecoder.void[F].map(_ => anything)
   }
 
-  final case class TokenResponse(accessToken: String, refreshToken: String)
-
-  object TokenResponse {
-    implicit val codec: Codec[TokenResponse] = deriveConfiguredCodec
-  }
-
-  final case class RefreshedTokenResponse(accessToken: String)
-
-  object RefreshedTokenResponse {
-    implicit val codec: Codec[RefreshedTokenResponse] = deriveConfiguredCodec
-  }
-
 }

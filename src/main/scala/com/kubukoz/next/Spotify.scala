@@ -80,7 +80,7 @@ object Spotify {
             case (_, desiredProgressPercent) if desiredProgressPercent >= 100 =>
               putStrLn("Too close to song's ending, rewinding to beginning") *> methods.seek[F](0).run(client)
 
-            case (player, desiredProgressPercent)                             =>
+            case (player, desiredProgressPercent) =>
               val desiredProgressMs = desiredProgressPercent * player.item.durationMs / 100
               putStrLn(show"Seeking to $desiredProgressPercent%") *> methods.seek[F](desiredProgressMs).run(client)
           }
@@ -90,9 +90,12 @@ object Spotify {
   object methods {
     type Method[F[_], A] = Kleisli[F, Client[F], A]
 
+    //todo we can loosen Sync to EntityDecoder of the appropriate response type
+
     def player[F[_]: Sync]: Method[F, Player[Option[PlayerContext], Option[Item]]] =
       Kleisli {
         _.expectOr("/v1/me/player") {
+          // todo (eventually): support other cases of errors for an exhaustive match
           case response if response.status === Status.NoContent => NotPlaying.pure[F].widen
         }
       }

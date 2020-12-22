@@ -19,13 +19,11 @@ import com.kubukoz.next.util.Config.RefreshToken
 object Program {
   val configPath = Paths.get(System.getProperty("user.home")).resolve(".spotify-next.json")
 
-  def makeLoader[F[_]: Sync: ContextShift: Console] =
-    Blocker[F].evalMap { blocker =>
-      ConfigLoader
-        .cached[F]
-        .compose(ConfigLoader.withCreateFileIfMissing[F](configPath))
-        .apply(ConfigLoader.default[F](configPath, blocker))
-    }
+  def makeLoader[F[_]: Sync: ContextShift: Console](blocker: Blocker) =
+    ConfigLoader
+      .cached[F]
+      .compose(ConfigLoader.withCreateFileIfMissing[F](configPath))
+      .apply(ConfigLoader.default[F](configPath, blocker))
 
   def makeBasicClient[F[_]: ConcurrentEffect: ContextShift: Timer]: Resource[F, Client[F]] =
     BlazeClientBuilder(ExecutionContext.global)
