@@ -1,7 +1,6 @@
 package com.kubukoz.next
 
 import com.kubukoz.next.util.Config
-import com.kubukoz.next.util.types._
 import io.circe.syntax._
 import io.circe.Printer
 import java.nio.file.Path

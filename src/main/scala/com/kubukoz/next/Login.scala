@@ -88,7 +88,7 @@ object Login {
 
     }
 
-  def routes[F[_]: Sync](saveCode: Code => F[Unit], finishServer: F[Unit]): HttpRoutes[F] = {
+  def routes[F[_]: Defer: MonadThrow](saveCode: Code => F[Unit], finishServer: F[Unit]): HttpRoutes[F] = {
     val dsl = new Http4sDsl[F] {}
     import dsl._
 

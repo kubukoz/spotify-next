@@ -13,9 +13,12 @@ import org.http4s.Response
 import org.http4s.Request
 
 object middlewares {
-  type BracketThrow[F[_]] = Bracket[F, Throwable]
 
-  def retryUnauthorizedWith[F[_]: Sync: Console](beforeRetry: F[Unit]): Client[F] => Client[F] = {
+  def retryUnauthorizedWith[F[_]: Console: BracketThrow](
+    beforeRetry: F[Unit]
+  )(
+    implicit SC: fs2.Stream.Compiler[F, F]
+  ): Client[F] => Client[F] = {
     def doBeforeRetry(response: Response[F]) = {
       val showBody = response.bodyText.compile.string.flatMap(Console[F].putStrLn)
 
@@ -46,7 +49,7 @@ object middlewares {
       }
   }
 
-  def logFailedResponse[F[_]: Console: Sync]: Client[F] => Client[F] = { client =>
+  def logFailedResponse[F[_]: Console: BracketThrow](implicit SC: fs2.Stream.Compiler[F, F]): Client[F] => Client[F] = { client =>
     Client[F] { req =>
       client.run(req).evalMap {
         case response if response.status.isSuccess => response.pure[F]

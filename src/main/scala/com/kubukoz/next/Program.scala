@@ -32,7 +32,7 @@ object Program {
       .map(RequestLogger(logHeaders = true, logBody = true))
       .map(ResponseLogger(logHeaders = true, logBody = true))
 
-  def apiClient[F[_]: Sync: Console: ConfigLoader: Login]: Client[F] => Client[F] = {
+  def apiClient[F[_]: Console: ConfigLoader: Login: BracketThrow](implicit SC: fs2.Stream.Compiler[F, F]): Client[F] => Client[F] = {
     val loginOrRefreshToken: F[Unit] =
       Config
         .ask[F]

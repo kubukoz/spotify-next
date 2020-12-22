@@ -1,7 +1,6 @@
 package com.kubukoz.next.util
 
 import simulacrum.typeclass
-import types._
 import cats.tagless.autoFunctor
 import com.ocadotechnology.sttp.oauth2.Secret
 
