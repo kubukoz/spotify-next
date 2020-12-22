@@ -17,9 +17,9 @@ inThisBuild(
 def crossPlugin(x: sbt.librarymanagement.ModuleID) = compilerPlugin(x.cross(CrossVersion.full))
 
 val compilerPlugins = List(
-  crossPlugin("org.typelevel" % "kind-projector" % "0.11.0"),
-  crossPlugin("com.github.cb372" % "scala-typed-holes" % "0.1.5"),
-  crossPlugin("com.kubukoz" % "better-tostring" % "0.2.4"),
+  crossPlugin("org.typelevel" % "kind-projector" % "0.11.2"),
+  crossPlugin("com.github.cb372" % "scala-typed-holes" % "0.1.6"),
+  crossPlugin("com.kubukoz" % "better-tostring" % "0.2.5"),
   compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
 )
 
@@ -44,21 +44,21 @@ val commonSettings = Seq(
     "org.typelevel" %% "simulacrum" % "1.0.1",
     "dev.profunktor" %% "console4cats" % "0.8.1",
     "com.monovore" %% "decline-effect" % "1.3.0",
-    "org.typelevel" %% "cats-effect" % "2.2.0",
-    "org.http4s" %% "http4s-dsl" % "0.21.8",
-    "org.http4s" %% "http4s-blaze-server" % "0.21.8",
-    "org.http4s" %% "http4s-blaze-client" % "0.21.8",
-    "org.http4s" %% "http4s-circe" % "0.21.8",
+    "org.typelevel" %% "cats-effect" % "2.3.1",
+    "org.http4s" %% "http4s-dsl" % "0.21.14",
+    "org.http4s" %% "http4s-blaze-server" % "0.21.14",
+    "org.http4s" %% "http4s-blaze-client" % "0.21.14",
+    "org.http4s" %% "http4s-circe" % "0.21.14",
     "ch.qos.logback" % "logback-classic" % "1.2.3",
     "io.chrisdavenport" %% "log4cats-slf4j" % "1.1.1",
-    "org.typelevel" %% "kittens" % "2.1.0",
-    "org.typelevel" %% "cats-tagless-macros" % "0.12",
+    "org.typelevel" %% "kittens" % "2.2.1",
+    "org.typelevel" %% "cats-tagless-macros" % "0.11",
     "io.circe" %% "circe-fs2" % "0.13.0",
     "io.circe" %% "circe-literal" % "0.13.0",
     "io.circe" %% "circe-generic-extras" % "0.13.0",
     "com.olegpy" %% "meow-mtl-core" % "0.4.1",
     "io.estatico" %% "newtype" % "0.4.4",
-    "org.scalatest" %% "scalatest" % "3.2.2" % Test
+    "org.scalatest" %% "scalatest" % "3.2.3" % Test
   ) ++ compilerPlugins
 )
 
