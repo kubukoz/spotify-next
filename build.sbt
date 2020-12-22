@@ -41,7 +41,7 @@ val commonSettings = Seq(
   name := "spotify-next",
   libraryDependencies ++= Seq(
     "com.ocadotechnology" %% "sttp-oauth2" % "0.1.0",
-    "com.softwaremill.sttp.client" %% "http4s-backend" % "2.2.9",
+    "com.softwaremill.sttp.client" %% "http4s-backend" % "2.0.9",
     "org.typelevel" %% "simulacrum" % "1.0.1",
     "dev.profunktor" %% "console4cats" % "0.8.1",
     "com.monovore" %% "decline-effect" % "1.3.0",

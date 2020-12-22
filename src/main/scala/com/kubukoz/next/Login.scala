@@ -47,8 +47,7 @@ object Login {
       )
 
       private val showUri = {
-        // todo: https://github.com/ocadotechnology/sttp-oauth2/issues/9
-        val uri = AuthorizationCodeProvider[Uri, F].loginLink(scope = scopes).path("authorize")
+        val uri = AuthorizationCodeProvider[Uri, F].loginLink(scope = scopes)
 
         Console[F].putStrLn(s"Go to $uri")
       }
@@ -63,9 +62,11 @@ object Login {
       }
 
       def getTokens(code: Code, config: Config): F[Tokens] =
-        AuthorizationCodeProvider[Uri, F].authCodeToToken(code.value).map { response =>
-          Tokens(Token(response.accessToken), RefreshToken(response.refreshToken))
-        }
+        AuthorizationCodeProvider[Uri, F]
+          .authCodeToToken(code.value)
+          .map { response =>
+            Tokens(Token(response.accessToken), RefreshToken(response.refreshToken))
+          }
 
       val server: F[Tokens] =
         (Config.ask[F], Deferred[F, Tokens], Deferred[F, Unit])

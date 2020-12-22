@@ -1,13 +1,17 @@
 package com.kubukoz.next.util
 
-import io.circe.generic.extras.Configuration
+import com.ocadotechnology.sttp.oauth2.AuthorizationCode
+import com.ocadotechnology.sttp.oauth2.AuthorizationCodeProvider
+import com.ocadotechnology.sttp.oauth2.Oauth2TokenResponse
+import com.ocadotechnology.sttp.oauth2.ScopeSelection
+import com.ocadotechnology.sttp.oauth2.Secret
+import com.ocadotechnology.sttp.oauth2.common
 import io.circe.Codec
+import io.circe.Encoder
+import io.circe.generic.extras.Configuration
 import io.circe.generic.extras.semiauto._
 import sttp.client.SttpBackend
-import com.ocadotechnology.sttp.oauth2.AuthorizationCodeProvider
-import com.ocadotechnology.sttp.oauth2.Secret
 import sttp.model.Uri
-import io.circe.Encoder
 
 final case class Config(
   clientId: String,
@@ -58,13 +62,48 @@ object Config extends AskFor[Config] {
         import sttp.client._
         implicit val backendImplicit: SttpBackend[F, Nothing, Nothing] = backend
 
-        AuthorizationCodeProvider
+        val baseUrl = uri"https://accounts.spotify.com"
+
+        // todo: https://github.com/ocadotechnology/sttp-oauth2/issues/9
+        // need support for customizable URL paths
+        val baseInstance = AuthorizationCodeProvider
           .uriInstance[F](
-            baseUrl = uri"https://accounts.spotify.com",
+            baseUrl = baseUrl,
             redirectUri = config.redirectUri,
             clientId = config.clientId,
             clientSecret = config.clientSecret
           )
+
+        new AuthorizationCodeProvider[Uri, F] {
+          def loginLink(state: Option[String], scope: Set[common.Scope]): Uri =
+            baseInstance.loginLink(state, scope).path("authorize")
+
+          // not used - plain forwarder
+          def logoutLink(postLogoutRedirect: Option[Uri]): Uri = baseInstance.logoutLink(postLogoutRedirect)
+
+          // todo: this currently fails because Spotify doesn't return all the data required in Oauth2TokenResponse.
+          // Available fields: access_token, token_type, expires_in, refresh_token, scope
+          def authCodeToToken(authCode: String): F[Oauth2TokenResponse] =
+            AuthorizationCode
+              .authCodeToToken[F](
+                tokenUri = baseUrl.path("api", "token"),
+                redirectUri = config.redirectUri,
+                clientId = config.clientId,
+                clientSecret = config.clientSecret,
+                authCode = authCode
+              )
+
+          // This will suffer from the same problems as authCodeToToken.
+          def refreshAccessToken(refreshToken: String, scope: ScopeSelection): F[Oauth2TokenResponse] =
+            AuthorizationCode.refreshAccessToken[F](
+              tokenUri = baseUrl.path("api", "token"),
+              clientId = config.clientId,
+              clientSecret = config.clientSecret,
+              refreshToken = refreshToken,
+              scopeOverride = scope
+            )
+
+        }
       }
 
 }
