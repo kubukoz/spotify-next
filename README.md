@@ -34,7 +34,7 @@ The application requires some configuration (e.g. the client ID for the Spotify 
 It's stored in a file at `~/.spotify-next.json`.
 When you first run the application, or if that file is deleted, the application will ask and attempt to create one.
 
-The configuration defines the port for the embedded HTTP server used for authentication. The server server will only start when the login flow is triggered, and stop afterwards.
+The configuration defines the port for the embedded HTTP server used for authentication. The server will only start when the login flow is triggered, and stop afterwards.
 
 ```
 $ ./spotify-next --help
