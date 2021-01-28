@@ -1,6 +1,4 @@
-language: scala
-scala:
-  - 2.13.1
+language: nix
 cache:
   directories:
     - $HOME/.sbt/1.0/dependency
@@ -24,6 +22,8 @@ jobs:
   include:
     # stage="test" if no stage is specified
     - script:
-        - sbt test:compile test
+        - nix-shell -p sbt --command "sbt test:compile test"
     - stage: release
-      script: sbt ci-release && ./front/deploy.sh
+      script:
+        - nix-shell -p sbt --command "sbt ci-release"
+        - ./front/deploy.sh
