@@ -7,3 +7,6 @@ target/
 **/.DS_Store
 .vscode/
 spotify-next
+
+# Local Netlify folder
+.netlify
