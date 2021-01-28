@@ -22,8 +22,8 @@ jobs:
   include:
     # stage="test" if no stage is specified
     - script:
-        - nix-shell -p sbt --command "sbt test:compile test"
+        - nix-shell --command "sbt test:compile test"
     - stage: release
       script:
-        - nix-shell -p sbt --command "sbt ci-release"
+        - nix-shell --command "sbt ci-release"
         - ./front/deploy.sh
