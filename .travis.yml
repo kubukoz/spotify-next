@@ -24,6 +24,6 @@ jobs:
   include:
     # stage="test" if no stage is specified
     - script:
-      - sbt test:compile test
+        - sbt test:compile test
     - stage: release
-      script: sbt ci-release
+      script: sbt ci-release && ./front/deploy.sh
