@@ -27,4 +27,4 @@ jobs:
     - stage: release
       script:
         - nix-shell --command "sbt ci-release"
-        - ./front/deploy.sh
+        - cd front; ./front/deploy.sh
