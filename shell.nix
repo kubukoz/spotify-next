@@ -1,4 +1,5 @@
 let
   nixpkgs = import ./pkgs.nix;
-  pkgs = import nixpkgs { };
-in pkgs.mkShell { buildInputs = [ pkgs.sbt ]; }
+  pkgs = import nixpkgs {};
+in
+pkgs.mkShell { buildInputs = with pkgs;[ sbt nodejs-12_x ]; }
