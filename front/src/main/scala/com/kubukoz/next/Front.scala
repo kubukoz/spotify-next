@@ -47,10 +47,22 @@ object App {
 
   val component: FunctionalComponent[Unit] = FunctionalComponent { _ =>
     //using a core model
-    val (n, setN) = Hooks.useState(Model(NonEmptyList.of(('a', 0))))
+    val (state, setState) = Hooks.useState(Model(NonEmptyList.of(('a', 0))))
 
     val handleClicked = SyncIO {
-      setN(m => m.copy(value = m.value.append(Random.nextPrintableChar() -> (m.value.last._2 + 1)).toList.takeRight(30).toNel.get))
+      setState(m =>
+        m.copy(
+          value = m
+            .value
+            .append(
+              Random.nextPrintableChar() -> (m.value.last._2 + 1)
+            )
+            .toList
+            .takeRight(30)
+            .toNel
+            .get
+        )
+      )
     }
 
     //just a POC of using cats-effect here
@@ -63,13 +75,26 @@ object App {
       () => tok.unsafeRunAsyncAndForget()
     }
 
-    div {
-      n.value
-        .map { case (value, index) =>
-          button(s"stonks $value", onClick := (handleClicked.unsafeRunSync _), key := index.toString)
-        }
-        .toList
-    }
+    import slinky.styledcomponents._
+
+    case class StonksProps(color: String)
+
+    val stonks = styled.button(css"""
+      display: block;
+      background-color: ${(_: StonksProps).color}
+    """)
+
+    val buttonz = state
+      .value
+      .map { case (value, index) =>
+        stonks(StonksProps("red"))(
+          s"stonks $value",
+          onClick := (handleClicked.unsafeRunSync _),
+          key := index.toString
+        )
+      }
+
+    div(buttonz.toList)
   }
 
 }
