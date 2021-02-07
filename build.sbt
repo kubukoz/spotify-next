@@ -55,7 +55,8 @@ val front = project
     libraryDependencies ++= Seq(
       "me.shadaj" %%% "slinky-core" % "0.6.7",
       "me.shadaj" %%% "slinky-web" % "0.6.7",
-      "me.shadaj" %%% "slinky-hot" % "0.6.7"
+      "me.shadaj" %%% "slinky-hot" % "0.6.7",
+      "me.shadaj" %%% "slinky-styled-components" % "0.1.0+9-38941d55"
     ),
     //
     fastOptJS / webpackConfigFile := Some(baseDirectory.value / "webpack" / "webpack-fastopt.config.js"),
@@ -70,7 +71,8 @@ val front = project
       "react" -> "16.11.0",
       "react-dom" -> "16.11.0",
       "react-proxy" -> "1.1.8",
-      "source-map-support" -> "0.5.19"
+      "source-map-support" -> "0.5.19",
+      "styled-components" -> "3.4.10"
     ),
     Compile / npmDevDependencies ++= Seq(
       "file-loader" -> "3.0.1",
