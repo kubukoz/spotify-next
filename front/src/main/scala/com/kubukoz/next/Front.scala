@@ -10,7 +10,6 @@ import org.scalajs.dom
 import slinky.core.FunctionalComponent
 import slinky.core.facade.Hooks
 import slinky.web.ReactDOM
-import slinky.web.html.button
 import slinky.web.html.div
 import slinky.web.html.key
 import slinky.web.html.onClick
