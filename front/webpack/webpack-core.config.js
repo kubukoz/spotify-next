@@ -19,17 +19,17 @@ module.exports = {
         use: [ 'style-loader', 'css-loader' ]
       },
       // "file" loader for svg
-      {
-        test: /\.svg$/,
-        use: [
-          {
-            loader: 'file-loader',
-            query: {
-              name: 'static/media/[name].[hash:8].[ext]'
-            }
-          }
-        ]
-      }
+      // {
+      //   test: /\.svg$/,
+      //   use: [
+      //     {
+      //       loader: 'file-loader',
+      //       query: {
+      //         name: 'static/media/[name].[hash:8].[ext]'
+      //       }
+      //     }
+      //   ]
+      // }
     ]
   },
   plugins: [
