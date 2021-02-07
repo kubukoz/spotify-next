@@ -43,6 +43,10 @@ val commonSettings = Seq(
   ) ++ compilerPlugins
 )
 
+val core = project
+  .enablePlugins(ScalaJSPlugin)
+  .settings(commonSettings)
+
 val front = project
   .enablePlugins(ScalaJSPlugin)
   .enablePlugins(ScalaJSBundlerPlugin)
@@ -66,17 +70,20 @@ val front = project
       "react" -> "16.11.0",
       "react-dom" -> "16.11.0",
       "react-proxy" -> "1.1.8",
+      "source-map-support" -> "0.5.19"
+    ),
+    Compile / npmDevDependencies ++= Seq(
       "file-loader" -> "3.0.1",
       "style-loader" -> "0.23.1",
       "css-loader" -> "2.1.1",
       "html-webpack-plugin" -> "3.2.0",
       "copy-webpack-plugin" -> "5.0.2",
-      "webpack-merge" -> "4.2.1",
-      "source-map-support" -> "0.5.19"
+      "webpack-merge" -> "4.2.1"
     ),
     addCommandAlias("dev", ";front/fastOptJS::startWebpackDevServer;~front/fastOptJS"),
     addCommandAlias("build", "front/fullOptJS::webpack")
   )
+  .dependsOn(core)
 
 val next =
   project
@@ -106,4 +113,5 @@ val next =
     .settings(name := "spotify-next")
     .enablePlugins(JavaAppPackaging)
     .enablePlugins(GraalVMNativeImagePlugin)
-    .aggregate(front)
+    .dependsOn(core)
+    .aggregate(core, front)

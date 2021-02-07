@@ -7,5 +7,6 @@ target/
 **/.DS_Store
 .vscode/
 
+front/build/
 # Local Netlify folder
 .netlify
