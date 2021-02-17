@@ -39,7 +39,7 @@ val commonSettings = Seq(
     ).mkString(",")
   ),
   libraryDependencies ++= Seq(
-    "org.typelevel" %%% "cats-effect" % "2.3.1"
+    "org.typelevel" %%% "cats-effect" % "2.3.2"
   ) ++ compilerPlugins
 )
 
