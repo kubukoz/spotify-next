@@ -109,7 +109,7 @@ val next =
         "io.circe" %% "circe-generic-extras" % "0.13.0",
         "com.olegpy" %% "meow-mtl-core" % "0.4.1",
         "io.estatico" %% "newtype" % "0.4.4",
-        "org.scalatest" %% "scalatest" % "3.2.3" % Test
+        "org.scalatest" %% "scalatest" % "3.2.4" % Test
       )
     )
     .settings(name := "spotify-next")
