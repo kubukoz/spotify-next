@@ -10,8 +10,9 @@ import org.http4s.EntityDecoder
 import scala.reflect.ClassTag
 import com.kubukoz.next.Spotify.InvalidContext
 import com.kubukoz.next.Spotify.InvalidItem
-import io.estatico.newtype.macros.newtype
 import cats.data.NonEmptyList
+import monocle.PLens
+import monocle.macros.PLenses
 
 object spotify {
   implicit val circeConfig = Configuration.default.withDiscriminator("type").withSnakeCaseMemberNames
@@ -31,48 +32,41 @@ object spotify {
     implicit val codec: Codec[Item] = deriveConfiguredCodec
   }
 
-  final case class Player[_Ctx, _Item](context: _Ctx, item: _Item, progressMs: Int) {
+  @PLenses final case class Player[_Ctx, _Item](context: _Ctx, item: _Item, progressMs: Int) {
+    private def itemLens[NewItem]: PLens[Player[_Ctx, _Item], Player[_Ctx, NewItem], _Item, NewItem] = Player.item
+    private def contextLens[NewContext]: PLens[Player[_Ctx, _Item], Player[NewContext, _Item], _Ctx, NewContext] = Player.context
 
-    def byContext: Player.ByContext[_Item, _Ctx] = Player.ByContext(this)
+    // It may not seem like it, but this is traverse.
+    def unwrapContext[F[_], Ctx2](
+      implicit ev: _Ctx <:< F[Ctx2],
+      fFunctor: Functor[F]
+    ): F[Player[Ctx2, _Item]] =
+      contextLens[Ctx2]
+        .modifyF[F](ev.apply)(this)
+
+    def unwrapItem[F[_], Item2](
+      implicit ev: _Item <:< F[Item2],
+      fFunctor: Functor[F]
+    ): F[Player[_Ctx, Item2]] =
+      itemLens[Item2]
+        .modifyF[F](ev.apply)(this)
 
     def narrowContext[DesiredContext <: _Ctx: ClassTag]: Either[InvalidContext[_Ctx], Player[DesiredContext, _Item]] =
-      byContext
-        .traverse {
+      contextLens[DesiredContext]
+        .modifyF {
           case desired: DesiredContext => desired.asRight
           case other                   => InvalidContext(other).asLeft
-        }
-        .map(_.value)
+        }(this)
 
     def narrowItem[DesiredItem <: _Item: ClassTag]: Either[InvalidItem[_Item], Player[_Ctx, DesiredItem]] =
-      this.traverse {
+      itemLens[DesiredItem].modifyF {
         case desired: DesiredItem => desired.asRight
         case other                => InvalidItem(other).asLeft
-      }
+      }(this)
 
   }
 
   object Player {
-
-    @newtype
-    final case class ByContext[_Item, _Ctx](value: Player[_Ctx, _Item])
-
-    object ByContext {
-      import cats.tagless.syntax.invariantK._
-      import com.kubukoz.next.util.traverse._
-
-      def lift[_Item]: Player[*, _Item] ~> ByContext[_Item, *] =
-        λ[Player[*, _Item] ~> ByContext[_Item, *]](ByContext(_))
-
-      def unlift[_Item]: ByContext[_Item, *] ~> Player[*, _Item] =
-        λ[ByContext[_Item, *] ~> Player[*, _Item]](_.value)
-
-      implicit def traverse[_Item]: NonEmptyTraverse[ByContext[_Item, *]] =
-        cats.derived.semi.nonEmptyTraverse[Player[*, _Item]].imapK(lift)(unlift)
-    }
-
-    implicit def traverse[_Context]: NonEmptyTraverse[Player[_Context, *]] =
-      cats.derived.semi.nonEmptyTraverse[Player[_Context, *]]
-
     implicit def codec[_Ctx: Codec, _Item: Codec]: Codec[Player[_Ctx, _Item]] = deriveConfiguredCodec
   }
 

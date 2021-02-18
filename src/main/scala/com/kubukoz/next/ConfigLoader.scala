@@ -6,17 +6,16 @@ import io.circe.syntax._
 import io.circe.Printer
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
-import cats.tagless.finalAlg
 import java.nio.file.NoSuchFileException
 import com.kubukoz.next.util.ConsoleRead
 
-@finalAlg
 trait ConfigLoader[F[_]] {
   def saveConfig(config: Config): F[Unit]
   def loadConfig: F[Config]
 }
 
 object ConfigLoader extends LowPriority {
+  def apply[F[_]](implicit F: ConfigLoader[F]): ConfigLoader[F] = F
 
   def cached[F[_]: Sync]: ConfigLoader[F] => F[ConfigLoader[F]] =
     underlying =>
@@ -43,10 +42,9 @@ object ConfigLoader extends LowPriority {
 
     underlying =>
       new ConfigLoader[F] {
-        val loadConfig: F[Config] = underlying.loadConfig.recoverWith {
-          case e: NoSuchFileException =>
-            askToCreateFile(e).flatTap(saveConfig) <*
-              Console[F].putStrLn(s"Saved config to new file at $configPath")
+        val loadConfig: F[Config] = underlying.loadConfig.recoverWith { case e: NoSuchFileException =>
+          askToCreateFile(e).flatTap(saveConfig) <*
+            Console[F].putStrLn(s"Saved config to new file at $configPath")
         }
 
         def saveConfig(config: Config): F[Unit] = underlying.saveConfig(config)

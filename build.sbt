@@ -16,12 +16,21 @@ inThisBuild(
 
 def crossPlugin(x: sbt.librarymanagement.ModuleID) = compilerPlugin(x.cross(CrossVersion.full))
 
-val compilerPlugins = List(
-  crossPlugin("org.typelevel" % "kind-projector" % "0.11.3"),
-  crossPlugin("com.github.cb372" % "scala-typed-holes" % "0.1.7"),
-  crossPlugin("com.kubukoz" % "better-tostring" % "0.2.6"),
-  compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
-)
+val addCompilerPlugins = libraryDependencies ++= {
+  if (scalaVersion.value.startsWith("2"))
+    List(
+      crossPlugin("org.typelevel" % "kind-projector" % "0.11.3"),
+      crossPlugin("com.github.cb372" % "scala-typed-holes" % "0.1.7"),
+      //gonna regret this one huh
+      compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
+    )
+  else Nil
+}
+
+val addVersionSpecificScalacSettings = scalacOptions ++= {
+  if (scalaVersion.value.startsWith("2")) Nil
+  else List("-Ykind-projector")
+}
 
 val commonSettings = Seq(
   scalaVersion := "2.13.4",
@@ -40,7 +49,9 @@ val commonSettings = Seq(
   ),
   libraryDependencies ++= Seq(
     "org.typelevel" %%% "cats-effect" % "2.3.1"
-  ) ++ compilerPlugins
+  ),
+  addCompilerPlugins,
+  addVersionSpecificScalacSettings
 )
 
 val core = project
@@ -93,7 +104,7 @@ val next =
     .settings(commonSettings)
     .settings(
       libraryDependencies ++= Seq(
-        "org.typelevel" %% "simulacrum" % "1.0.1",
+        "com.github.julien-truffaut" %% "monocle-macro" % "2.1.0",
         "dev.profunktor" %% "console4cats" % "0.8.1",
         "com.monovore" %% "decline-effect" % "1.3.0",
         "org.http4s" %% "http4s-dsl" % "0.21.18",
@@ -102,13 +113,10 @@ val next =
         "org.http4s" %% "http4s-circe" % "0.21.18",
         "ch.qos.logback" % "logback-classic" % "1.2.3",
         "io.chrisdavenport" %% "log4cats-slf4j" % "1.1.1",
-        "org.typelevel" %% "kittens" % "2.2.1",
-        "org.typelevel" %% "cats-tagless-macros" % "0.12",
         "io.circe" %% "circe-fs2" % "0.13.0",
         "io.circe" %% "circe-literal" % "0.13.0",
         "io.circe" %% "circe-generic-extras" % "0.13.0",
         "com.olegpy" %% "meow-mtl-core" % "0.4.1",
-        "io.estatico" %% "newtype" % "0.4.4",
         "org.scalatest" %% "scalatest" % "3.2.3" % Test
       )
     )

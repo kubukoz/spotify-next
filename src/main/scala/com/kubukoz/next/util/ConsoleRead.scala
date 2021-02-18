@@ -1,14 +1,13 @@
 package com.kubukoz.next.util
 
-import simulacrum.typeclass
 import types._
 
-@typeclass
 trait ConsoleRead[A] {
   def read(s: String): Either[Throwable, A]
 }
 
 object ConsoleRead {
+  def apply[A](implicit A: ConsoleRead[A]): ConsoleRead[A] = A
 
   implicit val readString: ConsoleRead[String] = new ConsoleRead[String] {
     def read(s: String): Either[Throwable, String] = Right(s)
