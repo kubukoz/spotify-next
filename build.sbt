@@ -104,8 +104,8 @@ val next =
     .settings(commonSettings)
     .settings(
       libraryDependencies ++= Seq(
+        // no macros
         "org.typelevel" %% "cats-mtl" % "1.1.2",
-        "com.github.julien-truffaut" %% "monocle-macro" % "2.1.0",
         "dev.profunktor" %% "console4cats" % "0.8.1",
         "com.monovore" %% "decline-effect" % "1.3.0",
         "org.http4s" %% "http4s-dsl" % "0.21.18",
@@ -115,7 +115,8 @@ val next =
         "ch.qos.logback" % "logback-classic" % "1.2.3",
         "io.circe" %% "circe-parser" % "0.13.0",
         "io.circe" %% "circe-literal" % "0.13.0",
-        "io.circe" %% "circe-generic-extras" % "0.13.0"
+        // yes macros
+        "com.github.julien-truffaut" %% "monocle-macro" % "2.1.0"
       )
     )
     .settings(name := "spotify-next")
