@@ -14,9 +14,10 @@ import io.circe.literal._
 import com.kubukoz.next.api.spotify.Player
 import com.kubukoz.next.api.spotify.Item
 import cats.data.Kleisli
-import cats.tagless.finalAlg
+import cats.effect.Sync
+import cats.effect.Console
+import cats.implicits._
 
-@finalAlg
 trait Spotify[F[_]] {
   def skipTrack: F[Unit]
   def dropTrack: F[Unit]
@@ -25,8 +26,11 @@ trait Spotify[F[_]] {
 
 object Spotify {
 
+  def apply[F[_]](implicit F: Spotify[F]): Spotify[F] = F
+
   sealed trait Error extends Throwable
   case object NotPlaying extends Error
+  case class InvalidStatus(status: Status) extends Error
   case object NoContext extends Error
   case object NoItem extends Error
   final case class InvalidContext[T](ctx: T) extends Error
@@ -41,15 +45,13 @@ object Spotify {
 
       private def requirePlaylist[A](player: Player[Option[PlayerContext], A]): F[Player[PlayerContext.playlist, A]] =
         player
-          .byContext
-          .sequence
-          .map(_.value)
+          .unwrapContext
           .liftTo[F](NoContext)
           .flatMap(_.narrowContext[PlayerContext.playlist].liftTo[F])
 
       private def requireTrack[A](player: Player[A, Option[Item]]): F[Player[A, Item.track]] =
         player
-          .sequence
+          .unwrapItem
           .liftTo[F](NoItem)
           .flatMap(_.narrowItem[Item.track].liftTo[F])
 
@@ -80,7 +82,7 @@ object Spotify {
             case (_, desiredProgressPercent) if desiredProgressPercent >= 100 =>
               putStrLn("Too close to song's ending, rewinding to beginning") *> methods.seek[F](0).run(client)
 
-            case (player, desiredProgressPercent)                             =>
+            case (player, desiredProgressPercent) =>
               val desiredProgressMs = desiredProgressPercent * player.item.durationMs / 100
               putStrLn(show"Seeking to $desiredProgressPercent%") *> methods.seek[F](desiredProgressMs).run(client)
           }
@@ -94,6 +96,7 @@ object Spotify {
       Kleisli {
         _.expectOr("/v1/me/player") {
           case response if response.status === Status.NoContent => NotPlaying.pure[F].widen
+          case response                                         => InvalidStatus(response.status).pure[F].widen
         }
       }
 

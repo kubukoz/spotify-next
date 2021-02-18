@@ -13,6 +13,8 @@ import slinky.web.ReactDOM
 import slinky.web.html.div
 import slinky.web.html.key
 import slinky.web.html.onClick
+import cats.effect._
+import cats.implicits._
 
 object Front {
 

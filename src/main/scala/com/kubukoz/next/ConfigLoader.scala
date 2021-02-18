@@ -1,22 +1,25 @@
 package com.kubukoz.next
 
 import com.kubukoz.next.util.Config
-import com.kubukoz.next.util.types._
 import io.circe.syntax._
 import io.circe.Printer
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
-import cats.tagless.finalAlg
 import java.nio.file.NoSuchFileException
 import com.kubukoz.next.util.ConsoleRead
+import cats.effect._
+import cats.implicits._
+import cats.effect.concurrent.Ref
+import cats.Show
+import cats.Applicative
 
-@finalAlg
 trait ConfigLoader[F[_]] {
   def saveConfig(config: Config): F[Unit]
   def loadConfig: F[Config]
 }
 
-object ConfigLoader extends LowPriority {
+object ConfigLoader {
+  def apply[F[_]](implicit F: ConfigLoader[F]): ConfigLoader[F] = F
 
   def cached[F[_]: Sync]: ConfigLoader[F] => F[ConfigLoader[F]] =
     underlying =>
@@ -43,10 +46,9 @@ object ConfigLoader extends LowPriority {
 
     underlying =>
       new ConfigLoader[F] {
-        val loadConfig: F[Config] = underlying.loadConfig.recoverWith {
-          case e: NoSuchFileException =>
-            askToCreateFile(e).flatTap(saveConfig) <*
-              Console[F].putStrLn(s"Saved config to new file at $configPath")
+        val loadConfig: F[Config] = underlying.loadConfig.recoverWith { case e: NoSuchFileException =>
+          askToCreateFile(e).flatTap(saveConfig) <*
+            Console[F].putStrLn(s"Saved config to new file at $configPath")
         }
 
         def saveConfig(config: Config): F[Unit] = underlying.saveConfig(config)
@@ -76,18 +78,15 @@ object ConfigLoader extends LowPriority {
           .io
           .file
           .readAll[F](configPath, blocker, 4096)
-          .through(io.circe.fs2.byteStreamParser[F])
-          .through(io.circe.fs2.decoder[F, Config])
+          .through(fs2.text.utf8Decode[F])
           .compile
-          .lastOrError
+          .string
+          .flatMap(io.circe.parser.decode[Config](_).liftTo[F])
 
     }
 
-}
-
-trait LowPriority {
-
-  implicit def deriveAskFromLoader[F[_]: ConfigLoader: Applicative]: Config.Ask[F] =
-    Config.askLiftF(ConfigLoader[F].loadConfig)
+  implicit final class ConfigLoaderOps[F[_]](private val cl: ConfigLoader[F]) extends AnyVal {
+    def configAsk(implicit F: Applicative[F]): Config.Ask[F] = Config.askLiftF(cl.loadConfig)
+  }
 
 }

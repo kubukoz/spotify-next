@@ -12,9 +12,19 @@ import org.http4s.client.middleware.ResponseLogger
 
 import org.http4s.client.Client
 import com.kubukoz.next.util.Config
-import com.olegpy.meow.hierarchy.deriveApplicativeAsk
-import ConfigLoader.deriveAskFromLoader
 import com.kubukoz.next.util.Config.RefreshToken
+import com.kubukoz.next.util.Config.Token
+import monocle.Getter
+import cats.implicits._
+import cats.effect.ContextShift
+import cats.effect.Sync
+import cats.effect.Console
+import cats.effect.Blocker
+import cats.effect.ConcurrentEffect
+import cats.effect.Timer
+import cats.effect.Resource
+import cats.Monad
+import cats.MonadError
 
 object Program {
   val configPath = Paths.get(System.getProperty("user.home")).resolve(".spotify-next.json")
@@ -35,6 +45,9 @@ object Program {
       .map(ResponseLogger(logHeaders = true, logBody = true))
 
   def apiClient[F[_]: Sync: Console: ConfigLoader: Login]: Client[F] => Client[F] = {
+    implicit val configAsk: Config.Ask[F] = ConfigLoader[F].configAsk
+    implicit val tokenAsk: Token.Ask[F] = Token.askBy(configAsk)(Getter(_.token))
+
     val loginOrRefreshToken: F[Unit] =
       Config
         .ask[F]
@@ -73,6 +86,7 @@ object Program {
     } yield ()
 
   def makeSpotify[F[_]: Console: Sync: Config.Ask](client: Client[F]) = {
+    implicit val tokenAsk: Token.Ask[F] = Token.askBy(Config.AskInstance[F])(Getter(_.token))
     implicit val theClient = client
 
     Spotify.instance[F]

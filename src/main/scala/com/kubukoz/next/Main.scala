@@ -5,7 +5,13 @@ import com.monovore.decline._
 import com.monovore.decline.effect._
 
 import cats.data.NonEmptyList
-import ConfigLoader.deriveAskFromLoader
+import com.kubukoz.next.util.Config
+import cats.effect.IO
+import cats.effect.Console
+import cats.implicits._
+import cats.Monad
+import cats.effect.Resource
+import cats.effect.ExitCode
 
 sealed trait Choice extends Product with Serializable
 
@@ -52,6 +58,8 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
   val makeProgram: Resource[IO, Choice => IO[Unit]] =
     makeLoader[IO]
       .flatMap { implicit loader =>
+        implicit val configAsk: Config.Ask[IO] = loader.configAsk
+
         makeBasicClient[IO].map { rawClient =>
           import scala.concurrent.ExecutionContext.Implicits.global
 

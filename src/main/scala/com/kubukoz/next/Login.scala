@@ -1,7 +1,6 @@
 package com.kubukoz.next
 
 import com.kubukoz.next.util.Config
-import cats.tagless.finalAlg
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.Uri
 import org.http4s.implicits._
@@ -20,19 +19,30 @@ import org.http4s.circe.CirceEntityCodec._
 import org.http4s.headers.Authorization
 import org.http4s.BasicCredentials
 import scala.concurrent.ExecutionContext
+import cats.effect.ConcurrentEffect
+import cats.effect.Timer
+import cats.effect.Console
+import cats.implicits._
+import cats.effect.concurrent.Deferred
+import cats.effect.Sync
 
-@finalAlg
 trait Login[F[_]] {
   def server: F[Tokens]
   def refreshToken(token: RefreshToken): F[Token]
 }
 
 object Login {
+  def apply[F[_]](implicit F: Login[F]): Login[F] = F
+
   final case class Tokens(access: Token, refresh: RefreshToken)
 
   final case class Code(value: String)
 
-  def blaze[F[_]: ConcurrentEffect: Timer: Console: Config.Ask](client: Client[F])(implicit executionContext: ExecutionContext): Login[F] =
+  def blaze[F[_]: ConcurrentEffect: Timer: Console: Config.Ask](
+    client: Client[F]
+  )(
+    implicit executionContext: ExecutionContext
+  ): Login[F] =
     new Login[F] {
 
       def refreshToken(token: RefreshToken): F[Token] = {
