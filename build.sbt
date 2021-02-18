@@ -116,7 +116,7 @@ val next =
         "io.circe" %% "circe-parser" % "0.13.0",
         "io.circe" %% "circe-literal" % "0.13.0",
         // yes macros
-        "com.github.julien-truffaut" %% "monocle-macro" % "2.1.0"
+        "com.github.julien-truffaut" %% "monocle-macro" % "3.0.0-M1"
       )
     )
     .settings(name := "spotify-next")
