@@ -13,6 +13,9 @@ import monocle.PLens
 import monocle.macros.PLenses
 import org.http4s.EntityDecoder
 import org.http4s.Uri
+import cats.Functor
+import cats.effect.Sync
+import cats.implicits._
 
 object spotify {
   private def asJsonWithType[T: Encoder.AsObject](t: T, tpe: String) = t.asJsonObject.add("type", tpe.asJson).asJson

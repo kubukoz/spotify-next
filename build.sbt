@@ -35,18 +35,7 @@ val addVersionSpecificScalacSettings = scalacOptions ++= {
 val commonSettings = Seq(
   scalaVersion := "2.13.4",
   scalacOptions -= "-Xfatal-warnings",
-  scalacOptions ++= Seq(
-    "-Ymacro-annotations",
-    "-Yimports:" ++ List(
-      "scala",
-      "scala.Predef",
-      "cats",
-      "cats.implicits",
-      "cats.effect",
-      "cats.effect.implicits",
-      "cats.effect.concurrent"
-    ).mkString(",")
-  ),
+  scalacOptions ++= Seq("-Ymacro-annotations"),
   libraryDependencies ++= Seq(
     "org.typelevel" %%% "cats-effect" % "2.3.1"
   ),

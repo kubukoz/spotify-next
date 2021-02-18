@@ -11,6 +11,11 @@ import org.http4s.headers.Authorization
 import org.http4s.Status
 import org.http4s.Response
 import org.http4s.Request
+import cats.effect.Console
+import cats.effect.Sync
+import cats.effect.Bracket
+import cats.implicits._
+import cats.effect.Resource
 
 object middlewares {
   type BracketThrow[F[_]] = Bracket[F, Throwable]

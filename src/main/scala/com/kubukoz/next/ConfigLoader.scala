@@ -1,13 +1,17 @@
 package com.kubukoz.next
 
 import com.kubukoz.next.util.Config
-import com.kubukoz.next.util.types._
 import io.circe.syntax._
 import io.circe.Printer
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.nio.file.NoSuchFileException
 import com.kubukoz.next.util.ConsoleRead
+import cats.effect._
+import cats.implicits._
+import cats.effect.concurrent.Ref
+import cats.Show
+import cats.Applicative
 
 trait ConfigLoader[F[_]] {
   def saveConfig(config: Config): F[Unit]

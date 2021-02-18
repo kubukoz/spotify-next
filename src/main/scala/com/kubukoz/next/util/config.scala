@@ -3,6 +3,7 @@ package com.kubukoz.next.util
 import io.circe.Codec
 import io.circe.Decoder
 import io.circe.Encoder
+import cats.implicits._
 
 final case class Config(
   clientId: String,

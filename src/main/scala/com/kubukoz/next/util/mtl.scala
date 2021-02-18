@@ -1,6 +1,8 @@
 package com.kubukoz.next.util
 
 import monocle.Getter
+import cats.Applicative
+import cats.implicits._
 
 trait AskFor[A] {
   type Ask[F[_]] = cats.mtl.Ask[F, A]

@@ -19,6 +19,12 @@ import org.http4s.circe.CirceEntityCodec._
 import org.http4s.headers.Authorization
 import org.http4s.BasicCredentials
 import scala.concurrent.ExecutionContext
+import cats.effect.ConcurrentEffect
+import cats.effect.Timer
+import cats.effect.Console
+import cats.implicits._
+import cats.effect.concurrent.Deferred
+import cats.effect.Sync
 
 trait Login[F[_]] {
   def server: F[Tokens]
@@ -32,7 +38,11 @@ object Login {
 
   final case class Code(value: String)
 
-  def blaze[F[_]: ConcurrentEffect: Timer: Console: Config.Ask](client: Client[F])(implicit executionContext: ExecutionContext): Login[F] =
+  def blaze[F[_]: ConcurrentEffect: Timer: Console: Config.Ask](
+    client: Client[F]
+  )(
+    implicit executionContext: ExecutionContext
+  ): Login[F] =
     new Login[F] {
 
       def refreshToken(token: RefreshToken): F[Token] = {

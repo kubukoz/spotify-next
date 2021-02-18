@@ -14,6 +14,9 @@ import io.circe.literal._
 import com.kubukoz.next.api.spotify.Player
 import com.kubukoz.next.api.spotify.Item
 import cats.data.Kleisli
+import cats.effect.Sync
+import cats.effect.Console
+import cats.implicits._
 
 trait Spotify[F[_]] {
   def skipTrack: F[Unit]

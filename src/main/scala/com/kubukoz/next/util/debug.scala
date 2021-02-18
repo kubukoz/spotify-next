@@ -1,6 +1,11 @@
 package com.kubukoz.next.util
 
 import java.util.concurrent.TimeUnit
+import cats.Monad
+import cats.effect.Resource
+import cats.effect.Console
+import cats.effect.Timer
+import cats.implicits._
 
 object debug {
 

@@ -6,6 +6,12 @@ import com.monovore.decline.effect._
 
 import cats.data.NonEmptyList
 import com.kubukoz.next.util.Config
+import cats.effect.IO
+import cats.effect.Console
+import cats.implicits._
+import cats.Monad
+import cats.effect.Resource
+import cats.effect.ExitCode
 
 sealed trait Choice extends Product with Serializable
 

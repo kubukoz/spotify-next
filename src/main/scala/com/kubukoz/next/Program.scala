@@ -15,6 +15,16 @@ import com.kubukoz.next.util.Config
 import com.kubukoz.next.util.Config.RefreshToken
 import com.kubukoz.next.util.Config.Token
 import monocle.Getter
+import cats.implicits._
+import cats.effect.ContextShift
+import cats.effect.Sync
+import cats.effect.Console
+import cats.effect.Blocker
+import cats.effect.ConcurrentEffect
+import cats.effect.Timer
+import cats.effect.Resource
+import cats.Monad
+import cats.MonadError
 
 object Program {
   val configPath = Paths.get(System.getProperty("user.home")).resolve(".spotify-next.json")
