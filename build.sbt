@@ -37,7 +37,7 @@ val commonSettings = Seq(
   scalacOptions -= "-Xfatal-warnings",
   scalacOptions ++= Seq("-Ymacro-annotations"),
   libraryDependencies ++= Seq(
-    "org.typelevel" %%% "cats-effect" % "2.3.1"
+    "org.typelevel" %%% "cats-effect" % "2.3.3"
   ),
   addCompilerPlugins,
   addVersionSpecificScalacSettings
