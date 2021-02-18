@@ -14,7 +14,7 @@ trait ConfigLoader[F[_]] {
   def loadConfig: F[Config]
 }
 
-object ConfigLoader extends LowPriority {
+object ConfigLoader {
   def apply[F[_]](implicit F: ConfigLoader[F]): ConfigLoader[F] = F
 
   def cached[F[_]: Sync]: ConfigLoader[F] => F[ConfigLoader[F]] =
@@ -74,18 +74,15 @@ object ConfigLoader extends LowPriority {
           .io
           .file
           .readAll[F](configPath, blocker, 4096)
-          .through(io.circe.fs2.byteStreamParser[F])
-          .through(io.circe.fs2.decoder[F, Config])
+          .through(fs2.text.utf8Decode[F])
           .compile
-          .lastOrError
+          .string
+          .flatMap(io.circe.parser.decode[Config](_).liftTo[F])
 
     }
 
-}
-
-trait LowPriority {
-
-  implicit def deriveAskFromLoader[F[_]: ConfigLoader: Applicative]: Config.Ask[F] =
-    Config.askLiftF(ConfigLoader[F].loadConfig)
+  implicit final class ConfigLoaderOps[F[_]](private val cl: ConfigLoader[F]) extends AnyVal {
+    def configAsk(implicit F: Applicative[F]): Config.Ask[F] = Config.askLiftF(cl.loadConfig)
+  }
 
 }

@@ -15,7 +15,8 @@ final case class Config(
 }
 
 object Config extends AskFor[Config] {
-  implicit val config = Configuration.default
+  // Actually used
+  private implicit val config = Configuration.default
 
   val defaultPort: Int = 4321
 

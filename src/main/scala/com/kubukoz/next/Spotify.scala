@@ -27,6 +27,7 @@ object Spotify {
 
   sealed trait Error extends Throwable
   case object NotPlaying extends Error
+  case class InvalidStatus(status: Status) extends Error
   case object NoContext extends Error
   case object NoItem extends Error
   final case class InvalidContext[T](ctx: T) extends Error
@@ -92,6 +93,7 @@ object Spotify {
       Kleisli {
         _.expectOr("/v1/me/player") {
           case response if response.status === Status.NoContent => NotPlaying.pure[F].widen
+          case response                                         => InvalidStatus(response.status).pure[F].widen
         }
       }
 
