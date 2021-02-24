@@ -20,7 +20,7 @@ val addCompilerPlugins = libraryDependencies ++= {
   if (scalaVersion.value.startsWith("2"))
     List(
       crossPlugin("org.typelevel" % "kind-projector" % "0.11.3"),
-      crossPlugin("com.github.cb372" % "scala-typed-holes" % "0.1.7"),
+      crossPlugin("com.github.cb372" % "scala-typed-holes" % "0.1.8"),
       //gonna regret this one huh
       compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
     )
