@@ -96,7 +96,7 @@ val next =
         // no macros
         "org.typelevel" %% "cats-mtl" % "1.1.2",
         "dev.profunktor" %% "console4cats" % "0.8.1",
-        "com.monovore" %% "decline-effect" % "1.3.0",
+        "com.monovore" %% "decline-effect" % "1.4.0",
         "org.http4s" %% "http4s-dsl" % "0.21.19",
         "org.http4s" %% "http4s-blaze-server" % "0.21.19",
         "org.http4s" %% "http4s-blaze-client" % "0.21.19",
