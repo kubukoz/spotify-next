@@ -9,9 +9,11 @@ import java.nio.file.NoSuchFileException
 import com.kubukoz.next.util.ConsoleRead
 import cats.effect._
 import cats.implicits._
-import cats.effect.concurrent.Ref
 import cats.Show
 import cats.Applicative
+import cats.effect.std.Console
+import fs2.io.file.Files
+import cats.FlatMap
 
 trait ConfigLoader[F[_]] {
   def saveConfig(config: Config): F[Unit]
@@ -21,9 +23,9 @@ trait ConfigLoader[F[_]] {
 object ConfigLoader {
   def apply[F[_]](implicit F: ConfigLoader[F]): ConfigLoader[F] = F
 
-  def cached[F[_]: Sync]: ConfigLoader[F] => F[ConfigLoader[F]] =
+  def cached[F[_]: Ref.Make: FlatMap]: ConfigLoader[F] => F[ConfigLoader[F]] =
     underlying =>
-      underlying.loadConfig.flatMap(Ref.of(_)).map { ref =>
+      underlying.loadConfig.flatMap(Ref[F].of(_)).map { ref =>
         new ConfigLoader[F] {
           def saveConfig(config: Config): F[Unit] = underlying.saveConfig(config) *> ref.set(config)
           val loadConfig: F[Config] = ref.get
@@ -38,8 +40,8 @@ object ConfigLoader {
 
     def askToCreateFile(originalException: NoSuchFileException): F[Config] =
       for {
-        _            <- Console[F].putStrLn(askMessage)
-        _            <- Console[F].readLn.map(_.trim).ensure(originalException)(_.equalsIgnoreCase(validInput))
+        _            <- Console[F].println(askMessage)
+        _            <- Console[F].readLine.map(_.trim).ensure(originalException)(_.equalsIgnoreCase(validInput))
         clientId     <- ConsoleRead.readWithPrompt[F, String]("Client ID")
         clientSecret <- ConsoleRead.readWithPrompt[F, String]("Client secret")
       } yield Config(clientId, clientSecret, Config.defaultPort, none, none)
@@ -48,20 +50,19 @@ object ConfigLoader {
       new ConfigLoader[F] {
         val loadConfig: F[Config] = underlying.loadConfig.recoverWith { case e: NoSuchFileException =>
           askToCreateFile(e).flatTap(saveConfig) <*
-            Console[F].putStrLn(s"Saved config to new file at $configPath")
+            Console[F].println(s"Saved config to new file at $configPath")
         }
 
         def saveConfig(config: Config): F[Unit] = underlying.saveConfig(config)
       }
   }
 
-  def default[F[_]: Sync: ContextShift](configPath: Path, blocker: Blocker): ConfigLoader[F] =
+  def default[F[_]: Files: MonadThrow](configPath: Path)(implicit SC: fs2.Compiler[F, F]): ConfigLoader[F] =
     new ConfigLoader[F] {
 
-      private val createOrOverwriteFile = fs2
-        .io
-        .file
-        .writeAll[F](configPath, blocker, List(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING))
+      private val createOrOverwriteFile =
+        Files[F]
+          .writeAll(configPath, List(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING))
 
       def saveConfig(config: Config): F[Unit] =
         fs2
@@ -74,10 +75,8 @@ object ConfigLoader {
           .drain
 
       val loadConfig: F[Config] =
-        fs2
-          .io
-          .file
-          .readAll[F](configPath, blocker, 4096)
+        Files[F]
+          .readAll(configPath, 4096)
           .through(fs2.text.utf8Decode[F])
           .compile
           .string

@@ -14,8 +14,8 @@ import io.circe.literal._
 import com.kubukoz.next.api.spotify.Player
 import com.kubukoz.next.api.spotify.Item
 import cats.data.Kleisli
-import cats.effect.Sync
-import cats.effect.Console
+import cats.effect.Concurrent
+import cats.effect.std.Console
 import cats.implicits._
 
 trait Spotify[F[_]] {
@@ -36,7 +36,7 @@ object Spotify {
   final case class InvalidContext[T](ctx: T) extends Error
   final case class InvalidItem[T](ctx: T) extends Error
 
-  def instance[F[_]: Client: Console: Sync: Token.Ask]: Spotify[F] =
+  def instance[F[_]: Client: Console: Concurrent: Token.Ask]: Spotify[F] =
     new Spotify[F] {
       val client = implicitly[Client[F]]
 
@@ -56,7 +56,7 @@ object Spotify {
           .flatMap(_.narrowItem[Item.track].liftTo[F])
 
       val skipTrack: F[Unit] =
-        putStrLn("Switching to next track") *>
+        println("Switching to next track") *>
           methods.nextTrack[F].run(client)
 
       val dropTrack: F[Unit] =
@@ -64,7 +64,7 @@ object Spotify {
           val trackUri = player.item.uri
           val playlistId = player.context.uri.playlist
 
-          putStrLn(show"Removing track $trackUri from playlist $playlistId") *>
+          println(show"Removing track $trackUri from playlist $playlistId") *>
             methods.removeTrack[F](trackUri, playlistId).run(client)
         } *> skipTrack
 
@@ -80,11 +80,11 @@ object Spotify {
           }
           .flatMap {
             case (_, desiredProgressPercent) if desiredProgressPercent >= 100 =>
-              putStrLn("Too close to song's ending, rewinding to beginning") *> methods.seek[F](0).run(client)
+              println("Too close to song's ending, rewinding to beginning") *> methods.seek[F](0).run(client)
 
             case (player, desiredProgressPercent) =>
               val desiredProgressMs = desiredProgressPercent * player.item.durationMs / 100
-              putStrLn(show"Seeking to $desiredProgressPercent%") *> methods.seek[F](desiredProgressMs).run(client)
+              println(show"Seeking to $desiredProgressPercent%") *> methods.seek[F](desiredProgressMs).run(client)
           }
 
     }
@@ -92,7 +92,7 @@ object Spotify {
   object methods {
     type Method[F[_], A] = Kleisli[F, Client[F], A]
 
-    def player[F[_]: Sync]: Method[F, Player[Option[PlayerContext], Option[Item]]] =
+    def player[F[_]: Concurrent]: Method[F, Player[Option[PlayerContext], Option[Item]]] =
       Kleisli {
         _.expectOr("/v1/me/player") {
           case response if response.status === Status.NoContent => NotPlaying.pure[F].widen
@@ -100,12 +100,12 @@ object Spotify {
         }
       }
 
-    def nextTrack[F[_]: Sync]: Method[F, Unit] =
+    def nextTrack[F[_]: Concurrent]: Method[F, Unit] =
       Kleisli {
         _.expect[api.spotify.Anything](Request[F](POST, Uri.uri("/v1/me/player/next"))).void
       }
 
-    def removeTrack[F[_]: Sync](trackUri: String, playlistId: String): Method[F, Unit] =
+    def removeTrack[F[_]: Concurrent](trackUri: String, playlistId: String): Method[F, Unit] =
       Kleisli {
         _.expect[api.spotify.Anything](
           Request[F](DELETE, Uri.uri("/v1/playlists") / playlistId / "tracks")
@@ -113,7 +113,7 @@ object Spotify {
         ).void
       }
 
-    def seek[F[_]: Sync](positionMs: Int): Method[F, Unit] =
+    def seek[F[_]: Concurrent](positionMs: Int): Method[F, Unit] =
       Kleisli {
         _.expect[api.spotify.Anything](
           Request[F](PUT, Uri.uri("/v1/me/player/seek").withQueryParam("position_ms", positionMs))
