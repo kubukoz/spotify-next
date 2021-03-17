@@ -1,50 +1,50 @@
 package com.kubukoz.next
 
-import com.kubukoz.next.util.middlewares
-
-import org.http4s.client.blaze.BlazeClientBuilder
-import scala.concurrent.ExecutionContext
-import java.nio.file.Paths
 import java.lang.System
+import java.nio.file.Paths
+
+import cats.Monad
+import cats.MonadError
+import cats.effect.Concurrent
+import cats.effect.MonadCancelThrow
+import cats.effect.MonadThrow
+import cats.effect.Resource
+import cats.effect.kernel.Async
+import cats.effect.kernel.Ref
+import cats.effect.std.Console
+import cats.implicits._
+import com.kubukoz.next.util.Config
+import com.kubukoz.next.util.Config.RefreshToken
+import com.kubukoz.next.util.Config.Token
+import com.kubukoz.next.util.middlewares
+import fs2.io.file.Files
+import monocle.Getter
+import org.http4s.client.Client
+import org.http4s.client.blaze.BlazeClientBuilder
 import org.http4s.client.middleware.FollowRedirect
 import org.http4s.client.middleware.RequestLogger
 import org.http4s.client.middleware.ResponseLogger
 
-import org.http4s.client.Client
-import com.kubukoz.next.util.Config
-import com.kubukoz.next.util.Config.RefreshToken
-import com.kubukoz.next.util.Config.Token
-import monocle.Getter
-import cats.implicits._
-import cats.effect.ContextShift
-import cats.effect.Sync
-import cats.effect.Console
-import cats.effect.Blocker
-import cats.effect.ConcurrentEffect
-import cats.effect.Timer
-import cats.effect.Resource
-import cats.Monad
-import cats.MonadError
-
 object Program {
   val configPath = Paths.get(System.getProperty("user.home")).resolve(".spotify-next.json")
 
-  def makeLoader[F[_]: Sync: ContextShift: Console] =
-    Blocker[F].evalMap { blocker =>
-      ConfigLoader
-        .cached[F]
-        .compose(ConfigLoader.withCreateFileIfMissing[F](configPath))
-        .apply(ConfigLoader.default[F](configPath, blocker))
-    }
+  def makeLoader[F[_]: Files: Ref.Make: Console: MonadThrow: fs2.Compiler.Target]: F[ConfigLoader[F]] =
+    ConfigLoader
+      .cached[F]
+      .compose(ConfigLoader.withCreateFileIfMissing[F](configPath))
+      .apply(ConfigLoader.default[F](configPath))
 
-  def makeBasicClient[F[_]: ConcurrentEffect: ContextShift: Timer]: Resource[F, Client[F]] =
-    BlazeClientBuilder(ExecutionContext.global)
-      .resource
+  def makeBasicClient[F[_]: Async]: Resource[F, Client[F]] =
+    Resource
+      .eval(Async[F].executionContext)
+      .flatMap { ec =>
+        BlazeClientBuilder(ec).resource
+      }
       .map(FollowRedirect(maxRedirects = 5))
       .map(RequestLogger(logHeaders = true, logBody = true))
       .map(ResponseLogger(logHeaders = true, logBody = true))
 
-  def apiClient[F[_]: Sync: Console: ConfigLoader: Login]: Client[F] => Client[F] = {
+  def apiClient[F[_]: Console: ConfigLoader: Login: MonadCancelThrow](implicit SC: fs2.Compiler[F, F]): Client[F] => Client[F] = {
     implicit val configAsk: Config.Ask[F] = ConfigLoader[F].configAsk
     implicit val tokenAsk: Token.Ask[F] = Token.askBy(configAsk)(Getter(_.token))
 
@@ -59,7 +59,7 @@ object Program {
 
     middlewares
       .logFailedResponse[F]
-      .compose(middlewares.implicitHost("api.spotify.com"))
+      .compose(middlewares.implicitHost[F]("api.spotify.com"))
       .compose(middlewares.retryUnauthorizedWith(loginOrRefreshToken))
       .compose(middlewares.withToken[F])
   }
@@ -71,7 +71,7 @@ object Program {
       config <- ConfigLoader[F].loadConfig
       newConfig = config.copy(token = tokens.access.some, refreshToken = tokens.refresh.some)
       _      <- ConfigLoader[F].saveConfig(newConfig)
-      _      <- Console[F].putStrLn("Saved token to file")
+      _      <- Console[F].println("Saved token to file")
     } yield ()
 
   def refreshUserToken[F[_]: Console: Login: ConfigLoader: MonadError[*[_], Throwable]](
@@ -82,10 +82,10 @@ object Program {
       config   <- ConfigLoader[F].loadConfig
       newConfig = config.copy(token = newToken.some)
       _        <- ConfigLoader[F].saveConfig(newConfig)
-      _        <- Console[F].putStrLn("Refreshed token") //todo debug level?
+      _        <- Console[F].println("Refreshed token") //todo debug level?
     } yield ()
 
-  def makeSpotify[F[_]: Console: Sync: Config.Ask](client: Client[F]) = {
+  def makeSpotify[F[_]: Console: Concurrent: Config.Ask](client: Client[F]) = {
     implicit val tokenAsk: Token.Ask[F] = Token.askBy(Config.AskInstance[F])(Getter(_.token))
     implicit val theClient = client
 
