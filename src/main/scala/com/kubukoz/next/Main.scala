@@ -1,5 +1,8 @@
 package com.kubukoz.next
 
+import java.io.EOFException
+import java.util.concurrent.CancellationException
+
 import cats.Monad
 import cats.data.NonEmptyList
 import cats.effect.ExitCode
@@ -40,7 +43,20 @@ object Choice {
 
 }
 
-object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: Gather great music.") {
+// Fun hack to avoid showing a stack trace if the user presses Ctrl+C.
+// Hopefully this can be patterned out in CE3
+object Main0 {
+
+  def main(args: Array[String]) =
+    try new Main().main(args)
+    catch {
+      case _: CancellationException => ()
+      case up: Throwable            => throw up
+    }
+
+}
+
+class Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: Gather great music.") {
 
   import Program._
 
@@ -72,9 +88,12 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
     }
 
   val runRepl: IO[Unit] = {
+    // EOF thrown on Ctrl+D
+    val prompt = IO.print("next> ") *> IO.readLine.map(_.some).recover { case _: EOFException => none[String] }
+
     val input = fs2
       .Stream
-      .repeatEval(IO.print("next> ") *> IO.readLine.map(Option(_)))
+      .repeatEval(prompt)
       .map(_.map(_.trim))
       .filter(_.forall(_.nonEmpty))
       .unNoneTerminate
