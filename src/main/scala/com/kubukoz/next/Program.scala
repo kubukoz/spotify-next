@@ -59,7 +59,6 @@ object Program {
 
     middlewares
       .logFailedResponse[F]
-      .compose(middlewares.implicitHost[F]("api.spotify.com"))
       .compose(middlewares.retryUnauthorizedWith(loginOrRefreshToken))
       .compose(middlewares.withToken[F])
   }

@@ -10,11 +10,8 @@ import org.http4s.Credentials
 import org.http4s.Request
 import org.http4s.Response
 import org.http4s.Status
-import org.http4s.Uri
-import org.http4s.Uri.RegName
 import org.http4s.client.Client
 import org.http4s.headers.Authorization
-import org.typelevel.ci.CIString
 
 object middlewares {
 
@@ -39,17 +36,6 @@ object middlewares {
           case response if response.status === Status.Unauthorized => doBeforeRetry(response) *> client.run(req)
           case response                                            => Resource.pure[F, Response[F]](response)
         }
-      }
-  }
-
-  def implicitHost[F[_]: MonadCancelThrow](hostname: String): Client[F] => Client[F] = {
-    val newAuthority = Some(Uri.Authority(None, RegName(CIString(hostname))))
-
-    client =>
-      Client { req =>
-        val newRequest = req.withUri(req.uri.copy(authority = newAuthority, scheme = Some(Uri.Scheme.https)))
-
-        client.run(newRequest)
       }
   }
 

@@ -1,22 +1,22 @@
 package com.kubukoz.next
 
-import util.Config.Token
-import org.http4s.client.Client
-import org.http4s.circe.CirceEntityCodec._
-import org.http4s.Status
-import com.kubukoz.next.api.spotify.PlayerContext
-import org.http4s.Uri
-import org.http4s.Method.POST
-import org.http4s.Method.PUT
-import org.http4s.Method.DELETE
-import org.http4s.Request
-import io.circe.literal._
-import com.kubukoz.next.api.spotify.Player
-import com.kubukoz.next.api.spotify.Item
 import cats.data.Kleisli
 import cats.effect.Concurrent
 import cats.effect.std.Console
 import cats.implicits._
+import com.kubukoz.next.api.spotify.Item
+import com.kubukoz.next.api.spotify.Player
+import com.kubukoz.next.api.spotify.PlayerContext
+import io.circe.literal._
+import org.http4s.Method.DELETE
+import org.http4s.Method.POST
+import org.http4s.Method.PUT
+import org.http4s.Request
+import org.http4s.Status
+import org.http4s.circe.CirceEntityCodec._
+import org.http4s.client.Client
+
+import util.Config.Token
 
 trait Spotify[F[_]] {
   def skipTrack: F[Unit]
@@ -90,11 +90,14 @@ object Spotify {
     }
 
   object methods {
+    import org.http4s.syntax.all._
+    private val SpotifyApi = uri"https://api.spotify.com"
+
     type Method[F[_], A] = Kleisli[F, Client[F], A]
 
     def player[F[_]: Concurrent]: Method[F, Player[Option[PlayerContext], Option[Item]]] =
       Kleisli {
-        _.expectOr("/v1/me/player") {
+        _.expectOr(SpotifyApi / "v1" / "me" / "player") {
           case response if response.status === Status.NoContent => NotPlaying.pure[F].widen
           case response                                         => InvalidStatus(response.status).pure[F].widen
         }
@@ -102,13 +105,13 @@ object Spotify {
 
     def nextTrack[F[_]: Concurrent]: Method[F, Unit] =
       Kleisli {
-        _.expect[api.spotify.Anything](Request[F](POST, Uri.uri("/v1/me/player/next"))).void
+        _.expect[api.spotify.Anything](Request[F](POST, SpotifyApi / "v1" / "me" / "player" / "next")).void
       }
 
     def removeTrack[F[_]: Concurrent](trackUri: String, playlistId: String): Method[F, Unit] =
       Kleisli {
         _.expect[api.spotify.Anything](
-          Request[F](DELETE, Uri.uri("/v1/playlists") / playlistId / "tracks")
+          Request[F](DELETE, SpotifyApi / "v1" / "playlists" / playlistId / "tracks")
             .withEntity(json"""{"tracks":[{"uri": $trackUri}]}""")
         ).void
       }
@@ -116,7 +119,7 @@ object Spotify {
     def seek[F[_]: Concurrent](positionMs: Int): Method[F, Unit] =
       Kleisli {
         _.expect[api.spotify.Anything](
-          Request[F](PUT, Uri.uri("/v1/me/player/seek").withQueryParam("position_ms", positionMs))
+          Request[F](PUT, (SpotifyApi / "v1" / "me" / "player" / "seek").withQueryParam("position_ms", positionMs))
         ).void
       }
 
