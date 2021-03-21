@@ -14,7 +14,7 @@ The port `4321` is configured in the `.spotify-next.json` config file (see [usag
 1. If you have [coursier](https://get-coursier.io), this will install the app in your current working directory:
 
 ```bash
-coursier bootstrap com.kubukoz:spotify-next_2.13:1.2.0 -o spotify-next
+coursier bootstrap com.kubukoz:spotify-next_2.13:1.3.0 -o spotify-next
 
 # now you can run the app like this:
 ./spotify-next --help
@@ -80,4 +80,16 @@ The application automatically saves the token to the configuration file after su
 
 ## Limitations
 
-Currently, it's impossible to control the playback on some devices (e.g. Sonos speakers) through the Spotify Web API. Because of that, requests to switch tracks (in `skip` / `drop`) will fail if such a device is currently playing.
+Currently, it's impossible to control the playback on some devices (e.g. Sonos speakers) through the Spotify Web API.
+
+As of version `v1.3.0`, spotify-next is able to work around that if the user has an instance of [node-sonos-http-api](https://github.com/jishi/node-sonos-http-api) running. Currently the instance has to run at `localhost:5005` and only a single device can be controlled.
+
+To get this workaround to be used, make sure the Sonos API is running before you start spotify-next - it'll be checked at startup to determine which API should be used for player control:
+
+```
+Loading REPL...
+Checking if Sonos API is available at http://localhost:5005...
+Found 1 zone(s), will use room Living Room
+Welcome to the spotify-next REPL! Type in a command to begin
+next>
+```

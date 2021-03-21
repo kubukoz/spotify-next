@@ -84,11 +84,15 @@ object Program {
       _        <- Console[F].println("Refreshed token") //todo debug level?
     } yield ()
 
-  def makeSpotify[F[_]: Console: Concurrent: Config.Ask](client: Client[F]) = {
+  def makeSpotify[F[_]: Console: Concurrent: Config.Ask](client: Client[F]): F[Spotify[F]] = {
     implicit val tokenAsk: Token.Ask[F] = Token.askBy(Config.AskInstance[F])(Getter(_.token))
     implicit val theClient = client
 
-    Spotify.instance[F]
+    import org.http4s.syntax.all._
+
+    Spotify.Playback.build[F](uri"http://localhost:5005", client).map { implicit playback =>
+      Spotify.instance[F]
+    }
   }
 
 }

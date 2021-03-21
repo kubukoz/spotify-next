@@ -73,11 +73,12 @@ class Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: G
       .flatMap { implicit loader =>
         implicit val configAsk: Config.Ask[IO] = loader.configAsk
 
-        makeBasicClient[IO].map { rawClient =>
+        makeBasicClient[IO].evalMap { rawClient =>
           implicit val login: Login[IO] = Login.blaze[IO](rawClient)
-          implicit val spotify: Spotify[IO] = makeSpotify(apiClient[IO].apply(rawClient))
 
-          runApp[IO]
+          makeSpotify(apiClient[IO].apply(rawClient)).map { implicit spotify =>
+            runApp[IO]
+          }
         }
       }
 
