@@ -111,4 +111,4 @@ val next =
     .enablePlugins(JavaAppPackaging)
     .enablePlugins(GraalVMNativeImagePlugin)
     .dependsOn(core)
-    .aggregate(core, front)
+    .aggregate(core /* front */ )
