@@ -1,30 +1,29 @@
 package com.kubukoz.next
 
+import cats.effect.MonadThrow
+import cats.effect.kernel.Async
+import cats.effect.kernel.Deferred
+import cats.effect.kernel.Resource
+import cats.effect.std.Console
+import cats.implicits._
+import com.kubukoz.next.Login.Tokens
+import com.kubukoz.next.api.spotify.RefreshedTokenResponse
+import com.kubukoz.next.api.spotify.TokenResponse
 import com.kubukoz.next.util.Config
-import org.http4s.server.blaze.BlazeServerBuilder
-import org.http4s.Uri
-import org.http4s.implicits._
-import org.http4s.HttpRoutes
-import org.http4s.dsl.Http4sDsl
+import com.kubukoz.next.util.Config.RefreshToken
 import com.kubukoz.next.util.Config.Token
-import org.http4s.client.Client
+import org.http4s.BasicCredentials
+import org.http4s.HttpRoutes
 import org.http4s.Method.POST
 import org.http4s.Request
-import com.kubukoz.next.api.spotify.TokenResponse
-import com.kubukoz.next.api.spotify.RefreshedTokenResponse
+import org.http4s.Uri
 import org.http4s.UrlForm
-import com.kubukoz.next.util.Config.RefreshToken
-import com.kubukoz.next.Login.Tokens
 import org.http4s.circe.CirceEntityCodec._
+import org.http4s.client.Client
+import org.http4s.dsl.Http4sDsl
 import org.http4s.headers.Authorization
-import org.http4s.BasicCredentials
-import scala.concurrent.ExecutionContext
-import cats.effect.ConcurrentEffect
-import cats.effect.Timer
-import cats.effect.Console
-import cats.implicits._
-import cats.effect.concurrent.Deferred
-import cats.effect.Sync
+import org.http4s.implicits._
+import org.http4s.server.blaze.BlazeServerBuilder
 
 trait Login[F[_]] {
   def server: F[Tokens]
@@ -38,10 +37,8 @@ object Login {
 
   final case class Code(value: String)
 
-  def blaze[F[_]: ConcurrentEffect: Timer: Console: Config.Ask](
+  def blaze[F[_]: Console: Config.Ask: Async](
     client: Client[F]
-  )(
-    implicit executionContext: ExecutionContext
   ): Login[F] =
     new Login[F] {
 
@@ -83,14 +80,16 @@ object Login {
             .withQueryParam("response_type", "code")
         }
         .flatMap { uri =>
-          Console[F].putStrLn(s"Go to $uri")
+          Console[F].println(s"Go to $uri")
         }
 
       def mkServer(config: Config, route: HttpRoutes[F]) =
-        BlazeServerBuilder[F](executionContext)
-          .withHttpApp(route.orNotFound)
-          .bindHttp(port = config.loginPort)
-          .resource
+        Resource.eval(Async[F].executionContext).flatMap { ec =>
+          BlazeServerBuilder[F](ec)
+            .withHttpApp(route.orNotFound)
+            .bindHttp(port = config.loginPort)
+            .resource
+        }
 
       def getTokens(code: Code, config: Config): F[Tokens] = {
 
@@ -113,8 +112,8 @@ object Login {
         (Config.ask[F], Deferred[F, Tokens], Deferred[F, Unit])
           .tupled
           .flatMap { case (config, tokensPromise, finishServer) =>
-            val finishLogin: Code => F[Unit] = getTokens(_, config).flatMap(tokensPromise.complete)
-            val route = Login.routes[F](finishLogin, finishServer.complete(()))
+            val finishLogin: Code => F[Unit] = getTokens(_, config).flatMap(tokensPromise.complete(_).void)
+            val route = Login.routes[F](finishLogin, finishServer.complete(()).void)
 
             // start server
             // user visits spotify website
@@ -129,7 +128,7 @@ object Login {
 
     }
 
-  def routes[F[_]: Sync](saveCode: Code => F[Unit], finishServer: F[Unit]): HttpRoutes[F] = {
+  def routes[F[_]: MonadThrow](saveCode: Code => F[Unit], finishServer: F[Unit]): HttpRoutes[F] = {
     val dsl = new Http4sDsl[F] {}
     import dsl._
 

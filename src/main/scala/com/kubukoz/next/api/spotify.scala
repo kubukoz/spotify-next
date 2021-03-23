@@ -14,8 +14,8 @@ import monocle.macros.PLenses
 import org.http4s.EntityDecoder
 import org.http4s.Uri
 import cats.Functor
-import cats.effect.Sync
 import cats.implicits._
+import cats.effect.Concurrent
 
 object spotify {
   private def asJsonWithType[T: Encoder.AsObject](t: T, tpe: String) = t.asJsonObject.add("type", tpe.asJson).asJson
@@ -163,7 +163,7 @@ object spotify {
   val anything: Anything = Void
 
   object Anything {
-    implicit def entityCodec[F[_]: Sync]: EntityDecoder[F, Anything] = EntityDecoder.void[F].map(_ => anything)
+    implicit def entityCodec[F[_]: Concurrent]: EntityDecoder[F, Anything] = EntityDecoder.void[F].map(_ => anything)
   }
 
   final case class TokenResponse(accessToken: String, refreshToken: String)
