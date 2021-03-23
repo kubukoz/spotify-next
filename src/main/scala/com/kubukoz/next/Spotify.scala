@@ -1,22 +1,26 @@
 package com.kubukoz.next
 
-import util.Config.Token
-import org.http4s.client.Client
-import org.http4s.circe.CirceEntityCodec._
-import org.http4s.Status
+import java.time.Duration
+
+import cats.data.Kleisli
+import cats.effect.Concurrent
+import cats.effect.std.Console
+import cats.implicits._
+import com.kubukoz.next.api.sonos
+import com.kubukoz.next.api.spotify.Item
+import com.kubukoz.next.api.spotify.Player
 import com.kubukoz.next.api.spotify.PlayerContext
-import org.http4s.Uri
+import io.circe.literal._
+import org.http4s.Method.DELETE
 import org.http4s.Method.POST
 import org.http4s.Method.PUT
-import org.http4s.Method.DELETE
 import org.http4s.Request
-import io.circe.literal._
-import com.kubukoz.next.api.spotify.Player
-import com.kubukoz.next.api.spotify.Item
-import cats.data.Kleisli
-import cats.effect.Sync
-import cats.effect.Console
-import cats.implicits._
+import org.http4s.Status
+import org.http4s.Uri
+import org.http4s.circe.CirceEntityCodec._
+import org.http4s.client.Client
+
+import util.Config.Token
 
 trait Spotify[F[_]] {
   def skipTrack: F[Unit]
@@ -36,7 +40,7 @@ object Spotify {
   final case class InvalidContext[T](ctx: T) extends Error
   final case class InvalidItem[T](ctx: T) extends Error
 
-  def instance[F[_]: Client: Console: Sync: Token.Ask]: Spotify[F] =
+  def instance[F[_]: Playback: Client: Console: Concurrent: Token.Ask]: Spotify[F] =
     new Spotify[F] {
       val client = implicitly[Client[F]]
 
@@ -56,17 +60,18 @@ object Spotify {
           .flatMap(_.narrowItem[Item.track].liftTo[F])
 
       val skipTrack: F[Unit] =
-        putStrLn("Switching to next track") *>
-          methods.nextTrack[F].run(client)
+        println("Switching to next track") *>
+          Playback[F].nextTrack
 
       val dropTrack: F[Unit] =
         methods.player[F].run(client).flatMap(requirePlaylist(_)).flatMap(requireTrack).flatMap { player =>
           val trackUri = player.item.uri
           val playlistId = player.context.uri.playlist
 
-          putStrLn(show"Removing track $trackUri from playlist $playlistId") *>
+          println(show"Removing track $trackUri from playlist $playlistId") *>
+            skipTrack *>
             methods.removeTrack[F](trackUri, playlistId).run(client)
-        } *> skipTrack
+        }
 
       def fastForward(percentage: Int): F[Unit] =
         methods
@@ -80,43 +85,89 @@ object Spotify {
           }
           .flatMap {
             case (_, desiredProgressPercent) if desiredProgressPercent >= 100 =>
-              putStrLn("Too close to song's ending, rewinding to beginning") *> methods.seek[F](0).run(client)
+              println("Too close to song's ending, rewinding to beginning") *> Playback[F].seek(0)
 
             case (player, desiredProgressPercent) =>
               val desiredProgressMs = desiredProgressPercent * player.item.durationMs / 100
-              putStrLn(show"Seeking to $desiredProgressPercent%") *> methods.seek[F](desiredProgressMs).run(client)
+              println(show"Seeking to $desiredProgressPercent%") *> Playback[F].seek(desiredProgressMs)
           }
 
     }
 
-  object methods {
+  trait Playback[F[_]] {
+    def nextTrack: F[Unit]
+    def seek(ms: Int): F[Unit]
+  }
+
+  object Playback {
+    def apply[F[_]](implicit F: Playback[F]): Playback[F] = F
+
+    def spotify[F[_]: Concurrent](client: Client[F]): Playback[F] = new Playback[F] {
+      val nextTrack: F[Unit] =
+        client.expect[api.spotify.Anything](Request[F](POST, methods.SpotifyApi / "v1" / "me" / "player" / "next")).void
+
+      def seek(ms: Int): F[Unit] = {
+        val uri = (methods.SpotifyApi / "v1" / "me" / "player" / "seek").withQueryParam("position_ms", ms)
+
+        client.expect[api.spotify.Anything](Request[F](PUT, uri)).void
+      }
+
+    }
+
+    def localSonos[F[_]: Concurrent](baseUrl: Uri, room: String, client: Client[F]): Playback[F] = new Playback[F] {
+      val nextTrack: F[Unit] =
+        client.expect[api.spotify.Anything](baseUrl / room / "next").void
+
+      def seek(ms: Int): F[Unit] = {
+        val seconds = Duration.ofMillis(ms.toLong).toSeconds().toString
+
+        client.expect[api.spotify.Anything](baseUrl / room / "timeseek" / seconds).void
+      }
+
+    }
+
+    def build[F[_]: Concurrent: Console](sonosBaseUrl: Uri, client: Client[F]): F[Playback[F]] =
+      Console[F].println(show"Checking if Sonos API is available at $sonosBaseUrl...") *>
+        client
+          .get(sonosBaseUrl / "zones") {
+            case response if response.status.isSuccess => response.as[sonos.SonosZones].map(_.some)
+            case _                                     => none[sonos.SonosZones].pure[F]
+          }
+          .handleError(_ => None)
+          .flatMap {
+            case None =>
+              Console[F].println("Sonos not found, will access Spotify API directly").as(spotify(client))
+
+            case Some(zones) =>
+              val roomName = zones.zones.head.coordinator.roomName
+
+              Console[F]
+                .println(show"Found ${zones.zones.size} zone(s), will use room $roomName")
+                .as(localSonos(sonosBaseUrl, roomName, client))
+          }
+
+  }
+
+  private object methods {
+    import org.http4s.syntax.all._
+
+    val SpotifyApi = uri"https://api.spotify.com"
+
     type Method[F[_], A] = Kleisli[F, Client[F], A]
 
-    def player[F[_]: Sync]: Method[F, Player[Option[PlayerContext], Option[Item]]] =
+    def player[F[_]: Concurrent]: Method[F, Player[Option[PlayerContext], Option[Item]]] =
       Kleisli {
-        _.expectOr("/v1/me/player") {
+        _.expectOr(SpotifyApi / "v1" / "me" / "player") {
           case response if response.status === Status.NoContent => NotPlaying.pure[F].widen
           case response                                         => InvalidStatus(response.status).pure[F].widen
         }
       }
 
-    def nextTrack[F[_]: Sync]: Method[F, Unit] =
-      Kleisli {
-        _.expect[api.spotify.Anything](Request[F](POST, Uri.uri("/v1/me/player/next"))).void
-      }
-
-    def removeTrack[F[_]: Sync](trackUri: String, playlistId: String): Method[F, Unit] =
+    def removeTrack[F[_]: Concurrent](trackUri: String, playlistId: String): Method[F, Unit] =
       Kleisli {
         _.expect[api.spotify.Anything](
-          Request[F](DELETE, Uri.uri("/v1/playlists") / playlistId / "tracks")
+          Request[F](DELETE, SpotifyApi / "v1" / "playlists" / playlistId / "tracks")
             .withEntity(json"""{"tracks":[{"uri": $trackUri}]}""")
-        ).void
-      }
-
-    def seek[F[_]: Sync](positionMs: Int): Method[F, Unit] =
-      Kleisli {
-        _.expect[api.spotify.Anything](
-          Request[F](PUT, Uri.uri("/v1/me/player/seek").withQueryParam("position_ms", positionMs))
         ).void
       }
 

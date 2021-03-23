@@ -1,6 +1,6 @@
 package com.kubukoz.next.util
 
-import cats.effect.Console
+import cats.effect.std.Console
 import cats.effect.MonadThrow
 import cats.implicits._
 
@@ -16,8 +16,8 @@ object ConsoleRead {
   }
 
   def readWithPrompt[F[_]: Console: MonadThrow, A: ConsoleRead](promptText: String): F[A] =
-    Console[F].putStr(promptText + ": ") *> Console[F]
-      .readLn
+    Console[F].print(promptText + ": ") *> Console[F]
+      .readLine
       .map(Option(_).getOrElse(""))
       .flatMap(ConsoleRead[A].read(_).liftTo[F])
 

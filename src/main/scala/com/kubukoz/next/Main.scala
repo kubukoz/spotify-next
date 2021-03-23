@@ -1,17 +1,18 @@
 package com.kubukoz.next
 
-import cats.effect.Console.implicits._
+import java.io.EOFException
+import java.util.concurrent.CancellationException
+
+import cats.Monad
+import cats.data.NonEmptyList
+import cats.effect.ExitCode
+import cats.effect.IO
+import cats.effect.Resource
+import cats.effect.std.Console
+import cats.implicits._
+import com.kubukoz.next.util.Config
 import com.monovore.decline._
 import com.monovore.decline.effect._
-
-import cats.data.NonEmptyList
-import com.kubukoz.next.util.Config
-import cats.effect.IO
-import cats.effect.Console
-import cats.implicits._
-import cats.Monad
-import cats.effect.Resource
-import cats.effect.ExitCode
 
 sealed trait Choice extends Product with Serializable
 
@@ -42,7 +43,20 @@ object Choice {
 
 }
 
-object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: Gather great music.") {
+// Fun hack to avoid showing a stack trace if the user presses Ctrl+C.
+// Hopefully this can be patterned out in CE3
+object Main0 {
+
+  def main(args: Array[String]) =
+    try new Main().main(args)
+    catch {
+      case _: CancellationException => ()
+      case up: Throwable            => throw up
+    }
+
+}
+
+class Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: Gather great music.") {
 
   import Program._
 
@@ -53,20 +67,18 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
     case Choice.FastForward(p) => Spotify[F].fastForward(p)
   }
 
-  import Console.io._
-
   val makeProgram: Resource[IO, Choice => IO[Unit]] =
-    makeLoader[IO]
+    Resource
+      .eval(makeLoader[IO])
       .flatMap { implicit loader =>
         implicit val configAsk: Config.Ask[IO] = loader.configAsk
 
-        makeBasicClient[IO].map { rawClient =>
-          import scala.concurrent.ExecutionContext.Implicits.global
-
+        makeBasicClient[IO].evalMap { rawClient =>
           implicit val login: Login[IO] = Login.blaze[IO](rawClient)
-          implicit val spotify: Spotify[IO] = makeSpotify(apiClient[IO].apply(rawClient))
 
-          runApp[IO]
+          makeSpotify(apiClient[IO].apply(rawClient)).map { implicit spotify =>
+            runApp[IO]
+          }
         }
       }
 
@@ -77,28 +89,31 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
     }
 
   val runRepl: IO[Unit] = {
+    // EOF thrown on Ctrl+D
+    val prompt = IO.print("next> ") *> IO.readLine.map(_.some).recover { case _: EOFException => none[String] }
+
     val input = fs2
       .Stream
-      .repeatEval(putStr("next> ") *> readLn.map(Option(_)))
+      .repeatEval(prompt)
       .map(_.map(_.trim))
       .filter(_.forall(_.nonEmpty))
       .unNoneTerminate
       .map(_.split("\\s+").toList)
-      .onComplete(fs2.Stream.eval_(putStrLn("Bye!")))
+      .onComplete(fs2.Stream.exec(IO.println("Bye!")))
 
     def reportError(e: Throwable): IO[Unit] =
-      putError("Command failed with exception: ") *> IO(e.printStackTrace())
+      Console[IO].errorln("Command failed with exception: ") *> IO(e.printStackTrace())
 
-    fs2.Stream.eval_(putStrLn("Loading REPL...")) ++
+    fs2.Stream.exec(IO.println("Loading REPL...")) ++
       fs2
         .Stream
         .resource(makeProgram)
-        .evalTap(_ => putStrLn("Welcome to the spotify-next REPL! Type in a command to begin"))
+        .evalTap(_ => IO.println("Welcome to the spotify-next REPL! Type in a command to begin"))
         .map(Command("", "")(Choice.opts).map(_))
         .flatMap { command =>
           input
             .map(command.parse(_, sys.env).leftMap(_.toString))
-            .evalMap(_.fold(putStrLn(_), _.handleErrorWith(reportError)))
+            .evalMap(_.fold(IO.println(_), _.handleErrorWith(reportError)))
         }
   }.compile.drain
 

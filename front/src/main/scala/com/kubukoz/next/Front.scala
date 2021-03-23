@@ -1,7 +1,6 @@
 package com.kubukoz.next
 
 import scala.scalajs.LinkingInfo
-import scala.scalajs.concurrent.JSExecutionContext
 import scala.scalajs.js.annotation.JSExportTopLevel
 import scala.util.Random
 
@@ -15,6 +14,8 @@ import slinky.web.html.key
 import slinky.web.html.onClick
 import cats.effect._
 import cats.implicits._
+import java.util.concurrent.atomic.AtomicReference
+import cats.effect.unsafe.implicits._
 
 object Front {
 
@@ -36,13 +37,7 @@ object Front {
 
 }
 
-object Runtime {
-  implicit val timer: Timer[IO] = IO.timer
-  implicit val cs: ContextShift[IO] = IO.contextShift(JSExecutionContext.queue)
-}
-
 object App {
-  import Runtime._
 
   import scala.concurrent.duration._
 
@@ -68,12 +63,15 @@ object App {
 
     //just a POC of using cats-effect here
     Hooks.useEffect { () =>
-      val theIO =
-        handleClicked.toIO.delayBy(16.millis)
+      val theIO = IO(handleClicked.unsafeRunSync()).delayBy(16.millis)
 
-      val tok = theIO.unsafeRunCancelable(_ => ())
+      // this could be a little nicer huh
+      val tok = new AtomicReference[IO[Unit]](IO.unit)
+      theIO.start.unsafeRunAsync {
+        _.traverse(fiber => IO(tok.set(fiber.cancel))).unsafeRunAndForget()
+      }
 
-      () => tok.unsafeRunAsyncAndForget()
+      () => IO(tok.get).flatten.unsafeRunAndForget()
     }
 
     import slinky.styledcomponents._
