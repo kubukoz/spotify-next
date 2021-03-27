@@ -20,8 +20,6 @@ import org.http4s.Uri
 import org.http4s.circe.CirceEntityCodec._
 import org.http4s.client.Client
 
-import util.Config.Token
-
 trait Spotify[F[_]] {
   def skipTrack: F[Unit]
   def dropTrack: F[Unit]
@@ -40,7 +38,7 @@ object Spotify {
   final case class InvalidContext[T](ctx: T) extends Error
   final case class InvalidItem[T](ctx: T) extends Error
 
-  def instance[F[_]: Playback: Client: Console: Concurrent: Token.Ask]: Spotify[F] =
+  def instance[F[_]: Playback: Client: Console: Concurrent]: Spotify[F] =
     new Spotify[F] {
       val client = implicitly[Client[F]]
 

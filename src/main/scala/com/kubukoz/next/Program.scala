@@ -83,8 +83,7 @@ object Program {
       _        <- Console[F].println("Refreshed token") //todo debug level?
     } yield ()
 
-  def makeSpotify[F[_]: Console: Concurrent: Config.Ask](client: Client[F]): F[Spotify[F]] = {
-    implicit val tokenAsk: Token.Ask[F] = Token.askBy(Config.AskInstance[F])(Getter(_.token))
+  def makeSpotify[F[_]: Console: Concurrent](client: Client[F]): F[Spotify[F]] = {
     implicit val theClient = client
 
     import org.http4s.syntax.all._
