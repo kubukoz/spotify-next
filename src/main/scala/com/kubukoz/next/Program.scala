@@ -7,7 +7,6 @@ import cats.Monad
 import cats.MonadError
 import cats.effect.Concurrent
 import cats.effect.MonadCancelThrow
-import cats.effect.MonadThrow
 import cats.effect.Resource
 import cats.effect.kernel.Async
 import cats.effect.kernel.Ref
@@ -28,7 +27,7 @@ import org.http4s.client.middleware.ResponseLogger
 object Program {
   val configPath = Paths.get(System.getProperty("user.home")).resolve(".spotify-next.json")
 
-  def makeLoader[F[_]: Files: Ref.Make: Console: MonadThrow: fs2.Compiler.Target]: F[ConfigLoader[F]] =
+  def makeLoader[F[_]: Files: Ref.Make: Console: fs2.Compiler.Target]: F[ConfigLoader[F]] =
     ConfigLoader
       .cached[F]
       .compose(ConfigLoader.withCreateFileIfMissing[F](configPath))

@@ -68,7 +68,7 @@ object Spotify {
           val trackUri = player.item.uri
           val playlistId = player.context.uri.playlist
 
-          println(show"Removing track $trackUri from playlist $playlistId") *>
+          println(show"""Removing track "${player.item.name}" ($trackUri) from playlist $playlistId""") *>
             skipTrack *>
             methods.removeTrack[F](trackUri, playlistId).run(client)
         }

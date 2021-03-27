@@ -39,13 +39,14 @@ object spotify {
   sealed trait Item extends Product with Serializable
 
   object Item {
-    final case class track(uri: String, durationMs: Int) extends Item
+    final case class track(uri: String, durationMs: Int, name: String) extends Item
 
     object track {
 
-      private[Item] implicit val codec: Codec.AsObject[track] = Codec.forProduct2(
+      private[Item] implicit val codec: Codec.AsObject[track] = Codec.forProduct3(
         "uri",
-        "duration_ms"
+        "duration_ms",
+        "name"
       )(apply)(unapply(_).get)
 
     }
