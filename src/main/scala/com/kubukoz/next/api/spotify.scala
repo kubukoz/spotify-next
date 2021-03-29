@@ -61,7 +61,7 @@ object spotify {
 
   }
 
-  @PLenses final case class Player[_Ctx, _Item](context: _Ctx, item: _Item, progressMs: Int) {
+  @PLenses final case class Player[_Ctx, _Item](context: _Ctx, item: _Item, device: Device, progressMs: Int) {
     private def itemLens[NewItem]: PLens[Player[_Ctx, _Item], Player[_Ctx, NewItem], _Item, NewItem] = Player.item
     private def contextLens[NewContext]: PLens[Player[_Ctx, _Item], Player[NewContext, _Item], _Ctx, NewContext] = Player.context
 
@@ -97,7 +97,7 @@ object spotify {
 
   object Player {
     implicit def codec[_Ctx: Codec, _Item: Codec]: Codec[Player[_Ctx, _Item]] =
-      Codec.forProduct3("context", "item", "progress_ms")(apply[_Ctx, _Item])(unapply(_).get)
+      Codec.forProduct4("context", "item", "device", "progress_ms")(apply[_Ctx, _Item])(unapply(_).get)
   }
 
   sealed trait PlayerContext extends Product with Serializable
@@ -157,6 +157,12 @@ object spotify {
       }
     )
 
+  }
+
+  final case class Device(isRestricted: Boolean)
+
+  object Device {
+    implicit val codec: Codec[Device] = Codec.forProduct1("is_restricted")(Device(_))(_.isRestricted)
   }
 
   sealed trait Anything extends Product with Serializable

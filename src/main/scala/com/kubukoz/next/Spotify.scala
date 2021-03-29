@@ -18,6 +18,10 @@ import org.http4s.Status
 import org.http4s.Uri
 import org.http4s.circe.CirceEntityCodec._
 import org.http4s.client.Client
+import cats.FlatMap
+import cats.effect.kernel.Ref
+import cats.data.OptionT
+import cats.effect.kernel.RefSink
 
 trait Spotify[F[_]] {
   def skipTrack: F[Unit]
@@ -122,25 +126,80 @@ object Spotify {
 
     }
 
-    def build[F[_]: UserOutput: Concurrent](sonosBaseUrl: Uri, client: Client[F]): F[Playback[F]] =
-      UserOutput[F].print(UserMessage.CheckingSonos(sonosBaseUrl)) *>
-        client
-          .get(sonosBaseUrl / "zones") {
-            case response if response.status.isSuccess => response.as[sonos.SonosZones].map(_.some)
-            case _                                     => none[sonos.SonosZones].pure[F]
-          }
-          .handleError(_ => None)
+    def suspend[F[_]: FlatMap](choose: F[Playback[F]]): Playback[F] = new Playback[F] {
+      def nextTrack: F[Unit] = choose.flatMap(_.nextTrack)
+      def seek(ms: Int): F[Unit] = choose.flatMap(_.seek(ms))
+    }
+
+    def build[F[_]: Concurrent: UserOutput](sonosBaseUrl: Uri, client: Client[F]): F[Playback[F]] = {
+      def spotifyInstanceF(lastUsedRoom: RefSink[F, None.type]) = lastUsedRoom.set(None).as(spotify(client))
+
+      def sonosInstanceF(lastUsedRoom: Ref[F, Option[String]]): F[Option[Playback[F]]] = {
+
+        val fetchZones: F[Option[sonos.SonosZones]] = UserOutput[F].print(UserMessage.CheckingSonos(sonosBaseUrl)) *>
+          client
+            .get(sonosBaseUrl / "zones") {
+              case response if response.status.isSuccess =>
+                response.as[sonos.SonosZones].map(_.some)
+              case _                                     => none[sonos.SonosZones].pure[F]
+            }
+            .handleError(_ => None)
+
+        def extractRoom(zones: sonos.SonosZones): F[String] = {
+          val roomName = zones.zones.head.coordinator.roomName
+
+          UserOutput[F].print(UserMessage.SonosFound(zones, roomName)) *>
+            lastUsedRoom.set(roomName.some).as(roomName)
+        }
+
+        val roomF: F[Option[String]] =
+          OptionT(lastUsedRoom.get)
+            .orElse(
+              OptionT(fetchZones).semiflatMap(extractRoom)
+            )
+            .value
+
+        roomF
           .flatMap {
             case None =>
-              UserOutput[F].print(UserMessage.SonosNotFound).as(spotify(client))
+              UserOutput[F].print(UserMessage.SonosNotFound).as(none)
 
-            case Some(zones) =>
-              val roomName = zones.zones.head.coordinator.roomName
-
-              UserOutput[F]
-                .print(UserMessage.SonosFound(zones, roomName))
-                .as(localSonos(sonosBaseUrl, roomName, client))
+            case Some(roomName) =>
+              localSonos(sonosBaseUrl, roomName, client).some.pure[F]
           }
+      }
+
+      def showChange(nowRestricted: Boolean): F[Unit] =
+        UserOutput[F].print {
+          if (nowRestricted) UserMessage.DeviceRestricted
+          else UserMessage.DirectControl
+        }
+
+      Ref[F].of(false).flatMap { isRestrictedRef =>
+        Ref[F].of(Option.empty[String]).map { lastSonosRoom =>
+          val resetRoom = (lastSonosRoom: RefSink[F, Option[String]]).narrow[None.type]
+
+          suspend[F] {
+            methods
+              .player[F]
+              .run(client)
+              .map(_.device.isRestricted)
+              .flatTap { newValue =>
+                isRestrictedRef.getAndSet(newValue).flatMap { oldValue =>
+                  showChange(newValue).unlessA(oldValue === newValue)
+                }
+              }
+              .ifM(
+                ifTrue = sonosInstanceF(lastSonosRoom).flatMap {
+                  case None                => spotifyInstanceF(resetRoom)
+                  case Some(sonosInstance) => sonosInstance.pure[F]
+                },
+                ifFalse = spotifyInstanceF(resetRoom)
+              )
+          }
+        }
+      }
+    }
 
   }
 

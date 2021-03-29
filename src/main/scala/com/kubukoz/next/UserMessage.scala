@@ -28,6 +28,8 @@ object UserMessage {
   final case class Seeking(desiredProgressPercent: Int) extends UserMessage
 
   // setup
+  case object DeviceRestricted extends UserMessage
+  case object DirectControl extends UserMessage
   final case class CheckingSonos(url: Uri) extends UserMessage
   case object SonosNotFound extends UserMessage
   final case class SonosFound(zones: SonosZones, roomName: String) extends UserMessage
@@ -58,8 +60,10 @@ object UserOutput {
       case TooCloseToEnd                        => "Too close to song's ending, rewinding to beginning"
       case Seeking(desiredProgressPercent)      => show"Seeking to $desiredProgressPercent%"
       case CheckingSonos(url)                   => show"Checking if Sonos API is available at $url..."
-      case SonosNotFound                        => "Sonos not found, will access Spotify API directly"
+      case SonosNotFound                        => "Sonos not found, using fallback"
       case SonosFound(zones, roomName)          => show"Found ${zones.zones.size} zone(s), will use room $roomName"
+      case DeviceRestricted                     => "Device restricted, trying to switch to Sonos API control..."
+      case DirectControl                        => "Switching to direct Spotify API control..."
     }
 
     msg => std.Console[F].println(stringify(msg))
