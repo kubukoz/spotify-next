@@ -1,8 +1,8 @@
 package com.kubukoz.next.util
 
 import cats.effect.std.Console
-import cats.effect.MonadThrow
 import cats.implicits._
+import cats.MonadThrow
 
 trait ConsoleRead[A] {
   def read(s: String): Either[Throwable, A]
