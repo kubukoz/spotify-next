@@ -14,6 +14,7 @@ import cats.Applicative
 import cats.effect.std.Console
 import fs2.io.file.Files
 import cats.FlatMap
+import cats.MonadThrow
 
 trait ConfigLoader[F[_]] {
   def saveConfig(config: Config): F[Unit]

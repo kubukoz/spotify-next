@@ -1,6 +1,5 @@
 package com.kubukoz.next
 
-import cats.effect.MonadThrow
 import cats.effect.kernel.Async
 import cats.effect.kernel.Deferred
 import cats.effect.kernel.Resource
@@ -24,6 +23,7 @@ import org.http4s.dsl.Http4sDsl
 import org.http4s.headers.Authorization
 import org.http4s.implicits._
 import org.http4s.server.blaze.BlazeServerBuilder
+import cats.MonadThrow
 
 trait Login[F[_]] {
   def server: F[Tokens]
