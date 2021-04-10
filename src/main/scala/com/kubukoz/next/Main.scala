@@ -1,8 +1,5 @@
 package com.kubukoz.next
 
-import java.io.EOFException
-import java.util.concurrent.CancellationException
-
 import cats.Monad
 import cats.data.NonEmptyList
 import cats.effect.ExitCode
@@ -13,6 +10,8 @@ import cats.implicits._
 import com.kubukoz.next.util.Config
 import com.monovore.decline._
 import com.monovore.decline.effect._
+
+import java.io.EOFException
 
 sealed trait Choice extends Product with Serializable
 
@@ -43,20 +42,7 @@ object Choice {
 
 }
 
-// Fun hack to avoid showing a stack trace if the user presses Ctrl+C.
-// Hopefully this can be patterned out in CE3
-object Main0 {
-
-  def main(args: Array[String]) =
-    try new Main().main(args)
-    catch {
-      case _: CancellationException => ()
-      case up: Throwable            => throw up
-    }
-
-}
-
-class Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: Gather great music.") {
+object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: Gather great music.") {
 
   import Program._
 

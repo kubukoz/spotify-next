@@ -1,7 +1,7 @@
 package com.kubukoz.next.util
 
 import cats.effect.std.Console
-import cats.effect.MonadThrow
+import cats.MonadThrow
 import cats.implicits._
 
 trait ConsoleRead[A] {

@@ -38,7 +38,7 @@ val commonSettings = Seq(
   scalacOptions -= "-Xfatal-warnings",
   scalacOptions ++= Seq("-Ymacro-annotations"),
   libraryDependencies ++= Seq(
-    "org.typelevel" %%% "cats-effect" % "3.0.0-RC2"
+    "org.typelevel" %%% "cats-effect" % "3.0.2"
   ),
   addCompilerPlugins,
   addVersionSpecificScalacSettings
@@ -96,14 +96,14 @@ val next =
       libraryDependencies ++= Seq(
         // no macros
         "org.typelevel" %% "cats-mtl" % "1.1.3",
-        "com.monovore" %% "decline-effect" % "2.0.0-RC1",
-        "org.http4s" %% "http4s-dsl" % "1.0.0-M19",
-        "org.http4s" %% "http4s-blaze-server" % "1.0.0-M19",
-        "org.http4s" %% "http4s-blaze-client" % "1.0.0-M19",
-        "org.http4s" %% "http4s-circe" % "1.0.0-M19",
+        "com.monovore" %% "decline-effect" % "2.0.0",
+        "org.http4s" %% "http4s-dsl" % "1.0.0-M21",
+        "org.http4s" %% "http4s-blaze-server" % "1.0.0-M21",
+        "org.http4s" %% "http4s-blaze-client" % "1.0.0-M21",
+        "org.http4s" %% "http4s-circe" % "1.0.0-M21",
         "ch.qos.logback" % "logback-classic" % "1.2.3",
-        "io.circe" %% "circe-parser" % "0.14.0-M4",
-        "io.circe" %% "circe-literal" % "0.14.0-M4",
+        "io.circe" %% "circe-parser" % "0.14.0-M5",
+        "io.circe" %% "circe-literal" % "0.14.0-M5",
         // yes macros
         "com.github.julien-truffaut" %% "monocle-macro" % "3.0.0-M4"
       )
