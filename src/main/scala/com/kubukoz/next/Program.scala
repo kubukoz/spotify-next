@@ -23,6 +23,7 @@ import org.http4s.client.middleware.ResponseLogger
 
 import java.lang.System
 import java.nio.file.Paths
+import com.kubukoz.next.api.sonos
 
 object Program {
   val configPath = Paths.get(System.getProperty("user.home")).resolve(".spotify-next.json")
@@ -86,13 +87,20 @@ object Program {
     } yield ()
 
   def makeSpotify[F[_]: UserOutput: Concurrent](client: Client[F]): F[Spotify[F]] = {
+    val sonosUri = sonos.baseUri
+
     implicit val theClient = client
+    implicit val deviceInfo = Spotify.DeviceInfo.instance(client)
+    implicit val sonosInfo = Spotify.SonosInfo.instance(sonosUri, client)
+    implicit val makeSonos = Spotify.Playback.MakeForSonos.instance(sonosUri, client)
+    implicit val makeSpotify = Spotify.Playback.MakeForSpotify.instance(client)
 
-    import org.http4s.syntax.all._
-
-    Spotify.Playback.build[F](uri"http://localhost:5005", client).map { implicit playback =>
-      Spotify.instance[F]
-    }
+    Spotify
+      .Playback
+      .build[F]
+      .map { implicit playback =>
+        Spotify.instance[F]
+      }
   }
 
 }

@@ -13,6 +13,7 @@ import com.monovore.decline._
 import com.monovore.decline.effect._
 
 import java.io.EOFException
+import com.kubukoz.next.api.sonos
 
 sealed trait Choice extends Product with Serializable
 
@@ -55,7 +56,7 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
   }
 
   def makeProgram[F[_]: Async: Console]: Resource[F, Choice => F[Unit]] = {
-    implicit val userOutput: UserOutput[F] = UserOutput.toConsole
+    implicit val userOutput: UserOutput[F] = UserOutput.toConsole[F](sonos.baseUri)
 
     Resource
       .eval(makeLoader[F])

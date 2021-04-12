@@ -30,7 +30,7 @@ object UserMessage {
   // setup
   case object DeviceRestricted extends UserMessage
   case object DirectControl extends UserMessage
-  final case class CheckingSonos(url: Uri) extends UserMessage
+  case object CheckingSonos extends UserMessage
   case object SonosNotFound extends UserMessage
   final case class SonosFound(zones: SonosZones, roomName: String) extends UserMessage
 }
@@ -43,7 +43,7 @@ trait UserOutput[F[_]] {
 object UserOutput {
   def apply[F[_]](implicit F: UserOutput[F]): UserOutput[F] = F
 
-  def toConsole[F[_]: std.Console]: UserOutput[F] = {
+  def toConsole[F[_]: std.Console](sonosBaseUrl: Uri): UserOutput[F] = {
     implicit val showPath: Show[Path] = Show.fromToString
 
     import UserMessage._
@@ -59,7 +59,7 @@ object UserOutput {
         show"""Removing track "${player.item.name}" (${player.item.uri}) from playlist ${player.context.uri.playlist}"""
       case TooCloseToEnd                        => "Too close to song's ending, rewinding to beginning"
       case Seeking(desiredProgressPercent)      => show"Seeking to $desiredProgressPercent%"
-      case CheckingSonos(url)                   => show"Checking if Sonos API is available at $url..."
+      case CheckingSonos                        => show"Checking if Sonos API is available at $sonosBaseUrl..."
       case SonosNotFound                        => "Sonos not found, using fallback"
       case SonosFound(zones, roomName)          => show"Found ${zones.zones.size} zone(s), will use room $roomName"
       case DeviceRestricted                     => "Device restricted, trying to switch to Sonos API control..."

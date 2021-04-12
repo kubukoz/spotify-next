@@ -1,20 +1,20 @@
 package com.kubukoz.next
 
-import com.kubukoz.next.util.Config
-import io.circe.syntax._
-import io.circe.Printer
-import java.nio.file.Path
-import java.nio.file.StandardOpenOption
-import java.nio.file.NoSuchFileException
-import com.kubukoz.next.util.ConsoleRead
-import cats.effect._
-import cats.implicits._
-import cats.Show
 import cats.Applicative
-import cats.effect.std.Console
-import fs2.io.file.Files
 import cats.FlatMap
 import cats.MonadThrow
+import cats.effect._
+import cats.effect.std.Console
+import cats.implicits._
+import com.kubukoz.next.util.Config
+import com.kubukoz.next.util.ConsoleRead
+import fs2.io.file.Files
+import io.circe.Printer
+import io.circe.syntax._
+
+import java.nio.file.NoSuchFileException
+import java.nio.file.Path
+import java.nio.file.StandardOpenOption
 
 trait ConfigLoader[F[_]] {
   def saveConfig(config: Config): F[Unit]
