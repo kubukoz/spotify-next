@@ -4,7 +4,6 @@ import java.time.Duration
 
 import cats.data.Kleisli
 import cats.effect.Concurrent
-import cats.effect.std.Console
 import cats.implicits._
 import com.kubukoz.next.api.sonos
 import com.kubukoz.next.api.spotify.Item
@@ -38,12 +37,9 @@ object Spotify {
   final case class InvalidContext[T](ctx: T) extends Error
   final case class InvalidItem[T](ctx: T) extends Error
 
-  def instance[F[_]: Playback: Client: Console: Concurrent]: Spotify[F] =
+  def instance[F[_]: Playback: Client: UserOutput: Concurrent]: Spotify[F] =
     new Spotify[F] {
       val client = implicitly[Client[F]]
-
-      val console = Console[F]
-      import console._
 
       private def requirePlaylist[A](player: Player[Option[PlayerContext], A]): F[Player[PlayerContext.playlist, A]] =
         player
@@ -58,7 +54,7 @@ object Spotify {
           .flatMap(_.narrowItem[Item.track].liftTo[F])
 
       val skipTrack: F[Unit] =
-        println("Switching to next track") *>
+        UserOutput[F].print(UserMessage.SwitchingToNext) *>
           Playback[F].nextTrack
 
       val dropTrack: F[Unit] =
@@ -66,7 +62,7 @@ object Spotify {
           val trackUri = player.item.uri
           val playlistId = player.context.uri.playlist
 
-          println(show"""Removing track "${player.item.name}" ($trackUri) from playlist $playlistId""") *>
+          UserOutput[F].print(UserMessage.RemovingCurrentTrack(player)) *>
             skipTrack *>
             methods.removeTrack[F](trackUri, playlistId).run(client)
         }
@@ -83,11 +79,13 @@ object Spotify {
           }
           .flatMap {
             case (_, desiredProgressPercent) if desiredProgressPercent >= 100 =>
-              println("Too close to song's ending, rewinding to beginning") *> Playback[F].seek(0)
+              UserOutput[F].print(UserMessage.TooCloseToEnd) *>
+                Playback[F].seek(0)
 
             case (player, desiredProgressPercent) =>
               val desiredProgressMs = desiredProgressPercent * player.item.durationMs / 100
-              println(show"Seeking to $desiredProgressPercent%") *> Playback[F].seek(desiredProgressMs)
+              UserOutput[F].print(UserMessage.Seeking(desiredProgressPercent)) *>
+                Playback[F].seek(desiredProgressMs)
           }
 
     }
@@ -124,8 +122,8 @@ object Spotify {
 
     }
 
-    def build[F[_]: Concurrent: Console](sonosBaseUrl: Uri, client: Client[F]): F[Playback[F]] =
-      Console[F].println(show"Checking if Sonos API is available at $sonosBaseUrl...") *>
+    def build[F[_]: UserOutput: Concurrent](sonosBaseUrl: Uri, client: Client[F]): F[Playback[F]] =
+      UserOutput[F].print(UserMessage.CheckingSonos(sonosBaseUrl)) *>
         client
           .get(sonosBaseUrl / "zones") {
             case response if response.status.isSuccess => response.as[sonos.SonosZones].map(_.some)
@@ -134,13 +132,13 @@ object Spotify {
           .handleError(_ => None)
           .flatMap {
             case None =>
-              Console[F].println("Sonos not found, will access Spotify API directly").as(spotify(client))
+              UserOutput[F].print(UserMessage.SonosNotFound).as(spotify(client))
 
             case Some(zones) =>
               val roomName = zones.zones.head.coordinator.roomName
 
-              Console[F]
-                .println(show"Found ${zones.zones.size} zone(s), will use room $roomName")
+              UserOutput[F]
+                .print(UserMessage.SonosFound(zones, roomName))
                 .as(localSonos(sonosBaseUrl, roomName, client))
           }
 

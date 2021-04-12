@@ -33,15 +33,13 @@ object ConfigLoader {
         }
       }
 
-  def withCreateFileIfMissing[F[_]: Console: MonadThrow](configPath: Path): ConfigLoader[F] => ConfigLoader[F] = {
-    implicit val showPath: Show[Path] = Show.fromToString
+  def withCreateFileIfMissing[F[_]: UserOutput: Console: MonadThrow](configPath: Path): ConfigLoader[F] => ConfigLoader[F] = {
 
     val validInput = "Y"
-    val askMessage = show"Didn't find config file at $configPath. Should I create one? ($validInput/n)"
 
     def askToCreateFile(originalException: NoSuchFileException): F[Config] =
       for {
-        _            <- Console[F].println(askMessage)
+        _            <- UserOutput[F].print(UserMessage.ConfigFileNotFound(configPath, validInput))
         _            <- Console[F].readLine.map(_.trim).ensure(originalException)(_.equalsIgnoreCase(validInput))
         clientId     <- ConsoleRead.readWithPrompt[F, String]("Client ID")
         clientSecret <- ConsoleRead.readWithPrompt[F, String]("Client secret")
@@ -51,7 +49,7 @@ object ConfigLoader {
       new ConfigLoader[F] {
         val loadConfig: F[Config] = underlying.loadConfig.recoverWith { case e: NoSuchFileException =>
           askToCreateFile(e).flatTap(saveConfig) <*
-            Console[F].println(s"Saved config to new file at $configPath")
+            UserOutput[F].print(UserMessage.SavedConfig(configPath))
         }
 
         def saveConfig(config: Config): F[Unit] = underlying.saveConfig(config)

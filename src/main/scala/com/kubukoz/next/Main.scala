@@ -5,6 +5,7 @@ import cats.data.NonEmptyList
 import cats.effect.ExitCode
 import cats.effect.IO
 import cats.effect.Resource
+import cats.effect.kernel.Async
 import cats.effect.std.Console
 import cats.implicits._
 import com.kubukoz.next.util.Config
@@ -46,32 +47,35 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
 
   import Program._
 
-  def runApp[F[_]: Spotify: ConfigLoader: Login: Console: Monad]: Choice => F[Unit] = {
+  def runApp[F[_]: Spotify: ConfigLoader: Login: UserOutput: Monad]: Choice => F[Unit] = {
     case Choice.Login          => loginUser[F]
     case Choice.SkipTrack      => Spotify[F].skipTrack
     case Choice.DropTrack      => Spotify[F].dropTrack
     case Choice.FastForward(p) => Spotify[F].fastForward(p)
   }
 
-  val makeProgram: Resource[IO, Choice => IO[Unit]] =
+  def makeProgram[F[_]: Async: Console]: Resource[F, Choice => F[Unit]] = {
+    implicit val userOutput: UserOutput[F] = UserOutput.toConsole
+
     Resource
-      .eval(makeLoader[IO])
+      .eval(makeLoader[F])
       .flatMap { implicit loader =>
-        implicit val configAsk: Config.Ask[IO] = loader.configAsk
+        implicit val configAsk: Config.Ask[F] = loader.configAsk
 
-        makeBasicClient[IO].evalMap { rawClient =>
-          implicit val login: Login[IO] = Login.blaze[IO](rawClient)
+        makeBasicClient[F].evalMap { rawClient =>
+          implicit val login: Login[F] = Login.blaze[F](rawClient)
 
-          makeSpotify(apiClient[IO].apply(rawClient)).map { implicit spotify =>
-            runApp[IO]
+          makeSpotify(apiClient[F].apply(rawClient)).map { implicit spotify =>
+            runApp[F]
           }
         }
       }
+  }
 
   val mainOpts: Opts[IO[Unit]] = Choice
     .opts
     .map { choice =>
-      makeProgram.use(_.apply(choice))
+      makeProgram[IO].use(_.apply(choice))
     }
 
   val runRepl: IO[Unit] = {
@@ -93,7 +97,7 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
     fs2.Stream.exec(IO.println("Loading REPL...")) ++
       fs2
         .Stream
-        .resource(makeProgram)
+        .resource(makeProgram[IO])
         .evalTap(_ => IO.println("Welcome to the spotify-next REPL! Type in a command to begin"))
         .map(Command("", "")(Choice.opts).map(_))
         .flatMap { command =>

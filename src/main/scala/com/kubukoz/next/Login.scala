@@ -3,7 +3,6 @@ package com.kubukoz.next
 import cats.effect.kernel.Async
 import cats.effect.kernel.Deferred
 import cats.effect.kernel.Resource
-import cats.effect.std.Console
 import cats.implicits._
 import com.kubukoz.next.Login.Tokens
 import com.kubukoz.next.api.spotify.RefreshedTokenResponse
@@ -37,7 +36,7 @@ object Login {
 
   final case class Code(value: String)
 
-  def blaze[F[_]: Console: Config.Ask: Async](
+  def blaze[F[_]: UserOutput: Config.Ask: Async](
     client: Client[F]
   ): Login[F] =
     new Login[F] {
@@ -80,7 +79,7 @@ object Login {
             .withQueryParam("response_type", "code")
         }
         .flatMap { uri =>
-          Console[F].println(s"Go to $uri")
+          UserOutput[F].print(UserMessage.GoToUri(uri))
         }
 
       def mkServer(config: Config, route: HttpRoutes[F]) =
