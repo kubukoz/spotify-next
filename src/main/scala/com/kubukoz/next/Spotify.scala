@@ -21,7 +21,6 @@ import org.http4s.client.Client
 import cats.FlatMap
 import cats.effect.kernel.Ref
 import cats.data.OptionT
-import cats.effect.kernel.RefSink
 
 trait Spotify[F[_]] {
   def skipTrack: F[Unit]
@@ -190,10 +189,7 @@ object Spotify {
               }
             }
             .ifM(
-              ifTrue = sonosInstanceF.flatMap {
-                case None                => spotifyInstanceF
-                case Some(sonosInstance) => sonosInstance.pure[F]
-              },
+              ifTrue = OptionT(sonosInstanceF).getOrElseF(spotifyInstanceF),
               ifFalse = spotifyInstanceF
             )
         }
