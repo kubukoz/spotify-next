@@ -102,112 +102,85 @@ object Spotify {
   object Playback {
     def apply[F[_]](implicit F: Playback[F]): Playback[F] = F
 
-    trait MakeForSpotify[F[_]] {
-      def make: Playback[F]
+    def spotifyInstance[F[_]: Concurrent](client: Client[F]): Playback[F] = new Playback[F] {
+      val nextTrack: F[Unit] =
+        client.expect[api.spotify.Anything](Request[F](POST, methods.SpotifyApi / "v1" / "me" / "player" / "next")).void
+
+      def seek(ms: Int): F[Unit] = {
+        val uri = (methods.SpotifyApi / "v1" / "me" / "player" / "seek").withQueryParam("position_ms", ms)
+
+        client.expect[api.spotify.Anything](Request[F](PUT, uri)).void
+      }
+
     }
 
-    object MakeForSpotify {
-      def apply[F[_]](implicit F: MakeForSpotify[F]): MakeForSpotify[F] = F
+    def sonosInstance[F[_]: Concurrent](sonosBaseUrl: Uri, client: Client[F])(room: String): Playback[F] =
+      new Playback[F] {
+        val nextTrack: F[Unit] =
+          client.expect[api.spotify.Anything](sonosBaseUrl / room / "next").void
 
-      def instance[F[_]: Concurrent](client: Client[F]): MakeForSpotify[F] = new MakeForSpotify[F] {
+        def seek(ms: Int): F[Unit] = {
+          val seconds = Duration.ofMillis(ms.toLong).toSeconds().toString
 
-        def make: Playback[F] = new Playback[F] {
-          val nextTrack: F[Unit] =
-            client.expect[api.spotify.Anything](Request[F](POST, methods.SpotifyApi / "v1" / "me" / "player" / "next")).void
-
-          def seek(ms: Int): F[Unit] = {
-            val uri = (methods.SpotifyApi / "v1" / "me" / "player" / "seek").withQueryParam("position_ms", ms)
-
-            client.expect[api.spotify.Anything](Request[F](PUT, uri)).void
-          }
-
+          client.expect[api.spotify.Anything](sonosBaseUrl / room / "timeseek" / seconds).void
         }
 
       }
-
-    }
-
-    // Produces a sonos instance of Playback
-    trait MakeForSonos[F[_]] {
-      def make(room: String): Playback[F]
-    }
-
-    object MakeForSonos {
-      def apply[F[_]](implicit F: MakeForSonos[F]): MakeForSonos[F] = F
-
-      def instance[F[_]: Concurrent](sonosBaseUrl: Uri, client: Client[F]): MakeForSonos[F] = new MakeForSonos[F] {
-
-        def make(room: String): Playback[F] =
-          new Playback[F] {
-            val nextTrack: F[Unit] =
-              client.expect[api.spotify.Anything](sonosBaseUrl / room / "next").void
-
-            def seek(ms: Int): F[Unit] = {
-              val seconds = Duration.ofMillis(ms.toLong).toSeconds().toString
-
-              client.expect[api.spotify.Anything](sonosBaseUrl / room / "timeseek" / seconds).void
-            }
-
-          }
-
-      }
-
-    }
 
     def suspend[F[_]: FlatMap](choose: F[Playback[F]]): Playback[F] = new Playback[F] {
       def nextTrack: F[Unit] = choose.flatMap(_.nextTrack)
       def seek(ms: Int): F[Unit] = choose.flatMap(_.seek(ms))
     }
 
-    /** Stateful instantiation of an effect that creates playbacks.
-      * Think F[ReadOnlyRef[F, Playback[F]]] - the outer effect allocates state,
+    /** Stateful instantiation of an effect that chooses values.
+      * Think F[ReadOnlyRef[F, A]] - the outer effect allocates state,
       * the inner effect (F[F[...]]) calculates the current value.
       *
       * The result returned can differ between calls to the inner F,
       * but will share state with all calls of the inner F inside the same outer F.
       */
-    def build[F[_]: Concurrent: UserOutput: DeviceInfo: SonosInfo: MakeForSonos: MakeForSpotify]: F[F[Playback[F]]] = {
-      def spotifyInstanceF(lastUsedRoom: RefSink[F, None.type]) = lastUsedRoom.set(None).as(MakeForSpotify[F].make)
-
-      def sonosInstanceF(lastUsedRoom: Ref[F, Option[String]]): F[Option[Playback[F]]] = {
-
-        val fetchZones: F[Option[sonos.SonosZones]] =
-          UserOutput[F].print(UserMessage.CheckingSonos) *>
-            SonosInfo[F].zones
-
-        def extractRoom(zones: sonos.SonosZones): F[String] = {
-          val roomName = zones.zones.head.coordinator.roomName
-
-          UserOutput[F].print(UserMessage.SonosFound(zones, roomName)) *>
-            lastUsedRoom.set(roomName.some).as(roomName)
-        }
-
-        val roomF: F[Option[String]] =
-          OptionT(lastUsedRoom.get)
-            .orElse(
-              OptionT(fetchZones).semiflatMap(extractRoom)
-            )
-            .value
-
-        roomF
-          .flatMap {
-            case None =>
-              UserOutput[F].print(UserMessage.SonosNotFound).as(none)
-
-            case Some(roomName) =>
-              MakeForSonos[F].make(roomName).some.pure[F]
-          }
-      }
-
-      def showChange(nowRestricted: Boolean): F[Unit] =
-        UserOutput[F].print {
-          if (nowRestricted) UserMessage.DeviceRestricted
-          else UserMessage.DirectControl
-        }
-
+    def build[F[_]: Concurrent: UserOutput: DeviceInfo: SonosInfo, A](
+      makeForSonos: String => A,
+      makeForSpotify: A
+    ): F[F[A]] =
       Ref[F].of(false).flatMap { isRestrictedRef =>
         Ref[F].of(Option.empty[String]).map { lastSonosRoom =>
-          val resetRoom = (lastSonosRoom: RefSink[F, Option[String]]).narrow[None.type]
+          val spotifyInstanceF = lastSonosRoom.set(None).as(makeForSpotify)
+
+          val sonosInstanceF: F[Option[A]] = {
+            val fetchZones: F[Option[sonos.SonosZones]] =
+              UserOutput[F].print(UserMessage.CheckingSonos) *>
+                SonosInfo[F].zones
+
+            def extractRoom(zones: sonos.SonosZones): F[String] = {
+              val roomName = zones.zones.head.coordinator.roomName
+
+              UserOutput[F].print(UserMessage.SonosFound(zones, roomName)) *>
+                lastSonosRoom.set(roomName.some).as(roomName)
+            }
+
+            val roomF: F[Option[String]] =
+              OptionT(lastSonosRoom.get)
+                .orElse(
+                  OptionT(fetchZones).semiflatMap(extractRoom)
+                )
+                .value
+
+            roomF
+              .flatMap {
+                case None =>
+                  UserOutput[F].print(UserMessage.SonosNotFound).as(none)
+
+                case Some(roomName) =>
+                  makeForSonos(roomName).some.pure[F]
+              }
+          }
+
+          def showChange(nowRestricted: Boolean): F[Unit] =
+            UserOutput[F].print {
+              if (nowRestricted) UserMessage.DeviceRestricted
+              else UserMessage.DirectControl
+            }
 
           DeviceInfo[F]
             .isRestricted
@@ -217,15 +190,14 @@ object Spotify {
               }
             }
             .ifM(
-              ifTrue = sonosInstanceF(lastSonosRoom).flatMap {
-                case None                => spotifyInstanceF(resetRoom)
+              ifTrue = sonosInstanceF.flatMap {
+                case None                => spotifyInstanceF
                 case Some(sonosInstance) => sonosInstance.pure[F]
               },
-              ifFalse = spotifyInstanceF(resetRoom)
+              ifFalse = spotifyInstanceF
             )
         }
       }
-    }
 
   }
 

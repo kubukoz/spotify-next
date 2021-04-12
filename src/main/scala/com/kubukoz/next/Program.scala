@@ -9,6 +9,7 @@ import cats.effect.kernel.Async
 import cats.effect.kernel.Ref
 import cats.effect.std.Console
 import cats.implicits._
+import com.kubukoz.next.api.sonos
 import com.kubukoz.next.util.Config
 import com.kubukoz.next.util.Config.RefreshToken
 import com.kubukoz.next.util.Config.Token
@@ -23,7 +24,6 @@ import org.http4s.client.middleware.ResponseLogger
 
 import java.lang.System
 import java.nio.file.Paths
-import com.kubukoz.next.api.sonos
 
 object Program {
   val configPath = Paths.get(System.getProperty("user.home")).resolve(".spotify-next.json")
@@ -92,12 +92,13 @@ object Program {
     implicit val theClient = client
     implicit val deviceInfo = Spotify.DeviceInfo.instance(client)
     implicit val sonosInfo = Spotify.SonosInfo.instance(sonosUri, client)
-    implicit val makeSonos = Spotify.Playback.MakeForSonos.instance(sonosUri, client)
-    implicit val makeSpotify = Spotify.Playback.MakeForSpotify.instance(client)
 
     Spotify
       .Playback
-      .build[F]
+      .build[F, Spotify.Playback[F]](
+        Spotify.Playback.sonosInstance[F](sonosUri, client),
+        Spotify.Playback.spotifyInstance[F](client)
+      )
       .map(Spotify.Playback.suspend(_))
       .map { implicit playback =>
         Spotify.instance[F]
