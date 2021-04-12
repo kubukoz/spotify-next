@@ -159,7 +159,14 @@ object Spotify {
       def seek(ms: Int): F[Unit] = choose.flatMap(_.seek(ms))
     }
 
-    def build[F[_]: Concurrent: UserOutput: DeviceInfo: SonosInfo: MakeForSonos: MakeForSpotify]: F[Playback[F]] = {
+    /** Stateful instantiation of an effect that creates playbacks.
+      * Think F[ReadOnlyRef[F, Playback[F]]] - the outer effect allocates state,
+      * the inner effect (F[F[...]]) calculates the current value.
+      *
+      * The result returned can differ between calls to the inner F,
+      * but will share state with all calls of the inner F inside the same outer F.
+      */
+    def build[F[_]: Concurrent: UserOutput: DeviceInfo: SonosInfo: MakeForSonos: MakeForSpotify]: F[F[Playback[F]]] = {
       def spotifyInstanceF(lastUsedRoom: RefSink[F, None.type]) = lastUsedRoom.set(None).as(MakeForSpotify[F].make)
 
       def sonosInstanceF(lastUsedRoom: Ref[F, Option[String]]): F[Option[Playback[F]]] = {
@@ -202,22 +209,20 @@ object Spotify {
         Ref[F].of(Option.empty[String]).map { lastSonosRoom =>
           val resetRoom = (lastSonosRoom: RefSink[F, Option[String]]).narrow[None.type]
 
-          suspend[F] {
-            DeviceInfo[F]
-              .isRestricted
-              .flatTap { newValue =>
-                isRestrictedRef.getAndSet(newValue).flatMap { oldValue =>
-                  showChange(newValue).unlessA(oldValue === newValue)
-                }
+          DeviceInfo[F]
+            .isRestricted
+            .flatTap { newValue =>
+              isRestrictedRef.getAndSet(newValue).flatMap { oldValue =>
+                showChange(newValue).unlessA(oldValue === newValue)
               }
-              .ifM(
-                ifTrue = sonosInstanceF(lastSonosRoom).flatMap {
-                  case None                => spotifyInstanceF(resetRoom)
-                  case Some(sonosInstance) => sonosInstance.pure[F]
-                },
-                ifFalse = spotifyInstanceF(resetRoom)
-              )
-          }
+            }
+            .ifM(
+              ifTrue = sonosInstanceF(lastSonosRoom).flatMap {
+                case None                => spotifyInstanceF(resetRoom)
+                case Some(sonosInstance) => sonosInstance.pure[F]
+              },
+              ifFalse = spotifyInstanceF(resetRoom)
+            )
         }
       }
     }

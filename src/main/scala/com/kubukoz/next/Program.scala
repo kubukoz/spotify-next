@@ -98,6 +98,7 @@ object Program {
     Spotify
       .Playback
       .build[F]
+      .map(Spotify.Playback.suspend(_))
       .map { implicit playback =>
         Spotify.instance[F]
       }
