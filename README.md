@@ -77,19 +77,3 @@ Subcommands:
 You can run the login command to be prompted for authorization, or you can rely on the fallback mechanism of all API calls - when one fails with 401 Unauthorized, you'll see the response and be prompted to log in. The call will be retried once after you successfully log in.
 
 The application automatically saves the token to the configuration file after successful logins.
-
-## Limitations
-
-Currently, it's impossible to control the playback on some devices (e.g. Sonos speakers) through the Spotify Web API.
-
-As of version `v1.3.0`, spotify-next is able to work around that if the user has an instance of [node-sonos-http-api](https://github.com/jishi/node-sonos-http-api) running. Currently the instance has to run at `localhost:5005` and only a single device can be controlled.
-
-To get this workaround to be used, make sure the Sonos API is running before you start spotify-next - it'll be checked at startup to determine which API should be used for player control:
-
-```
-Loading REPL...
-Checking if Sonos API is available at http://localhost:5005...
-Found 1 zone(s), will use room Living Room
-Welcome to the spotify-next REPL! Type in a command to begin
-next>
-```
