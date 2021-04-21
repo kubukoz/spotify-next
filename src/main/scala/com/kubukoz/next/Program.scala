@@ -1,7 +1,5 @@
 package com.kubukoz.next
 
-import cats.Monad
-import cats.MonadError
 import cats.effect.Concurrent
 import cats.effect.MonadCancelThrow
 import cats.effect.Resource
@@ -10,7 +8,6 @@ import cats.effect.kernel.Ref
 import cats.effect.std.Console
 import cats.implicits._
 import com.kubukoz.next.util.Config
-import com.kubukoz.next.util.Config.RefreshToken
 import com.kubukoz.next.util.Config.Token
 import com.kubukoz.next.util.middlewares
 import fs2.io.file.Files
@@ -43,7 +40,7 @@ object Program {
       .map(RequestLogger(logHeaders = true, logBody = true))
       .map(ResponseLogger(logHeaders = true, logBody = true))
 
-  def apiClient[F[_]: UserOutput: Console: ConfigLoader: Login: MonadCancelThrow](
+  def apiClient[F[_]: Console: ConfigLoader: LoginProcess: MonadCancelThrow](
     implicit SC: fs2.Compiler[F, F]
   ): Client[F] => Client[F] = {
     implicit val configAsk: Config.Ask[F] = ConfigLoader[F].configAsk
@@ -54,8 +51,8 @@ object Program {
         .ask[F]
         .map(_.refreshToken)
         .flatMap {
-          case None               => loginUser
-          case Some(refreshToken) => refreshUserToken(refreshToken)
+          case None               => LoginProcess[F].login
+          case Some(refreshToken) => LoginProcess[F].refreshUserToken(refreshToken)
         }
 
     middlewares
@@ -64,35 +61,11 @@ object Program {
       .compose(middlewares.withToken[F])
   }
 
-  // Do NOT move this into Spotify, it'll vastly increase the range of its responsibilities!
-  def loginUser[F[_]: UserOutput: Login: ConfigLoader: Monad]: F[Unit] =
-    for {
-      tokens <- Login[F].server
-      config <- ConfigLoader[F].loadConfig
-      newConfig = config.copy(token = tokens.access.some, refreshToken = tokens.refresh.some)
-      _      <- ConfigLoader[F].saveConfig(newConfig)
-      _      <- UserOutput[F].print(UserMessage.SavedToken)
-    } yield ()
-
-  def refreshUserToken[F[_]: UserOutput: Login: ConfigLoader: MonadError[*[_], Throwable]](
-    refreshToken: RefreshToken
-  ): F[Unit] =
-    for {
-      newToken <- Login[F].refreshToken(refreshToken)
-      config   <- ConfigLoader[F].loadConfig
-      newConfig = config.copy(token = newToken.some)
-      _        <- ConfigLoader[F].saveConfig(newConfig)
-      _        <- UserOutput[F].print(UserMessage.RefreshedToken)
-    } yield ()
-
-  def makeSpotify[F[_]: UserOutput: Concurrent](client: Client[F]): F[Spotify[F]] = {
+  def makeSpotify[F[_]: UserOutput: Concurrent](client: Client[F]): Spotify[F] = {
     implicit val theClient = client
+    implicit val playback = Spotify.Playback.spotify[F](client)
 
-    import org.http4s.syntax.all._
-
-    Spotify.Playback.build[F](uri"http://localhost:5005", client).map { implicit playback =>
-      Spotify.instance[F]
-    }
+    Spotify.instance[F]
   }
 
 }

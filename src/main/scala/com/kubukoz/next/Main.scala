@@ -1,6 +1,5 @@
 package com.kubukoz.next
 
-import cats.Monad
 import cats.data.NonEmptyList
 import cats.effect.ExitCode
 import cats.effect.IO
@@ -47,14 +46,7 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
 
   import Program._
 
-  def runApp[F[_]: Spotify: ConfigLoader: Login: UserOutput: Monad]: Choice => F[Unit] = {
-    case Choice.Login          => loginUser[F]
-    case Choice.SkipTrack      => Spotify[F].skipTrack
-    case Choice.DropTrack      => Spotify[F].dropTrack
-    case Choice.FastForward(p) => Spotify[F].fastForward(p)
-  }
-
-  def makeProgram[F[_]: Async: Console]: Resource[F, Choice => F[Unit]] = {
+  def makeProgram[F[_]: Async: Console]: Resource[F, Runner[F]] = {
     implicit val userOutput: UserOutput[F] = UserOutput.toConsole
 
     Resource
@@ -62,12 +54,13 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
       .flatMap { implicit loader =>
         implicit val configAsk: Config.Ask[F] = loader.configAsk
 
-        makeBasicClient[F].evalMap { rawClient =>
+        makeBasicClient[F].map { rawClient =>
           implicit val login: Login[F] = Login.blaze[F](rawClient)
+          implicit val loginProcess: LoginProcess[F] = LoginProcess.instance
 
-          makeSpotify(apiClient[F].apply(rawClient)).map { implicit spotify =>
-            runApp[F]
-          }
+          implicit val spotify = makeSpotify(apiClient[F].apply(rawClient))
+
+          Runner.instance[F]
         }
       }
   }
@@ -75,7 +68,7 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
   val mainOpts: Opts[IO[Unit]] = Choice
     .opts
     .map { choice =>
-      makeProgram[IO].use(_.apply(choice))
+      makeProgram[IO].use(_.run(choice))
     }
 
   val runRepl: IO[Unit] = {
@@ -99,7 +92,7 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
         .Stream
         .resource(makeProgram[IO])
         .evalTap(_ => IO.println("Welcome to the spotify-next REPL! Type in a command to begin"))
-        .map(Command("", "")(Choice.opts).map(_))
+        .map(runner => Command("", "")(Choice.opts).map(runner.run))
         .flatMap { command =>
           input
             .map(command.parse(_, sys.env).leftMap(_.toString))

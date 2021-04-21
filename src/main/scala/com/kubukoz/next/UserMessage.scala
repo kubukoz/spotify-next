@@ -4,7 +4,6 @@ import cats.Show
 import cats.effect.std
 import cats.implicits._
 import cats.~>
-import com.kubukoz.next.api.sonos.SonosZones
 import com.kubukoz.next.api.spotify.Item
 import com.kubukoz.next.api.spotify.Player
 import com.kubukoz.next.api.spotify.PlayerContext
@@ -26,11 +25,6 @@ object UserMessage {
   final case class RemovingCurrentTrack(player: Player[PlayerContext.playlist, Item.track]) extends UserMessage
   case object TooCloseToEnd extends UserMessage
   final case class Seeking(desiredProgressPercent: Int) extends UserMessage
-
-  // setup
-  final case class CheckingSonos(url: Uri) extends UserMessage
-  case object SonosNotFound extends UserMessage
-  final case class SonosFound(zones: SonosZones, roomName: String) extends UserMessage
 }
 
 trait UserOutput[F[_]] {
@@ -57,9 +51,6 @@ object UserOutput {
         show"""Removing track "${player.item.name}" (${player.item.uri}) from playlist ${player.context.uri.playlist}"""
       case TooCloseToEnd                        => "Too close to song's ending, rewinding to beginning"
       case Seeking(desiredProgressPercent)      => show"Seeking to $desiredProgressPercent%"
-      case CheckingSonos(url)                   => show"Checking if Sonos API is available at $url..."
-      case SonosNotFound                        => "Sonos not found, will access Spotify API directly"
-      case SonosFound(zones, roomName)          => show"Found ${zones.zones.size} zone(s), will use room $roomName"
     }
 
     msg => std.Console[F].println(stringify(msg))

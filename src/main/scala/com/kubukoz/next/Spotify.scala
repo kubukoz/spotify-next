@@ -1,11 +1,8 @@
 package com.kubukoz.next
 
-import java.time.Duration
-
 import cats.data.Kleisli
 import cats.effect.Concurrent
 import cats.implicits._
-import com.kubukoz.next.api.sonos
 import com.kubukoz.next.api.spotify.Item
 import com.kubukoz.next.api.spotify.Player
 import com.kubukoz.next.api.spotify.PlayerContext
@@ -15,7 +12,6 @@ import org.http4s.Method.POST
 import org.http4s.Method.PUT
 import org.http4s.Request
 import org.http4s.Status
-import org.http4s.Uri
 import org.http4s.circe.CirceEntityCodec._
 import org.http4s.client.Client
 
@@ -109,38 +105,6 @@ object Spotify {
       }
 
     }
-
-    def localSonos[F[_]: Concurrent](baseUrl: Uri, room: String, client: Client[F]): Playback[F] = new Playback[F] {
-      val nextTrack: F[Unit] =
-        client.expect[api.spotify.Anything](baseUrl / room / "next").void
-
-      def seek(ms: Int): F[Unit] = {
-        val seconds = Duration.ofMillis(ms.toLong).toSeconds().toString
-
-        client.expect[api.spotify.Anything](baseUrl / room / "timeseek" / seconds).void
-      }
-
-    }
-
-    def build[F[_]: UserOutput: Concurrent](sonosBaseUrl: Uri, client: Client[F]): F[Playback[F]] =
-      UserOutput[F].print(UserMessage.CheckingSonos(sonosBaseUrl)) *>
-        client
-          .get(sonosBaseUrl / "zones") {
-            case response if response.status.isSuccess => response.as[sonos.SonosZones].map(_.some)
-            case _                                     => none[sonos.SonosZones].pure[F]
-          }
-          .handleError(_ => None)
-          .flatMap {
-            case None =>
-              UserOutput[F].print(UserMessage.SonosNotFound).as(spotify(client))
-
-            case Some(zones) =>
-              val roomName = zones.zones.head.coordinator.roomName
-
-              UserOutput[F]
-                .print(UserMessage.SonosFound(zones, roomName))
-                .as(localSonos(sonosBaseUrl, roomName, client))
-          }
 
   }
 

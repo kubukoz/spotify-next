@@ -9,7 +9,6 @@ import java.nio.file.NoSuchFileException
 import com.kubukoz.next.util.ConsoleRead
 import cats.effect._
 import cats.implicits._
-import cats.Show
 import cats.Applicative
 import cats.effect.std.Console
 import fs2.io.file.Files
