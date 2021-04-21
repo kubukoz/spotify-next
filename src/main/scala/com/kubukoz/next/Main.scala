@@ -10,8 +10,9 @@ import cats.implicits._
 import com.kubukoz.next.util.Config
 import com.monovore.decline._
 import com.monovore.decline.effect._
-
 import java.io.EOFException
+
+import nextbuildinfo.BuildInfo
 
 sealed trait Choice extends Product with Serializable
 
@@ -87,7 +88,7 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
     def reportError(e: Throwable): IO[Unit] =
       Console[IO].errorln("Command failed with exception: ") *> IO(e.printStackTrace())
 
-    fs2.Stream.exec(IO.println("Loading REPL...")) ++
+    fs2.Stream.exec(IO.println(s"Loading REPL...version: ${BuildInfo.version.takeWhile(_ != '+')}")) ++
       fs2
         .Stream
         .resource(makeProgram[IO])

@@ -106,10 +106,13 @@ val next =
         "io.circe" %% "circe-literal" % "0.14.0-M5",
         // yes macros
         "com.github.julien-truffaut" %% "monocle-macro" % "3.0.0-M4"
-      )
+      ),
+      buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
+      buildInfoPackage := "nextbuildinfo"
     )
     .settings(name := "spotify-next")
     .enablePlugins(JavaAppPackaging)
     .enablePlugins(GraalVMNativeImagePlugin)
+    .enablePlugins(BuildInfoPlugin)
     .dependsOn(core)
     .aggregate(core /* front */ )
