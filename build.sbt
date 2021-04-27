@@ -107,7 +107,7 @@ val next =
         // yes macros
         "com.github.julien-truffaut" %% "monocle-macro" % "3.0.0-M4"
       ),
-      buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
+      buildInfoKeys := Seq[BuildInfoKey](version),
       buildInfoPackage := "nextbuildinfo"
     )
     .settings(name := "spotify-next")

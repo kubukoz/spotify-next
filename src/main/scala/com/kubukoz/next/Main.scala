@@ -88,11 +88,11 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
     def reportError(e: Throwable): IO[Unit] =
       Console[IO].errorln("Command failed with exception: ") *> IO(e.printStackTrace())
 
-    fs2.Stream.exec(IO.println(s"Loading REPL...version: ${BuildInfo.version.takeWhile(_ != '+')}")) ++
+    fs2.Stream.exec(IO.println("Loading REPL...")) ++
       fs2
         .Stream
         .resource(makeProgram[IO])
-        .evalTap(_ => IO.println("Welcome to the spotify-next REPL! Type in a command to begin"))
+        .evalTap(_ => IO.println(s"Welcome to the spotify-next ${BuildInfo.version} REPL! Type in a command to begin"))
         .map(runner => Command("", "")(Choice.opts).map(runner.run))
         .flatMap { command =>
           input

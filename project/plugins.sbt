@@ -7,4 +7,3 @@ addSbtPlugin("ch.epfl.scala" % "sbt-scalajs-bundler" % "0.20.0")
 addSbtPlugin("ch.epfl.scala" % "sbt-scala3-migrate" % "0.3.3")
 
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.10.0")
-addSbtPlugin("com.dwijnand" % "sbt-dynver" % "4.1.1")
