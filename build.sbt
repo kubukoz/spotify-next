@@ -21,7 +21,7 @@ val addCompilerPlugins = libraryDependencies ++= {
     List(
       crossPlugin("org.typelevel" % "kind-projector" % "0.11.3"),
       crossPlugin("com.github.cb372" % "scala-typed-holes" % "0.1.8"),
-      crossPlugin("com.kubukoz" % "better-tostring" % "0.2.9"),
+      crossPlugin("com.kubukoz" % "better-tostring" % "0.2.10"),
       //gonna regret this one huh
       compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
     )
@@ -95,7 +95,7 @@ val next =
     .settings(
       libraryDependencies ++= Seq(
         // no macros
-        "org.typelevel" %% "cats-mtl" % "1.1.3",
+        "org.typelevel" %% "cats-mtl" % "1.2.0",
         "com.monovore" %% "decline-effect" % "2.0.0",
         "org.http4s" %% "http4s-dsl" % "1.0.0-M21",
         "org.http4s" %% "http4s-blaze-server" % "1.0.0-M21",
@@ -105,7 +105,7 @@ val next =
         "io.circe" %% "circe-parser" % "0.14.0-M5",
         "io.circe" %% "circe-literal" % "0.14.0-M5",
         // yes macros
-        "com.github.julien-truffaut" %% "monocle-macro" % "3.0.0-M4"
+        "com.github.julien-truffaut" %% "monocle-macro" % "3.0.0-M5"
       ),
       buildInfoKeys := Seq[BuildInfoKey](version),
       buildInfoPackage := "nextbuildinfo"
