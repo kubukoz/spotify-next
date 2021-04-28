@@ -42,7 +42,7 @@ object Choice {
 
 }
 
-object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: Gather great music.") {
+object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: Gather great music.", version = BuildInfo.version) {
 
   import Program._
 
