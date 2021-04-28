@@ -108,9 +108,10 @@ val next =
         "com.github.julien-truffaut" %% "monocle-macro" % "3.0.0-M5"
       ),
       buildInfoKeys := Seq[BuildInfoKey](version),
-      buildInfoPackage := "nextbuildinfo"
+      buildInfoPackage := "com.kubukoz.next"
     )
     .settings(name := "spotify-next")
+    .enablePlugins(BuildInfoPlugin)
     .enablePlugins(JavaAppPackaging)
     .enablePlugins(GraalVMNativeImagePlugin)
     .dependsOn(core)
