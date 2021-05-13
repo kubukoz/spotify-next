@@ -63,7 +63,7 @@ object Program {
 
   def makeSpotify[F[_]: UserOutput: Concurrent](client: Client[F]): Spotify[F] = {
     implicit val theClient = client
-    implicit val playback = Spotify.Playback.spotify[F](client)
+    implicit val playback: Spotify.Playback[F] = Spotify.Playback.spotify[F](client)
 
     Spotify.instance[F]
   }

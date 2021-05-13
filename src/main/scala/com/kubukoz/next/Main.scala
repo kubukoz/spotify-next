@@ -8,21 +8,19 @@ import cats.effect.kernel.Async
 import cats.effect.std.Console
 import cats.implicits._
 import com.kubukoz.next.util.Config
-import com.monovore.decline._
-import com.monovore.decline.effect._
+// import com.monovore.decline._
+// import com.monovore.decline.effect._
 
 import java.io.EOFException
 
-sealed trait Choice extends Product with Serializable
+enum Choice {
+  case Login
+  case SkipTrack
+  case DropTrack
+  case FastForward(percentage: Int)
 
-object Choice {
-  case object Login extends Choice
-  case object SkipTrack extends Choice
-  case object DropTrack extends Choice
-  final case class FastForward(percentage: Int) extends Choice
-
-  val ffOpts = Opts.argument[Int]("step").map(FastForward).withDefault(FastForward(10))
-
+  /*
+    val ffOpts = Opts.argument[Int]("step").map(FastForward).withDefault(FastForward(10))
   val opts: Opts[Choice] =
     NonEmptyList
       .of[Opts[Choice]](
@@ -39,9 +37,10 @@ object Choice {
         Opts.subcommand("f", "Alias for `forward`")(ffOpts)
       )
       .reduceK
-
+   */
 }
 
+/*
 object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: Gather great music.", version = BuildInfo.version) {
 
   import Program._
@@ -106,3 +105,4 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
   val main: Opts[IO[ExitCode]] =
     (mainOpts <+> repl.as(runRepl)).map(_.as(ExitCode.Success))
 }
+ */

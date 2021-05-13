@@ -50,7 +50,7 @@ object Login {
         Config
           .ask[F]
           .map { config =>
-            Request[F](POST, Uri.uri("https://accounts.spotify.com/api/token"))
+            Request[F](POST, uri"https://accounts.spotify.com/api/token")
               .withEntity(body)
               .putHeaders(Authorization(BasicCredentials(config.clientId, config.clientSecret)))
           }
@@ -70,8 +70,7 @@ object Login {
       private val showUri = Config
         .ask[F]
         .map { config =>
-          Uri
-            .uri("https://accounts.spotify.com/authorize")
+          uri"https://accounts.spotify.com/authorize"
             .withQueryParam("client_id", config.clientId)
             .withQueryParam("client_secret", config.clientSecret)
             .withQueryParam("scope", scopes.mkString(" "))
@@ -101,7 +100,7 @@ object Login {
         )
 
         client
-          .expect[TokenResponse](Request[F](POST, Uri.uri("https://accounts.spotify.com/api/token")).withEntity(body))
+          .expect[TokenResponse](Request[F](POST, uri"https://accounts.spotify.com/api/token").withEntity(body))
           .map { response =>
             Tokens(Token(response.accessToken), RefreshToken(response.refreshToken))
           }
