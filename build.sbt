@@ -53,6 +53,7 @@ val core = project
   .enablePlugins(ScalaJSPlugin)
   .settings(commonSettings)
 
+/*
 val front = project
   .enablePlugins(ScalaJSPlugin)
   .enablePlugins(ScalaJSBundlerPlugin)
@@ -92,7 +93,7 @@ val front = project
     addCommandAlias("build", "front/fullOptJS::webpack")
   )
   .dependsOn(core)
-
+ */
 val next =
   project
     .in(file("."))
@@ -120,4 +121,4 @@ val next =
     .enablePlugins(JavaAppPackaging)
     .enablePlugins(GraalVMNativeImagePlugin)
     .dependsOn(core)
-    .aggregate(core, front)
+    .aggregate(core /* , front */ )
