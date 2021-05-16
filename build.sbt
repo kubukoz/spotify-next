@@ -25,7 +25,7 @@ def crossPlugin(x: sbt.librarymanagement.ModuleID) = compilerPlugin(x.cross(Cros
 val addCompilerPlugins = libraryDependencies ++= {
   if (scalaVersion.value.startsWith("2"))
     List(
-      crossPlugin("org.typelevel" % "kind-projector" % "0.12.0"),
+      crossPlugin("org.typelevel" % "kind-projector" % "0.13.0"),
       crossPlugin("com.github.cb372" % "scala-typed-holes" % "0.1.8"),
       crossPlugin("com.kubukoz" % "better-tostring" % "0.3.1"),
       //gonna regret this one huh
