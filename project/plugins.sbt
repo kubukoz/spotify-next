@@ -7,3 +7,4 @@ addSbtPlugin("ch.epfl.scala" % "sbt-scalajs-bundler" % "0.20.0")
 addSbtPlugin("ch.epfl.scala" % "sbt-scala3-migrate" % "0.4.1")
 
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.10.0")
+addSbtPlugin("com.codecommit" % "sbt-github-actions" % "0.10.1")
