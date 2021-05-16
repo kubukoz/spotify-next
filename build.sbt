@@ -18,7 +18,7 @@ inThisBuild(
 
 val GraalVM11 = "graalvm-ce-java11@20.3.0"
 ThisBuild / githubWorkflowJavaVersions := Seq(GraalVM11)
-ThisBuild / githubWorkflowPublishTargetBranches := Nil
+ThisBuild / githubWorkflowPublishTargetBranches := List(RefPredicate.Equals(Ref.Branch("main")))
 
 def crossPlugin(x: sbt.librarymanagement.ModuleID) = compilerPlugin(x.cross(CrossVersion.full))
 
