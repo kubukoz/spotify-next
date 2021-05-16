@@ -14,6 +14,12 @@ inThisBuild(
   )
 )
 
+(ThisBuild / scalaVersion) := "2.13.5"
+
+val GraalVM11 = "graalvm-ce-java11@20.3.0"
+ThisBuild / githubWorkflowJavaVersions := Seq(GraalVM11)
+ThisBuild / githubWorkflowPublishTargetBranches := List(RefPredicate.Equals(Ref.Branch("main")))
+
 def crossPlugin(x: sbt.librarymanagement.ModuleID) = compilerPlugin(x.cross(CrossVersion.full))
 
 val addCompilerPlugins = libraryDependencies ++= {
@@ -34,7 +40,6 @@ val addVersionSpecificScalacSettings = scalacOptions ++= {
 }
 
 val commonSettings = Seq(
-  scalaVersion := "2.13.5",
   scalacOptions -= "-Xfatal-warnings",
   scalacOptions ++= Seq("-Ymacro-annotations"),
   libraryDependencies ++= Seq(
@@ -48,6 +53,7 @@ val core = project
   .enablePlugins(ScalaJSPlugin)
   .settings(commonSettings)
 
+/*
 val front = project
   .enablePlugins(ScalaJSPlugin)
   .enablePlugins(ScalaJSBundlerPlugin)
@@ -87,7 +93,7 @@ val front = project
     addCommandAlias("build", "front/fullOptJS::webpack")
   )
   .dependsOn(core)
-
+ */
 val next =
   project
     .in(file("."))
@@ -115,4 +121,4 @@ val next =
     .enablePlugins(JavaAppPackaging)
     .enablePlugins(GraalVMNativeImagePlugin)
     .dependsOn(core)
-    .aggregate(core /* front */ )
+    .aggregate(core /* , front */ )
