@@ -24,8 +24,7 @@ ThisBuild / libraryDependencySchemes ++= Seq(
   "io.circe" %% "circe-core" % "early-semver",
   "io.circe" %% "circe-numbers" % "early-semver",
   "io.circe" %% "circe-jawn" % "early-semver",
-  "io.circe" %% "circe-parser" % "early-semver",
-  "io.circe" %% "circe-literal" % "early-semver"
+  "io.circe" %% "circe-parser" % "early-semver"
 )
 
 def crossPlugin(x: sbt.librarymanagement.ModuleID) = compilerPlugin(x.cross(CrossVersion.full))
@@ -117,7 +116,6 @@ val next =
         "org.http4s" %% "http4s-circe" % "1.0.0-M22",
         "ch.qos.logback" % "logback-classic" % "1.2.3",
         "io.circe" %% "circe-parser" % "0.14.0-M7",
-        "io.circe" %% "circe-literal" % "0.14.0-M7",
         // yes macros
         "com.github.julien-truffaut" %% "monocle-macro" % "3.0.0-M6"
       ),

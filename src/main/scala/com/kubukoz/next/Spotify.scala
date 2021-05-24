@@ -6,7 +6,7 @@ import cats.implicits._
 import com.kubukoz.next.api.spotify.Item
 import com.kubukoz.next.api.spotify.Player
 import com.kubukoz.next.api.spotify.PlayerContext
-import io.circe.literal._
+import io.circe.syntax._
 import org.http4s.Method.DELETE
 import org.http4s.Method.POST
 import org.http4s.Method.PUT
@@ -127,7 +127,7 @@ object Spotify {
       Kleisli {
         _.expect[api.spotify.Anything](
           Request[F](DELETE, SpotifyApi / "v1" / "playlists" / playlistId / "tracks")
-            .withEntity(json"""{"tracks":[{"uri": $trackUri}]}""")
+            .withEntity(Map("tracks" := Map("uri" := trackUri)).asJson)
         ).void
       }
 
