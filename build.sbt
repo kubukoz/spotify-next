@@ -20,6 +20,14 @@ val GraalVM11 = "graalvm-ce-java11@20.3.0"
 ThisBuild / githubWorkflowJavaVersions := Seq(GraalVM11)
 ThisBuild / githubWorkflowPublishTargetBranches := List(RefPredicate.Equals(Ref.Branch("main")))
 
+ThisBuild / libraryDependencySchemes ++= Seq(
+  "io.circe" %% "circe-core" % "early-semver",
+  "io.circe" %% "circe-numbers" % "early-semver",
+  "io.circe" %% "circe-jawn" % "early-semver",
+  "io.circe" %% "circe-parser" % "early-semver",
+  "io.circe" %% "circe-literal" % "early-semver"
+)
+
 def crossPlugin(x: sbt.librarymanagement.ModuleID) = compilerPlugin(x.cross(CrossVersion.full))
 
 val addCompilerPlugins = libraryDependencies ++= {
@@ -108,8 +116,8 @@ val next =
         "org.http4s" %% "http4s-blaze-client" % "1.0.0-M22",
         "org.http4s" %% "http4s-circe" % "1.0.0-M22",
         "ch.qos.logback" % "logback-classic" % "1.2.3",
-        "io.circe" %% "circe-parser" % "0.14.0-M5",
-        "io.circe" %% "circe-literal" % "0.14.0-M5",
+        "io.circe" %% "circe-parser" % "0.14.0-M7",
+        "io.circe" %% "circe-literal" % "0.14.0-M7",
         // yes macros
         "com.github.julien-truffaut" %% "monocle-macro" % "3.0.0-M5"
       ),
