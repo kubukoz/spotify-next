@@ -18,7 +18,7 @@ inThisBuild(
 
 val GraalVM11 = "graalvm-ce-java11@20.3.0"
 ThisBuild / githubWorkflowJavaVersions := Seq(GraalVM11)
-ThisBuild / githubWorkflowPublishTargetBranches := List(RefPredicate.Equals(Ref.Branch("main")))
+ThisBuild / githubWorkflowPublishTargetBranches := List(RefPredicate.StartsWith(Ref.Tag("v")), RefPredicate.Equals(Ref.Branch("main")))
 
 ThisBuild / githubWorkflowPublishPreamble := Seq(
   WorkflowStep.Use(UseRef.Public("olafurpg", "setup-gpg", "v3"))
