@@ -26,7 +26,7 @@ val addCompilerPlugins = libraryDependencies ++= {
   if (scalaVersion.value.startsWith("2"))
     List(
       crossPlugin("org.typelevel" % "kind-projector" % "0.13.0"),
-      crossPlugin("com.github.cb372" % "scala-typed-holes" % "0.1.8"),
+      crossPlugin("com.github.cb372" % "scala-typed-holes" % "0.1.9"),
       crossPlugin("com.kubukoz" % "better-tostring" % "0.3.1"),
       //gonna regret this one huh
       compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
@@ -111,7 +111,7 @@ val next =
         "io.circe" %% "circe-parser" % "0.14.0-M5",
         "io.circe" %% "circe-literal" % "0.14.0-M5",
         // yes macros
-        "com.github.julien-truffaut" %% "monocle-macro" % "3.0.0-M5"
+        "com.github.julien-truffaut" %% "monocle-macro" % "3.0.0-M6"
       ),
       buildInfoKeys := Seq[BuildInfoKey](version),
       buildInfoPackage := "com.kubukoz.next"
