@@ -6,7 +6,7 @@ target/
 **/secret.conf
 **/.DS_Store
 .vscode/
-
+.bsp
 spotify-next
 
 front/build/
