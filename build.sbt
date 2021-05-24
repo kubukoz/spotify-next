@@ -20,6 +20,21 @@ val GraalVM11 = "graalvm-ce-java11@20.3.0"
 ThisBuild / githubWorkflowJavaVersions := Seq(GraalVM11)
 ThisBuild / githubWorkflowPublishTargetBranches := List(RefPredicate.Equals(Ref.Branch("main")))
 
+ThisBuild / githubWorkflowPublishPreamble := Seq(
+  WorkflowStep.Use(UseRef.Public("olafurpg", "setup-gpg", "v3"))
+)
+
+ThisBuild / githubWorkflowPublish := Seq(WorkflowStep.Sbt(List("ci-release")))
+
+ThisBuild / githubWorkflowEnv ++= List(
+  "PGP_PASSPHRASE",
+  "PGP_SECRET",
+  "SONATYPE_PASSWORD",
+  "SONATYPE_USERNAME"
+).map { envKey =>
+  envKey -> s"$${{ secrets.$envKey }}"
+}.toMap
+
 ThisBuild / libraryDependencySchemes ++= Seq(
   "io.circe" %% "circe-core" % "early-semver",
   "io.circe" %% "circe-numbers" % "early-semver",

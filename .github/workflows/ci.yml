@@ -14,6 +14,10 @@ on:
     branches: ['**']
 
 env:
+  PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
+  SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+  SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+  PGP_SECRET: ${{ secrets.PGP_SECRET }}
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
@@ -106,5 +110,6 @@ jobs:
           tar xf targets.tar
           rm targets.tar
 
-      - name: Publish project
-        run: sbt --client '++${{ matrix.scala }}; +publish'
+      - uses: olafurpg/setup-gpg@v3
+
+      - run: sbt --client '++${{ matrix.scala }}; ci-release'
