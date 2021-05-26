@@ -131,7 +131,7 @@ val next =
         "org.http4s" %% "http4s-blaze-client" % "1.0.0-M22",
         "org.http4s" %% "http4s-circe" % "1.0.0-M22",
         "ch.qos.logback" % "logback-classic" % "1.2.3",
-        "io.circe" %% "circe-parser" % "0.14.0-M7",
+        "io.circe" %% "circe-parser" % "0.14.1",
         // yes macros
         "com.github.julien-truffaut" %% "monocle-macro" % "3.0.0-M6"
       ),
