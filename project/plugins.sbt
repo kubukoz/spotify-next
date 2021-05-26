@@ -1,5 +1,5 @@
 addSbtPlugin("com.geirsson" % "sbt-ci-release" % "1.5.7")
-addSbtPlugin("io.github.davidgregory084" % "sbt-tpolecat" % "0.1.18")
+addSbtPlugin("io.github.davidgregory084" % "sbt-tpolecat" % "0.1.19")
 addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.8.1")
 
 addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.5.1")
