@@ -127,7 +127,7 @@ object Spotify {
       Kleisli {
         _.expect[api.spotify.Anything](
           Request[F](DELETE, SpotifyApi / "v1" / "playlists" / playlistId / "tracks")
-            .withEntity(Map("tracks" := Map("uri" := trackUri)).asJson)
+            .withEntity(Map("tracks" := List(Map("uri" := trackUri))).asJson)
         ).void
       }
 
