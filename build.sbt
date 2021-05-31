@@ -50,7 +50,7 @@ val addCompilerPlugins = libraryDependencies ++= {
     List(
       crossPlugin("org.typelevel" % "kind-projector" % "0.13.0"),
       crossPlugin("com.github.cb372" % "scala-typed-holes" % "0.1.9"),
-      crossPlugin("com.kubukoz" % "better-tostring" % "0.3.2"),
+      crossPlugin("com.kubukoz" % "better-tostring" % "0.3.3"),
       //gonna regret this one huh
       compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
     )
