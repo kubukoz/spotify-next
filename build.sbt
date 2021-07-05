@@ -125,7 +125,7 @@ val next =
       libraryDependencies ++= Seq(
         // no macros
         "org.typelevel" %% "cats-mtl" % "1.2.1",
-        "com.monovore" %% "decline-effect" % "2.0.0",
+        "com.monovore" %% "decline-effect" % "2.1.0",
         "org.http4s" %% "http4s-dsl" % "1.0.0-M23",
         "org.http4s" %% "http4s-blaze-server" % "1.0.0-M23",
         "org.http4s" %% "http4s-blaze-client" % "1.0.0-M23",
