@@ -14,7 +14,7 @@ inThisBuild(
   )
 )
 
-(ThisBuild / scalaVersion) := "2.13.6"
+(ThisBuild / scalaVersion) := "3.0.0"
 
 val GraalVM11 = "graalvm-ce-java11@20.3.0"
 ThisBuild / githubWorkflowJavaVersions := Seq(GraalVM11)
@@ -53,7 +53,6 @@ val addCompilerPlugins = libraryDependencies ++= {
 }
 
 val commonSettings = Seq(
-  scalaVersion := "3.0.0",
   scalacOptions -= "-Xfatal-warnings",
   libraryDependencies ++= Seq(
     "org.typelevel" %%% "cats-effect" % "3.1.1"
@@ -112,7 +111,6 @@ val next =
     .settings(commonSettings)
     .settings(
       libraryDependencies ++= Seq(
-        // no macros
         "org.typelevel" %% "cats-mtl" % "1.2.1",
         "com.monovore" %% "decline-effect" % "2.1.0",
         "org.http4s" %% "http4s-dsl" % "0.23.0-RC1",
