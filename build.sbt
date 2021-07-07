@@ -47,6 +47,7 @@ def crossPlugin(x: sbt.librarymanagement.ModuleID) = compilerPlugin(x.cross(Cros
 
 val addCompilerPlugins = libraryDependencies ++= {
   List(
+    // https://github.com/polyvariant/better-tostring/issues/56
     // crossPlugin("com.kubukoz" % "better-tostring" % "0.3.3")
   )
 }
