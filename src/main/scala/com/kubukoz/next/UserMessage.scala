@@ -11,20 +11,17 @@ import org.http4s.Uri
 
 import java.nio.file.Path
 
-sealed trait UserMessage extends Product with Serializable
-
-object UserMessage {
-  final case class GoToUri(uri: Uri) extends UserMessage
-  final case class ConfigFileNotFound(path: Path, validInput: String) extends UserMessage
-  final case class SavedConfig(path: Path) extends UserMessage
-  case object SavedToken extends UserMessage
-  case object RefreshedToken extends UserMessage
-
+enum UserMessage {
+  case GoToUri(uri: Uri)
+  case ConfigFileNotFound(path: Path, validInput: String)
+  case SavedConfig(path: Path)
+  case SavedToken
+  case RefreshedToken
   // playback
-  case object SwitchingToNext extends UserMessage
-  final case class RemovingCurrentTrack(player: Player[PlayerContext.playlist, Item.track]) extends UserMessage
-  case object TooCloseToEnd extends UserMessage
-  final case class Seeking(desiredProgressPercent: Int) extends UserMessage
+  case SwitchingToNext
+  case RemovingCurrentTrack(player: Player[PlayerContext.playlist, Item.track])
+  case TooCloseToEnd
+  case Seeking(desiredProgressPercent: Int)
 }
 
 trait UserOutput[F[_]] {

@@ -3,8 +3,7 @@ package com.kubukoz.next.api
 import scala.reflect.ClassTag
 
 import cats.data.NonEmptyList
-import com.kubukoz.next.Spotify.InvalidContext
-import com.kubukoz.next.Spotify.InvalidItem
+import com.kubukoz.next.Spotify.Error._
 import io.circe.Codec
 import io.circe.Decoder
 import io.circe.Encoder
@@ -35,16 +34,19 @@ object spotify {
     Encoder[String].contramap(_.renderString)
   )
 
-  sealed trait Item extends Product with Serializable
+  enum Item {
+    case track(uri: String, duration_ms: Int, name: String)
+  }
 
   object Item {
-    final case class track(uri: String, duration_ms: Int, name: String) extends Item derives Codec.AsObject
 
-    implicit val codec: Codec[Item] =
+    given Codec[Item] =
       Codec.from(
-        byTypeDecoder("track" -> Decoder[track]),
+        byTypeDecoder("track" -> Decoder.derived[track]),
         Encoder.instance[Item] { case t: track =>
-          asJsonWithType(t, "track")
+          asJsonWithType(t, "track")(
+            using Encoder.AsObject.derived[track]
+          )
         }
       )
 
@@ -92,7 +94,11 @@ object spotify {
       Codec.forProduct3("context", "item", "progress_ms")(apply[_Ctx, _Item])(p => (p.context, p.item, p.progress_ms))
   }
 
-  sealed trait PlayerContext extends Product with Serializable
+  enum PlayerContext {
+    case playlist(href: Uri, uri: PlaylistUri)
+    case album(href: Uri)
+    case artist(href: Uri)
+  }
 
   final case class PlaylistUri(playlist: String, user: Option[String])
 
@@ -118,30 +124,36 @@ object spotify {
   }
 
   object PlayerContext {
-    final case class playlist(href: Uri, uri: PlaylistUri) extends PlayerContext derives Codec.AsObject
-
-    final case class album(href: Uri) extends PlayerContext derives Codec.AsObject
-
-    final case class artist(href: Uri) extends PlayerContext derives Codec.AsObject
 
     implicit val codec: Codec[PlayerContext] = Codec.from(
       byTypeDecoder(
-        "playlist" -> Decoder[playlist],
-        "album" -> Decoder[album],
-        "artist" -> Decoder[artist]
+        "playlist" -> Decoder.derived[playlist],
+        "album" -> Decoder.derived[album],
+        "artist" -> Decoder.derived[artist]
       ),
       Encoder.instance[PlayerContext] {
-        case p: playlist => asJsonWithType(p, "playlist")
-        case p: album    => asJsonWithType(p, "album")
-        case p: artist   => asJsonWithType(p, "artist")
+        case p: playlist =>
+          asJsonWithType(p, "playlist")(
+            using Encoder.AsObject.derived[PlayerContext.playlist]
+          )
+        case p: album    =>
+          asJsonWithType(p, "album")(
+            using Encoder.AsObject.derived[PlayerContext.album]
+          )
+        case p: artist   =>
+          asJsonWithType(p, "artist")(
+            using Encoder.AsObject.derived[PlayerContext.artist]
+          )
       }
     )
 
   }
 
-  sealed trait Anything extends Product with Serializable
-  case object Void extends Anything
-  val anything: Anything = Void
+  enum Anything {
+    case Void
+  }
+
+  val anything: Anything = Anything.Void
 
   object Anything {
     implicit def entityCodec[F[_]: Concurrent]: EntityDecoder[F, Anything] = EntityDecoder.void[F].map(_ => anything)
