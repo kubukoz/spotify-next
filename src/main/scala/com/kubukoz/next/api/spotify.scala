@@ -50,7 +50,7 @@ object spotify {
 
   }
 
-  final case class Player[_Ctx, _Item](context: _Ctx, item: _Item, progressMs: Int) {
+  final case class Player[_Ctx, _Item](context: _Ctx, item: _Item, progress_ms: Int) {
     private def itemLens[NewItem]: PLens[Player[_Ctx, _Item], Player[_Ctx, NewItem], _Item, NewItem] =
       PLens[Player[_Ctx, _Item], Player[_Ctx, NewItem], _Item, NewItem](_.item)(i => _.copy(item = i))
 
@@ -89,7 +89,7 @@ object spotify {
 
   object Player {
     implicit def codec[_Ctx: Codec, _Item: Codec]: Codec[Player[_Ctx, _Item]] =
-      Codec.forProduct3("context", "item", "progress_ms")(apply[_Ctx, _Item])(p => (p.context, p.item, p.progressMs))
+      Codec.forProduct3("context", "item", "progress_ms")(apply[_Ctx, _Item])(p => (p.context, p.item, p.progress_ms))
   }
 
   sealed trait PlayerContext extends Product with Serializable

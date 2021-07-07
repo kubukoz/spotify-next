@@ -69,7 +69,7 @@ object Spotify {
           .run(client)
           .flatMap(requireTrack)
           .fproduct { player =>
-            val currentLength = player.progressMs
+            val currentLength = player.progress_ms
             val totalLength = player.item.duration_ms
             ((currentLength * 100 / totalLength) + percentage)
           }
