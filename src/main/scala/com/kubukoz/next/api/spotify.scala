@@ -3,14 +3,12 @@ package com.kubukoz.next.api
 import scala.reflect.ClassTag
 
 import cats.data.NonEmptyList
-import com.kubukoz.next.Spotify.InvalidContext
-import com.kubukoz.next.Spotify.InvalidItem
+import com.kubukoz.next.Spotify.Error._
 import io.circe.Codec
 import io.circe.Decoder
 import io.circe.Encoder
 import io.circe.syntax._
 import monocle.PLens
-import monocle.macros.PLenses
 import org.http4s.EntityDecoder
 import org.http4s.Uri
 import cats.Functor
@@ -36,34 +34,30 @@ object spotify {
     Encoder[String].contramap(_.renderString)
   )
 
-  sealed trait Item extends Product with Serializable
+  enum Item {
+    case track(uri: String, duration_ms: Int, name: String)
+  }
 
   object Item {
-    final case class track(uri: String, durationMs: Int, name: String) extends Item
 
-    object track {
-
-      private[Item] implicit val codec: Codec.AsObject[track] = Codec.forProduct3(
-        "uri",
-        "duration_ms",
-        "name"
-      )(apply)(unapply(_).get)
-
-    }
-
-    implicit val codec: Codec[Item] =
+    given Codec[Item] =
       Codec.from(
-        byTypeDecoder("track" -> Decoder[track]),
+        byTypeDecoder("track" -> Decoder.derived[track]),
         Encoder.instance[Item] { case t: track =>
-          asJsonWithType(t, "track")
+          asJsonWithType(t, "track")(
+            using Encoder.AsObject.derived[track]
+          )
         }
       )
 
   }
 
-  @PLenses final case class Player[_Ctx, _Item](context: _Ctx, item: _Item, progressMs: Int) {
-    private def itemLens[NewItem]: PLens[Player[_Ctx, _Item], Player[_Ctx, NewItem], _Item, NewItem] = Player.item
-    private def contextLens[NewContext]: PLens[Player[_Ctx, _Item], Player[NewContext, _Item], _Ctx, NewContext] = Player.context
+  final case class Player[_Ctx, _Item](context: _Ctx, item: _Item, progress_ms: Int) {
+    private def itemLens[NewItem]: PLens[Player[_Ctx, _Item], Player[_Ctx, NewItem], _Item, NewItem] =
+      PLens[Player[_Ctx, _Item], Player[_Ctx, NewItem], _Item, NewItem](_.item)(i => _.copy(item = i))
+
+    private def contextLens[NewContext]: PLens[Player[_Ctx, _Item], Player[NewContext, _Item], _Ctx, NewContext] =
+      PLens[Player[_Ctx, _Item], Player[NewContext, _Item], _Ctx, NewContext](_.context)(c => _.copy(context = c))
 
     // It may not seem like it, but this is traverse.
     def unwrapContext[F[_], Ctx2](
@@ -97,10 +91,14 @@ object spotify {
 
   object Player {
     implicit def codec[_Ctx: Codec, _Item: Codec]: Codec[Player[_Ctx, _Item]] =
-      Codec.forProduct3("context", "item", "progress_ms")(apply[_Ctx, _Item])(unapply(_).get)
+      Codec.forProduct3("context", "item", "progress_ms")(apply[_Ctx, _Item])(p => (p.context, p.item, p.progress_ms))
   }
 
-  sealed trait PlayerContext extends Product with Serializable
+  enum PlayerContext {
+    case playlist(href: Uri, uri: PlaylistUri)
+    case album(href: Uri)
+    case artist(href: Uri)
+  }
 
   final case class PlaylistUri(playlist: String, user: Option[String])
 
@@ -126,57 +124,42 @@ object spotify {
   }
 
   object PlayerContext {
-    final case class playlist(href: Uri, uri: PlaylistUri) extends PlayerContext
-
-    object playlist {
-      private[PlayerContext] implicit val codec: Codec.AsObject[playlist] = Codec.forProduct2("href", "uri")(apply)(unapply(_).get)
-    }
-
-    final case class album(href: Uri) extends PlayerContext
-
-    object album {
-      private[PlayerContext] implicit val codec: Codec.AsObject[album] = Codec.forProduct1("href")(apply)(_.href)
-    }
-
-    final case class artist(href: Uri) extends PlayerContext
-
-    object artist {
-      private[PlayerContext] implicit val codec: Codec.AsObject[artist] = Codec.forProduct1("href")(apply)(_.href)
-    }
 
     implicit val codec: Codec[PlayerContext] = Codec.from(
       byTypeDecoder(
-        "playlist" -> Decoder[playlist],
-        "album" -> Decoder[album],
-        "artist" -> Decoder[artist]
+        "playlist" -> Decoder.derived[playlist],
+        "album" -> Decoder.derived[album],
+        "artist" -> Decoder.derived[artist]
       ),
       Encoder.instance[PlayerContext] {
-        case p: playlist => asJsonWithType(p, "playlist")
-        case p: album    => asJsonWithType(p, "album")
-        case p: artist   => asJsonWithType(p, "artist")
+        case p: playlist =>
+          asJsonWithType(p, "playlist")(
+            using Encoder.AsObject.derived[PlayerContext.playlist]
+          )
+        case p: album    =>
+          asJsonWithType(p, "album")(
+            using Encoder.AsObject.derived[PlayerContext.album]
+          )
+        case p: artist   =>
+          asJsonWithType(p, "artist")(
+            using Encoder.AsObject.derived[PlayerContext.artist]
+          )
       }
     )
 
   }
 
-  sealed trait Anything extends Product with Serializable
-  case object Void extends Anything
-  val anything: Anything = Void
+  enum Anything {
+    case Void
+  }
+
+  val anything: Anything = Anything.Void
 
   object Anything {
     implicit def entityCodec[F[_]: Concurrent]: EntityDecoder[F, Anything] = EntityDecoder.void[F].map(_ => anything)
   }
 
-  final case class TokenResponse(accessToken: String, refreshToken: String)
+  final case class TokenResponse(access_token: String, refresh_token: String) derives Codec.AsObject
 
-  object TokenResponse {
-    implicit val codec: Codec[TokenResponse] = Codec.forProduct2("access_token", "refresh_token")(apply)(unapply(_).get)
-  }
-
-  final case class RefreshedTokenResponse(accessToken: String)
-
-  object RefreshedTokenResponse {
-    implicit val codec: Codec[RefreshedTokenResponse] = Codec.forProduct1("access_token")(apply)(_.accessToken)
-  }
-
+  final case class RefreshedTokenResponse(access_token: String) derives Codec.AsObject
 }

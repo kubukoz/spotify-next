@@ -11,7 +11,7 @@ final case class Config(
   loginPort: Int,
   token: Option[Config.Token],
   refreshToken: Option[Config.RefreshToken]
-) {
+) derives Codec.AsObject {
   def redirectUri: String = show"http://localhost:$loginPort/login"
 }
 
@@ -29,14 +29,5 @@ object Config extends AskFor[Config] {
   object RefreshToken {
     implicit val codec: Codec[RefreshToken] = Codec.from(Decoder[String].map(apply), Encoder[String].contramap(_.value))
   }
-
-  implicit val codec: Codec[Config] =
-    Codec.forProduct5(
-      "clientId",
-      "clientSecret",
-      "loginPort",
-      "token",
-      "refreshToken"
-    )(apply)(unapply(_).get)
 
 }

@@ -14,7 +14,7 @@ inThisBuild(
   )
 )
 
-(ThisBuild / scalaVersion) := "2.13.6"
+(ThisBuild / scalaVersion) := "3.0.0"
 
 val GraalVM11 = "graalvm-ce-java11@20.3.0"
 ThisBuild / githubWorkflowJavaVersions := Seq(GraalVM11)
@@ -46,30 +46,18 @@ ThisBuild / libraryDependencySchemes ++= Seq(
 def crossPlugin(x: sbt.librarymanagement.ModuleID) = compilerPlugin(x.cross(CrossVersion.full))
 
 val addCompilerPlugins = libraryDependencies ++= {
-  if (scalaVersion.value.startsWith("2"))
-    List(
-      crossPlugin("org.typelevel" % "kind-projector" % "0.13.0"),
-      crossPlugin("com.github.cb372" % "scala-typed-holes" % "0.1.9"),
-      crossPlugin("com.kubukoz" % "better-tostring" % "0.3.3"),
-      //gonna regret this one huh
-      compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
-    )
-  else Nil
-}
-
-val addVersionSpecificScalacSettings = scalacOptions ++= {
-  if (scalaVersion.value.startsWith("2")) Nil
-  else List("-Ykind-projector")
+  List(
+    // https://github.com/polyvariant/better-tostring/issues/56
+    // crossPlugin("com.kubukoz" % "better-tostring" % "0.3.3")
+  )
 }
 
 val commonSettings = Seq(
   scalacOptions -= "-Xfatal-warnings",
-  scalacOptions ++= Seq("-Ymacro-annotations"),
   libraryDependencies ++= Seq(
     "org.typelevel" %%% "cats-effect" % "3.1.1"
   ),
-  addCompilerPlugins,
-  addVersionSpecificScalacSettings
+  addCompilerPlugins
 )
 
 val core = project
@@ -123,17 +111,15 @@ val next =
     .settings(commonSettings)
     .settings(
       libraryDependencies ++= Seq(
-        // no macros
         "org.typelevel" %% "cats-mtl" % "1.2.1",
-        "com.monovore" %% "decline-effect" % "2.0.0",
-        "org.http4s" %% "http4s-dsl" % "1.0.0-M23",
-        "org.http4s" %% "http4s-blaze-server" % "1.0.0-M23",
-        "org.http4s" %% "http4s-blaze-client" % "1.0.0-M23",
-        "org.http4s" %% "http4s-circe" % "1.0.0-M23",
+        "com.monovore" %% "decline-effect" % "2.1.0",
+        "org.http4s" %% "http4s-dsl" % "0.23.0-RC1",
+        "org.http4s" %% "http4s-blaze-server" % "0.23.0-RC1",
+        "org.http4s" %% "http4s-blaze-client" % "0.23.0-RC1",
+        "org.http4s" %% "http4s-circe" % "0.23.0-RC1",
         "ch.qos.logback" % "logback-classic" % "1.2.3",
         "io.circe" %% "circe-parser" % "0.14.1",
-        // yes macros
-        "com.github.julien-truffaut" %% "monocle-macro" % "3.0.0-M6"
+        "dev.optics" %% "monocle-core" % "3.0.0-RC2"
       ),
       buildInfoKeys := Seq[BuildInfoKey](version),
       buildInfoPackage := "com.kubukoz.next"

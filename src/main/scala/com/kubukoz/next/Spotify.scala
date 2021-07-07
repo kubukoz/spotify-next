@@ -25,13 +25,16 @@ object Spotify {
 
   def apply[F[_]](implicit F: Spotify[F]): Spotify[F] = F
 
-  sealed trait Error extends Throwable
-  case object NotPlaying extends Error
-  case class InvalidStatus(status: Status) extends Error
-  case object NoContext extends Error
-  case object NoItem extends Error
-  final case class InvalidContext[T](ctx: T) extends Error
-  final case class InvalidItem[T](ctx: T) extends Error
+  enum Error extends Throwable {
+    case NotPlaying
+    case InvalidStatus(status: Status)
+    case NoContext
+    case NoItem
+    case InvalidContext[T](ctx: T)
+    case InvalidItem[T](item: T)
+  }
+
+  import Error._
 
   def instance[F[_]: Playback: Client: UserOutput: Concurrent]: Spotify[F] =
     new Spotify[F] {
@@ -69,8 +72,8 @@ object Spotify {
           .run(client)
           .flatMap(requireTrack)
           .fproduct { player =>
-            val currentLength = player.progressMs
-            val totalLength = player.item.durationMs
+            val currentLength = player.progress_ms
+            val totalLength = player.item.duration_ms
             ((currentLength * 100 / totalLength) + percentage)
           }
           .flatMap {
@@ -79,7 +82,7 @@ object Spotify {
                 Playback[F].seek(0)
 
             case (player, desiredProgressPercent) =>
-              val desiredProgressMs = desiredProgressPercent * player.item.durationMs / 100
+              val desiredProgressMs = desiredProgressPercent * player.item.duration_ms / 100
               UserOutput[F].print(UserMessage.Seeking(desiredProgressPercent)) *>
                 Playback[F].seek(desiredProgressMs)
           }

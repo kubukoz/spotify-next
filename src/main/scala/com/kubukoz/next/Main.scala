@@ -13,15 +13,15 @@ import com.monovore.decline.effect._
 
 import java.io.EOFException
 
-sealed trait Choice extends Product with Serializable
+enum Choice {
+  case Login
+  case SkipTrack
+  case DropTrack
+  case FastForward(percentage: Int)
+}
 
 object Choice {
-  case object Login extends Choice
-  case object SkipTrack extends Choice
-  case object DropTrack extends Choice
-  final case class FastForward(percentage: Int) extends Choice
-
-  val ffOpts = Opts.argument[Int]("step").map(FastForward).withDefault(FastForward(10))
+  val ffOpts = Opts.argument[Int]("step").map(FastForward(_)).withDefault(FastForward(10))
 
   val opts: Opts[Choice] =
     NonEmptyList
@@ -58,7 +58,7 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
           implicit val login: Login[F] = Login.blaze[F](rawClient)
           implicit val loginProcess: LoginProcess[F] = LoginProcess.instance
 
-          implicit val spotify = makeSpotify(apiClient[F].apply(rawClient))
+          implicit val spotify: Spotify[F] = makeSpotify(apiClient[F].apply(rawClient))
 
           Runner.instance[F]
         }
