@@ -8,8 +8,8 @@ import cats.effect.kernel.Async
 import cats.effect.std.Console
 import cats.implicits._
 import com.kubukoz.next.util.Config
-// import com.monovore.decline._
-// import com.monovore.decline.effect._
+import com.monovore.decline._
+import com.monovore.decline.effect._
 
 import java.io.EOFException
 
@@ -18,9 +18,11 @@ enum Choice {
   case SkipTrack
   case DropTrack
   case FastForward(percentage: Int)
+}
 
-  /*
-    val ffOpts = Opts.argument[Int]("step").map(FastForward).withDefault(FastForward(10))
+object Choice {
+  val ffOpts = Opts.argument[Int]("step").map(FastForward(_)).withDefault(FastForward(10))
+
   val opts: Opts[Choice] =
     NonEmptyList
       .of[Opts[Choice]](
@@ -37,10 +39,9 @@ enum Choice {
         Opts.subcommand("f", "Alias for `forward`")(ffOpts)
       )
       .reduceK
-   */
+
 }
 
-/*
 object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: Gather great music.", version = BuildInfo.version) {
 
   import Program._
@@ -57,7 +58,7 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
           implicit val login: Login[F] = Login.blaze[F](rawClient)
           implicit val loginProcess: LoginProcess[F] = LoginProcess.instance
 
-          implicit val spotify = makeSpotify(apiClient[F].apply(rawClient))
+          implicit val spotify: Spotify[F] = makeSpotify(apiClient[F].apply(rawClient))
 
           Runner.instance[F]
         }
@@ -105,4 +106,3 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
   val main: Opts[IO[ExitCode]] =
     (mainOpts <+> repl.as(runRepl)).map(_.as(ExitCode.Success))
 }
- */

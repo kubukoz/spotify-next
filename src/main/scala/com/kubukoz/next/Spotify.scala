@@ -6,11 +6,7 @@ import cats.implicits._
 import com.kubukoz.next.api.spotify.Item
 import com.kubukoz.next.api.spotify.Player
 import com.kubukoz.next.api.spotify.PlayerContext
-<<<<<<< HEAD
 import io.circe.syntax._
-=======
-// import io.circe.literal._
->>>>>>> ca1870d (WIP: scala 3.0.0-RC2)
 import org.http4s.Method.DELETE
 import org.http4s.Method.POST
 import org.http4s.Method.PUT
@@ -74,7 +70,7 @@ object Spotify {
           .flatMap(requireTrack)
           .fproduct { player =>
             val currentLength = player.progressMs
-            val totalLength = player.item.durationMs
+            val totalLength = player.item.duration_ms
             ((currentLength * 100 / totalLength) + percentage)
           }
           .flatMap {
@@ -83,7 +79,7 @@ object Spotify {
                 Playback[F].seek(0)
 
             case (player, desiredProgressPercent) =>
-              val desiredProgressMs = desiredProgressPercent * player.item.durationMs / 100
+              val desiredProgressMs = desiredProgressPercent * player.item.duration_ms / 100
               UserOutput[F].print(UserMessage.Seeking(desiredProgressPercent)) *>
                 Playback[F].seek(desiredProgressMs)
           }
@@ -131,11 +127,7 @@ object Spotify {
       Kleisli {
         _.expect[api.spotify.Anything](
           Request[F](DELETE, SpotifyApi / "v1" / "playlists" / playlistId / "tracks")
-<<<<<<< HEAD
             .withEntity(Map("tracks" := List(Map("uri" := trackUri))).asJson)
-=======
-          // .withEntity(json"""{"tracks":[{"uri": $trackUri}]}""")
->>>>>>> ca1870d (WIP: scala 3.0.0-RC2)
         ).void
       }
 

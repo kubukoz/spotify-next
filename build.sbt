@@ -47,14 +47,13 @@ def crossPlugin(x: sbt.librarymanagement.ModuleID) = compilerPlugin(x.cross(Cros
 
 val addCompilerPlugins = libraryDependencies ++= {
   List(
-    crossPlugin("com.kubukoz" % "better-tostring" % "0.3.3")
+    // crossPlugin("com.kubukoz" % "better-tostring" % "0.3.3")
   )
 }
 
 val commonSettings = Seq(
   scalaVersion := "3.0.0",
   scalacOptions -= "-Xfatal-warnings",
-  scalacOptions ++= Seq("-Ymacro-annotations"),
   libraryDependencies ++= Seq(
     "org.typelevel" %%% "cats-effect" % "3.1.1"
   ),

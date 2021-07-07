@@ -10,7 +10,6 @@ import io.circe.Decoder
 import io.circe.Encoder
 import io.circe.syntax._
 import monocle.PLens
-import monocle.macros.GenLens
 import org.http4s.EntityDecoder
 import org.http4s.Uri
 import cats.Functor
@@ -39,7 +38,7 @@ object spotify {
   sealed trait Item extends Product with Serializable
 
   object Item {
-    final case class track(uri: String, durationMs: Int, name: String) extends Item derives Codec.AsObject
+    final case class track(uri: String, duration_ms: Int, name: String) extends Item derives Codec.AsObject
 
     implicit val codec: Codec[Item] =
       Codec.from(
@@ -148,7 +147,7 @@ object spotify {
     implicit def entityCodec[F[_]: Concurrent]: EntityDecoder[F, Anything] = EntityDecoder.void[F].map(_ => anything)
   }
 
-  final case class TokenResponse(accessToken: String, refreshToken: String) derives Codec.AsObject
+  final case class TokenResponse(access_token: String, refresh_token: String) derives Codec.AsObject
 
-  final case class RefreshedTokenResponse(accessToken: String) derives Codec.AsObject
+  final case class RefreshedTokenResponse(access_token: String) derives Codec.AsObject
 }

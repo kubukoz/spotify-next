@@ -55,7 +55,7 @@ object Login {
               .putHeaders(Authorization(BasicCredentials(config.clientId, config.clientSecret)))
           }
           .flatMap(client.fetchAs[RefreshedTokenResponse])
-          .map(_.accessToken)
+          .map(_.access_token)
           .map(Token(_))
       }
 
@@ -102,7 +102,7 @@ object Login {
         client
           .expect[TokenResponse](Request[F](POST, uri"https://accounts.spotify.com/api/token").withEntity(body))
           .map { response =>
-            Tokens(Token(response.accessToken), RefreshToken(response.refreshToken))
+            Tokens(Token(response.access_token), RefreshToken(response.refresh_token))
           }
       }
 
