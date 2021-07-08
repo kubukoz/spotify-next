@@ -119,7 +119,7 @@ val next =
         "org.http4s" %% "http4s-circe" % "0.23.0-RC1",
         "ch.qos.logback" % "logback-classic" % "1.2.3",
         "io.circe" %% "circe-parser" % "0.14.1",
-        "dev.optics" %% "monocle-core" % "3.0.0-RC2"
+        "dev.optics" %% "monocle-core" % "3.0.0"
       ),
       buildInfoKeys := Seq[BuildInfoKey](version),
       buildInfoPackage := "com.kubukoz.next"
