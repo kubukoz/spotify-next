@@ -113,10 +113,10 @@ val next =
       libraryDependencies ++= Seq(
         "org.typelevel" %% "cats-mtl" % "1.2.1",
         "com.monovore" %% "decline-effect" % "2.1.0",
-        "org.http4s" %% "http4s-dsl" % "0.23.0-RC1",
-        "org.http4s" %% "http4s-blaze-server" % "0.23.0-RC1",
-        "org.http4s" %% "http4s-blaze-client" % "0.23.0-RC1",
-        "org.http4s" %% "http4s-circe" % "0.23.0-RC1",
+        "org.http4s" %% "http4s-dsl" % "0.23.0",
+        "org.http4s" %% "http4s-blaze-server" % "0.23.0",
+        "org.http4s" %% "http4s-blaze-client" % "0.23.0",
+        "org.http4s" %% "http4s-circe" % "0.23.0",
         "ch.qos.logback" % "logback-classic" % "1.2.3",
         "io.circe" %% "circe-parser" % "0.14.1",
         "dev.optics" %% "monocle-core" % "3.0.0-RC2"
