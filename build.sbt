@@ -55,7 +55,7 @@ val addCompilerPlugins = libraryDependencies ++= {
 val commonSettings = Seq(
   scalacOptions -= "-Xfatal-warnings",
   libraryDependencies ++= Seq(
-    "org.typelevel" %%% "cats-effect" % "3.1.1"
+    "org.typelevel" %%% "cats-effect" % "3.2.1"
   ),
   addCompilerPlugins
 )
