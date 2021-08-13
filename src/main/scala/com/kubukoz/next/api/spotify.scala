@@ -1,7 +1,6 @@
 package com.kubukoz.next.api
 
 import scala.reflect.ClassTag
-
 import cats.data.NonEmptyList
 import com.kubukoz.next.Spotify.Error._
 import io.circe.Codec

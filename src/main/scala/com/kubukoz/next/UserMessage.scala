@@ -8,7 +8,6 @@ import com.kubukoz.next.api.spotify.Item
 import com.kubukoz.next.api.spotify.Player
 import com.kubukoz.next.api.spotify.PlayerContext
 import org.http4s.Uri
-
 import java.nio.file.Path
 
 enum UserMessage {

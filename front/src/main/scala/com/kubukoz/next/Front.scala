@@ -3,7 +3,6 @@ package com.kubukoz.next
 import scala.scalajs.LinkingInfo
 import scala.scalajs.js.annotation.JSExportTopLevel
 import scala.util.Random
-
 import cats.data.NonEmptyList
 import org.scalajs.dom
 import slinky.core.FunctionalComponent
