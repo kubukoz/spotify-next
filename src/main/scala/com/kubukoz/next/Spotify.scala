@@ -14,11 +14,15 @@ import org.http4s.Request
 import org.http4s.Status
 import org.http4s.circe.CirceEntityCodec._
 import org.http4s.client.Client
+import com.kubukoz.next.api.spotify.AudioAnalysis
+import com.kubukoz.next.api.spotify.TrackUri
+import scala.concurrent.duration._
 
 trait Spotify[F[_]] {
   def skipTrack: F[Unit]
   def dropTrack: F[Unit]
   def fastForward(percentage: Int): F[Unit]
+  def jumpSection: F[Unit]
 }
 
 object Spotify {
@@ -87,6 +91,29 @@ object Spotify {
                 Playback[F].seek(desiredProgressMs)
           }
 
+      def jumpSection: F[Unit] = methods
+        .player[F]
+        .flatMapF(requireTrack)
+        .flatMap { player =>
+          val track = player.item
+
+          val currentLength = player.progress_ms.millis
+
+          methods
+            .audioAnalysis[F](track.uri)
+            .flatMapF {
+              _.sections
+                .map(_.start.seconds)
+                .find(_ > currentLength)
+                .toOptionT
+                .getOrElseF(UserOutput[F].print(UserMessage.TooCloseToEnd).as(Duration.Zero))
+                .map(_.toMillis.toInt)
+            }
+        }
+        .flatMapF(Playback[F].seek)
+        .run(client)
+        .void
+
     }
 
   trait Playback[F[_]] {
@@ -126,12 +153,19 @@ object Spotify {
         }
       }
 
-    def removeTrack[F[_]: Concurrent](trackUri: String, playlistId: String): Method[F, Unit] =
+    def removeTrack[F[_]: Concurrent](trackUri: TrackUri, playlistId: String): Method[F, Unit] =
       Kleisli {
         _.expect[api.spotify.Anything](
           Request[F](DELETE, SpotifyApi / "v1" / "playlists" / playlistId / "tracks")
-            .withEntity(Map("tracks" := List(Map("uri" := trackUri))).asJson)
+            .withEntity(Map("tracks" := List(Map("uri" := trackUri.toFullUri))).asJson)
         ).void
+      }
+
+    def audioAnalysis[F[_]: Concurrent](trackUri: TrackUri): Method[F, AudioAnalysis] =
+      Kleisli {
+        _.expect(
+          SpotifyApi / "v1" / "audio-analysis" / trackUri.id
+        )
       }
 
   }

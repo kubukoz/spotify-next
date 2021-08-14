@@ -34,8 +34,24 @@ object spotify {
     Encoder[String].contramap(_.renderString)
   )
 
+  final case class TrackUri(id: String) {
+    def toFullUri: String = s"spotify:track:$id"
+  }
+
+  object TrackUri {
+
+    implicit val codec: Codec[TrackUri] = Codec.from(
+      Decoder[String].emap {
+        case s"spotify:track:$trackId" => TrackUri(trackId).asRight
+        case s                         => s"Not a spotify:track:{trackId}: $s".asLeft
+      },
+      _.toFullUri.asJson
+    )
+
+  }
+
   enum Item {
-    case track(uri: String, duration_ms: Int, name: String)
+    case track(uri: TrackUri, duration_ms: Int, name: String)
   }
 
   object Item {
@@ -146,6 +162,15 @@ object spotify {
           )
       }
     )
+
+  }
+
+  final case class AudioAnalysis(sections: List[AudioAnalysis.Section]) derives Codec.AsObject
+
+  object AudioAnalysis {
+
+    //start: seconds
+    final case class Section(start: Double) derives Codec.AsObject
 
   }
 

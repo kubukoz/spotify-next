@@ -45,7 +45,7 @@ object UserOutput {
       case RefreshedToken                       => "Refreshed token"
       case SwitchingToNext                      => "Switching to next track"
       case RemovingCurrentTrack(player)         =>
-        show"""Removing track "${player.item.name}" (${player.item.uri}) from playlist ${player.context.uri.playlist}"""
+        show"""Removing track "${player.item.name}" (${player.item.uri.toFullUri}) from playlist ${player.context.uri.playlist}"""
       case TooCloseToEnd                        => "Too close to song's ending, rewinding to beginning"
       case Seeking(desiredProgressPercent)      => show"Seeking to $desiredProgressPercent%"
     }

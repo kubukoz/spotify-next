@@ -12,6 +12,7 @@ object Runner {
     case Choice.SkipTrack      => Spotify[F].skipTrack
     case Choice.DropTrack      => Spotify[F].dropTrack
     case Choice.FastForward(p) => Spotify[F].fastForward(p)
+    case Choice.JumpSection    => Spotify[F].jumpSection
   }
 
 }

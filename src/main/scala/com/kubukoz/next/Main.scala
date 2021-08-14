@@ -18,6 +18,7 @@ enum Choice {
   case SkipTrack
   case DropTrack
   case FastForward(percentage: Int)
+  case JumpSection
 }
 
 object Choice {
@@ -34,9 +35,11 @@ object Choice {
         Opts.subcommand("forward", "Fast forward the current track by a percentage of its length (10% by default)")(
           ffOpts
         ),
+        Opts.subcommand("jump", "Fast forward the current track to the next section")(Opts(JumpSection)),
         Opts.subcommand("s", "Alias for `skip`")(Opts(SkipTrack)),
         Opts.subcommand("d", "Alias for `drop`")(Opts(DropTrack)),
-        Opts.subcommand("f", "Alias for `forward`")(ffOpts)
+        Opts.subcommand("f", "Alias for `forward`")(ffOpts),
+        Opts.subcommand("j", "Alias for `jump`")(Opts(JumpSection))
       )
       .reduceK
 
