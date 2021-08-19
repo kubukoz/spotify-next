@@ -17,7 +17,6 @@ import org.http4s.blaze.client.BlazeClientBuilder
 import org.http4s.client.middleware.FollowRedirect
 import org.http4s.client.middleware.RequestLogger
 import org.http4s.client.middleware.ResponseLogger
-
 import java.lang.System
 import java.nio.file.Paths
 

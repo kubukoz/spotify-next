@@ -10,7 +10,6 @@ import cats.implicits._
 import com.kubukoz.next.util.Config
 import com.monovore.decline._
 import com.monovore.decline.effect._
-
 import java.io.EOFException
 
 enum Choice {
