@@ -68,7 +68,7 @@ object spotify {
 
   }
 
-  final case class Player[_Ctx, _Item](context: _Ctx, item: _Item, progress_ms: Int) {
+  final case class Player[_Ctx, _Item](context: _Ctx, item: _Item, progress_ms: Int, device: Device) {
     private def itemLens[NewItem]: PLens[Player[_Ctx, _Item], Player[_Ctx, NewItem], _Item, NewItem] =
       PLens[Player[_Ctx, _Item], Player[_Ctx, NewItem], _Item, NewItem](_.item)(i => _.copy(item = i))
 
@@ -109,7 +109,7 @@ object spotify {
 
   object Player {
     given [_Ctx: Codec, _Item: Codec]: Codec[Player[_Ctx, _Item]] =
-      Codec.forProduct3("context", "item", "progress_ms")(apply[_Ctx, _Item])(p => (p.context, p.item, p.progress_ms))
+      Codec.forProduct4("context", "item", "progress_ms", "device")(apply[_Ctx, _Item])(p => (p.context, p.item, p.progress_ms, p.device))
   }
 
   enum PlayerContext {
@@ -175,6 +175,8 @@ object spotify {
     final case class Section(start: Double) derives Codec.AsObject
 
   }
+
+  final case class Device(is_restricted: Boolean) derives Codec.AsObject
 
   enum Anything {
     case Void

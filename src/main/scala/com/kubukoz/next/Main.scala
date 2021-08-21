@@ -8,6 +8,7 @@ import cats.effect.kernel.Async
 import cats.effect.std.Console
 import cats.implicits.*
 import com.kubukoz.next.util.Config
+import com.kubukoz.next.api.sonos
 import com.monovore.decline.*
 import com.monovore.decline.effect.*
 import cats.effect.implicits.*
@@ -50,7 +51,7 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
   import Program.*
 
   def makeProgram[F[_]: Async: Console]: Resource[F, Runner[F]] = {
-    given UserOutput[F] = UserOutput.toConsole
+    given UserOutput[F] = UserOutput.toConsole(sonos.baseUri)
 
     for {
       cl        <- makeLoader[F].toResource

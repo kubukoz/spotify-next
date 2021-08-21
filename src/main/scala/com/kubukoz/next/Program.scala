@@ -10,6 +10,7 @@ import cats.implicits.*
 import com.kubukoz.next.util.Config
 import com.kubukoz.next.util.Config.Token
 import com.kubukoz.next.util.middlewares
+import com.kubukoz.next.api.sonos
 import fs2.io.file.Files
 import monocle.Getter
 import org.http4s.client.Client
@@ -19,7 +20,6 @@ import org.http4s.client.middleware.RequestLogger
 import org.http4s.client.middleware.ResponseLogger
 import java.lang.System
 import java.nio.file.Paths
-import org.http4s.implicits.*
 
 object Program {
   val configPath = Paths.get(System.getProperty("user.home")).resolve(".spotify-next.json")
@@ -61,13 +61,24 @@ object Program {
       .compose(middlewares.withToken[F])
   }
 
-  def makeSpotify[F[_]: UserOutput: Concurrent](client: Client[F]): F[Spotify[F]] =
-    Spotify.Playback.build[F](uri"http://localhost:5005", client).map { playback =>
-      given Spotify.Playback[F] = playback
+  def makeSpotify[F[_]: UserOutput: Concurrent](client: Client[F]): F[Spotify[F]] = {
+    given Spotify.DeviceInfo[F] = Spotify.DeviceInfo.instance(client)
+    given Spotify.SonosInfo[F] = Spotify.SonosInfo.instance(sonos.baseUri, client)
 
-      given Client[F] = client
+    Spotify
+      .Playback
+      .build[F, Spotify.Playback[F]](
+        room => Spotify.Playback.sonosInstance[F](sonos.baseUri, room, client),
+        Spotify.Playback.spotifyInstance[F](client)
+      )
+      .map(Spotify.Playback.suspend(_))
+      .map { playback =>
+        given Spotify.Playback[F] = playback
 
-      Spotify.instance[F]
-    }
+        given Client[F] = client
+
+        Spotify.instance[F]
+      }
+  }
 
 }
