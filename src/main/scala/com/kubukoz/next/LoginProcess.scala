@@ -1,6 +1,6 @@
 package com.kubukoz.next
 
-import cats.implicits._
+import cats.implicits.*
 import com.kubukoz.next.util.Config
 import cats.Monad
 
@@ -10,7 +10,7 @@ trait LoginProcess[F[_]] {
 }
 
 object LoginProcess {
-  def apply[F[_]](implicit F: LoginProcess[F]): LoginProcess[F] = F
+  def apply[F[_]](using F: LoginProcess[F]): LoginProcess[F] = F
 
   def instance[F[_]: UserOutput: Login: ConfigLoader: Monad]: LoginProcess[F] = new LoginProcess[F] {
 

@@ -6,11 +6,12 @@ import cats.effect.IO
 import cats.effect.Resource
 import cats.effect.kernel.Async
 import cats.effect.std.Console
-import cats.implicits._
+import cats.implicits.*
 import com.kubukoz.next.util.Config
-import com.monovore.decline._
-import com.monovore.decline.effect._
-
+import com.kubukoz.next.api.sonos
+import com.monovore.decline.*
+import com.monovore.decline.effect.*
+import cats.effect.implicits.*
 import java.io.EOFException
 
 enum Choice {
@@ -18,6 +19,7 @@ enum Choice {
   case SkipTrack
   case DropTrack
   case FastForward(percentage: Int)
+  case JumpSection
 }
 
 object Choice {
@@ -34,9 +36,11 @@ object Choice {
         Opts.subcommand("forward", "Fast forward the current track by a percentage of its length (10% by default)")(
           ffOpts
         ),
+        Opts.subcommand("jump", "Fast forward the current track to the next section")(Opts(JumpSection)),
         Opts.subcommand("s", "Alias for `skip`")(Opts(SkipTrack)),
         Opts.subcommand("d", "Alias for `drop`")(Opts(DropTrack)),
-        Opts.subcommand("f", "Alias for `forward`")(ffOpts)
+        Opts.subcommand("f", "Alias for `forward`")(ffOpts),
+        Opts.subcommand("j", "Alias for `jump`")(Opts(JumpSection))
       )
       .reduceK
 
@@ -44,26 +48,27 @@ object Choice {
 
 object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: Gather great music.", version = BuildInfo.version) {
 
-  import Program._
+  import Program.*
 
   def makeProgram[F[_]: Async: Console]: Resource[F, Runner[F]] = {
-    implicit val userOutput: UserOutput[F] = UserOutput.toConsole
+    given UserOutput[F] = UserOutput.toConsole(sonos.baseUri)
 
-    Resource
-      .eval(makeLoader[F])
-      .flatMap { implicit loader =>
-        implicit val configAsk: Config.Ask[F] = loader.configAsk
+    for {
+      cl        <- makeLoader[F].toResource
+      rawClient <- makeBasicClient[F]
+    } yield {
+      given ConfigLoader[F] = cl
+      given Config.Ask[F] = ConfigLoader[F].configAsk
+      given Login[F] = Login.blaze[F](rawClient)
+      given LoginProcess[F] = LoginProcess.instance[F]
+      makeSpotify[F](apiClient[F].apply(rawClient)).map { s =>
+        given Spotify[F] = s
 
-        makeBasicClient[F].map { rawClient =>
-          implicit val login: Login[F] = Login.blaze[F](rawClient)
-          implicit val loginProcess: LoginProcess[F] = LoginProcess.instance
-
-          implicit val spotify: Spotify[F] = makeSpotify(apiClient[F].apply(rawClient))
-
-          Runner.instance[F]
-        }
+        Runner.instance[F]
       }
-  }
+
+    }
+  }.flatMap(_.toResource)
 
   val mainOpts: Opts[IO[Unit]] = Choice
     .opts
