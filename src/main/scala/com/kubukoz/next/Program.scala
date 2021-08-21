@@ -19,6 +19,7 @@ import org.http4s.client.middleware.RequestLogger
 import org.http4s.client.middleware.ResponseLogger
 import java.lang.System
 import java.nio.file.Paths
+import org.http4s.implicits.*
 
 object Program {
   val configPath = Paths.get(System.getProperty("user.home")).resolve(".spotify-next.json")
@@ -60,11 +61,13 @@ object Program {
       .compose(middlewares.withToken[F])
   }
 
-  def makeSpotify[F[_]: UserOutput: Concurrent](client: Client[F]): Spotify[F] = {
-    given Client[F] = client
-    given Spotify.Playback[F] = Spotify.Playback.spotify[F](client)
+  def makeSpotify[F[_]: UserOutput: Concurrent](client: Client[F]): F[Spotify[F]] =
+    Spotify.Playback.build[F](uri"http://localhost:5005", client).map { playback =>
+      given Spotify.Playback[F] = playback
 
-    Spotify.instance[F]
-  }
+      given Client[F] = client
+
+      Spotify.instance[F]
+    }
 
 }

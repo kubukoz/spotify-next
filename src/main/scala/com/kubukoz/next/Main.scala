@@ -60,11 +60,14 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
       given Config.Ask[F] = ConfigLoader[F].configAsk
       given Login[F] = Login.blaze[F](rawClient)
       given LoginProcess[F] = LoginProcess.instance[F]
-      given Spotify[F] = makeSpotify[F](apiClient[F].apply(rawClient))
+      makeSpotify[F](apiClient[F].apply(rawClient)).map { s =>
+        given Spotify[F] = s
 
-      Runner.instance[F]
+        Runner.instance[F]
+      }
+
     }
-  }
+  }.flatMap(_.toResource)
 
   val mainOpts: Opts[IO[Unit]] = Choice
     .opts
