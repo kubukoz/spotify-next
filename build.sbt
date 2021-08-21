@@ -14,7 +14,7 @@ inThisBuild(
   )
 )
 
-(ThisBuild / scalaVersion) := "3.0.0"
+(ThisBuild / scalaVersion) := "3.0.1"
 
 val GraalVM11 = "graalvm-ce-java11@20.3.0"
 ThisBuild / githubWorkflowJavaVersions := Seq(GraalVM11)
@@ -48,12 +48,13 @@ def crossPlugin(x: sbt.librarymanagement.ModuleID) = compilerPlugin(x.cross(Cros
 val addCompilerPlugins = libraryDependencies ++= {
   List(
     // https://github.com/polyvariant/better-tostring/issues/56
-    // crossPlugin("com.kubukoz" % "better-tostring" % "0.3.3")
+    crossPlugin("com.kubukoz" % "better-tostring" % "0.3.5")
   )
 }
 
 val commonSettings = Seq(
   scalacOptions -= "-Xfatal-warnings",
+  scalacOptions ++= List("-source", "future"),
   libraryDependencies ++= Seq(
     "org.typelevel" %%% "cats-effect" % "3.1.1"
   ),
@@ -113,13 +114,13 @@ val next =
       libraryDependencies ++= Seq(
         "org.typelevel" %% "cats-mtl" % "1.2.1",
         "com.monovore" %% "decline-effect" % "2.1.0",
-        "org.http4s" %% "http4s-dsl" % "0.23.0-RC1",
-        "org.http4s" %% "http4s-blaze-server" % "0.23.0-RC1",
-        "org.http4s" %% "http4s-blaze-client" % "0.23.0-RC1",
-        "org.http4s" %% "http4s-circe" % "0.23.0-RC1",
+        "org.http4s" %% "http4s-dsl" % "0.23.0",
+        "org.http4s" %% "http4s-blaze-server" % "0.23.0",
+        "org.http4s" %% "http4s-blaze-client" % "0.23.0",
+        "org.http4s" %% "http4s-circe" % "0.23.0",
         "ch.qos.logback" % "logback-classic" % "1.2.3",
         "io.circe" %% "circe-parser" % "0.14.1",
-        "dev.optics" %% "monocle-core" % "3.0.0-RC2"
+        "dev.optics" %% "monocle-core" % "3.0.0"
       ),
       buildInfoKeys := Seq[BuildInfoKey](version),
       buildInfoPackage := "com.kubukoz.next"

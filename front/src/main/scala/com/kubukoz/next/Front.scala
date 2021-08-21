@@ -3,7 +3,6 @@ package com.kubukoz.next
 import scala.scalajs.LinkingInfo
 import scala.scalajs.js.annotation.JSExportTopLevel
 import scala.util.Random
-
 import cats.data.NonEmptyList
 import org.scalajs.dom
 import slinky.core.FunctionalComponent
@@ -12,10 +11,10 @@ import slinky.web.ReactDOM
 import slinky.web.html.div
 import slinky.web.html.key
 import slinky.web.html.onClick
-import cats.effect._
-import cats.implicits._
+import cats.effect.*
+import cats.implicits.*
 import java.util.concurrent.atomic.AtomicReference
-import cats.effect.unsafe.implicits._
+import cats.effect.unsafe.implicits.*
 
 object Front {
 
@@ -39,7 +38,7 @@ object Front {
 
 object App {
 
-  import scala.concurrent.duration._
+  import scala.concurrent.duration.*
 
   val component: FunctionalComponent[Unit] = FunctionalComponent { _ =>
     //using a core model
@@ -74,7 +73,7 @@ object App {
       () => IO(tok.get).flatten.unsafeRunAndForget()
     }
 
-    import slinky.styledcomponents._
+    import slinky.styledcomponents.*
 
     case class StonksProps(color: String)
 

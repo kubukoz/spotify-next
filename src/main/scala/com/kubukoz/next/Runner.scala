@@ -5,7 +5,7 @@ trait Runner[F[_]] {
 }
 
 object Runner {
-  def apply[F[_]](implicit F: Runner[F]): Runner[F] = F
+  def apply[F[_]](using F: Runner[F]): Runner[F] = F
 
   def instance[F[_]: Spotify: LoginProcess]: Runner[F] = {
     case Choice.Login          => LoginProcess[F].login

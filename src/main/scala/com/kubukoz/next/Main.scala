@@ -6,11 +6,11 @@ import cats.effect.IO
 import cats.effect.Resource
 import cats.effect.kernel.Async
 import cats.effect.std.Console
-import cats.implicits._
+import cats.implicits.*
 import com.kubukoz.next.util.Config
-import com.monovore.decline._
-import com.monovore.decline.effect._
-
+import com.monovore.decline.*
+import com.monovore.decline.effect.*
+import cats.effect.implicits.*
 import java.io.EOFException
 
 enum Choice {
@@ -47,25 +47,23 @@ object Choice {
 
 object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: Gather great music.", version = BuildInfo.version) {
 
-  import Program._
+  import Program.*
 
   def makeProgram[F[_]: Async: Console]: Resource[F, Runner[F]] = {
-    implicit val userOutput: UserOutput[F] = UserOutput.toConsole
+    given UserOutput[F] = UserOutput.toConsole
 
-    Resource
-      .eval(makeLoader[F])
-      .flatMap { implicit loader =>
-        implicit val configAsk: Config.Ask[F] = loader.configAsk
+    for {
+      cl        <- makeLoader[F].toResource
+      rawClient <- makeBasicClient[F]
+    } yield {
+      given ConfigLoader[F] = cl
+      given Config.Ask[F] = ConfigLoader[F].configAsk
+      given Login[F] = Login.blaze[F](rawClient)
+      given LoginProcess[F] = LoginProcess.instance[F]
+      given Spotify[F] = makeSpotify[F](apiClient[F].apply(rawClient))
 
-        makeBasicClient[F].map { rawClient =>
-          implicit val login: Login[F] = Login.blaze[F](rawClient)
-          implicit val loginProcess: LoginProcess[F] = LoginProcess.instance
-
-          implicit val spotify: Spotify[F] = makeSpotify(apiClient[F].apply(rawClient))
-
-          Runner.instance[F]
-        }
-      }
+      Runner.instance[F]
+    }
   }
 
   val mainOpts: Opts[IO[Unit]] = Choice
