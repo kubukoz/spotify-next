@@ -3,7 +3,7 @@ package com.kubukoz.next.util
 import cats.effect.MonadCancelThrow
 import cats.effect.Resource
 import cats.effect.std.Console
-import cats.implicits._
+import cats.implicits.*
 import com.kubukoz.next.util.Config.Token
 import org.http4s.AuthScheme
 import org.http4s.Credentials
@@ -18,7 +18,7 @@ object middlewares {
   def retryUnauthorizedWith[F[_]: Console: MonadCancelThrow](
     beforeRetry: F[Unit]
   )(
-    implicit SC: fs2.Compiler[F, F]
+    using fs2.Compiler[F, F]
   ): Client[F] => Client[F] = {
     def doBeforeRetry(response: Response[F]) = {
       val showBody = response.bodyText.compile.string.flatMap(Console[F].println)
@@ -39,7 +39,7 @@ object middlewares {
       }
   }
 
-  def logFailedResponse[F[_]: Console: MonadCancelThrow](implicit SC: fs2.Compiler[F, F]): Client[F] => Client[F] = { client =>
+  def logFailedResponse[F[_]: Console: MonadCancelThrow](using fs2.Compiler[F, F]): Client[F] => Client[F] = { client =>
     Client[F] { req =>
       client.run(req).evalMap {
         case response if response.status.isSuccess => response.pure[F]

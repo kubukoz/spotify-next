@@ -2,16 +2,16 @@ package com.kubukoz.next.util
 
 import cats.effect.std.Console
 import cats.MonadThrow
-import cats.implicits._
+import cats.implicits.*
 
 trait ConsoleRead[A] {
   def read(s: String): Either[Throwable, A]
 }
 
 object ConsoleRead {
-  def apply[A](implicit A: ConsoleRead[A]): ConsoleRead[A] = A
+  def apply[A](using A: ConsoleRead[A]): ConsoleRead[A] = A
 
-  implicit val readString: ConsoleRead[String] = new ConsoleRead[String] {
+  given ConsoleRead[String] = new ConsoleRead[String] {
     def read(s: String): Either[Throwable, String] = Right(s)
   }
 

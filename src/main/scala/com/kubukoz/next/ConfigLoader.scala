@@ -1,14 +1,14 @@
 package com.kubukoz.next
 
 import com.kubukoz.next.util.Config
-import io.circe.syntax._
+import io.circe.syntax.*
 import io.circe.Printer
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.nio.file.NoSuchFileException
 import com.kubukoz.next.util.ConsoleRead
-import cats.effect._
-import cats.implicits._
+import cats.effect.*
+import cats.implicits.*
 import cats.Applicative
 import cats.effect.std.Console
 import fs2.io.file.Files
@@ -21,7 +21,7 @@ trait ConfigLoader[F[_]] {
 }
 
 object ConfigLoader {
-  def apply[F[_]](implicit F: ConfigLoader[F]): ConfigLoader[F] = F
+  def apply[F[_]](using F: ConfigLoader[F]): ConfigLoader[F] = F
 
   def cached[F[_]: Ref.Make: FlatMap]: ConfigLoader[F] => F[ConfigLoader[F]] =
     underlying =>
@@ -55,7 +55,7 @@ object ConfigLoader {
       }
   }
 
-  def default[F[_]: Files: MonadThrow](configPath: Path)(implicit SC: fs2.Compiler[F, F]): ConfigLoader[F] =
+  def default[F[_]: Files: MonadThrow](configPath: Path)(using fs2.Compiler[F, F]): ConfigLoader[F] =
     new ConfigLoader[F] {
 
       private val createOrOverwriteFile =
@@ -82,8 +82,6 @@ object ConfigLoader {
 
     }
 
-  implicit final class ConfigLoaderOps[F[_]](private val cl: ConfigLoader[F]) extends AnyVal {
-    def configAsk(implicit F: Applicative[F]): Config.Ask[F] = Config.askLiftF(cl.loadConfig)
-  }
+  extension [F[_]: Applicative](cl: ConfigLoader[F]) def configAsk: Config.Ask[F] = Config.askLiftF(cl.loadConfig)
 
 }

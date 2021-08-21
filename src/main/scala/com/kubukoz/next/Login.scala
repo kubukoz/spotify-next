@@ -3,7 +3,7 @@ package com.kubukoz.next
 import cats.effect.kernel.Async
 import cats.effect.kernel.Deferred
 import cats.effect.kernel.Resource
-import cats.implicits._
+import cats.implicits.*
 import com.kubukoz.next.Login.Tokens
 import com.kubukoz.next.api.spotify.RefreshedTokenResponse
 import com.kubukoz.next.api.spotify.TokenResponse
@@ -16,11 +16,11 @@ import org.http4s.Method.POST
 import org.http4s.Request
 import org.http4s.Uri
 import org.http4s.UrlForm
-import org.http4s.circe.CirceEntityCodec._
+import org.http4s.circe.CirceEntityCodec.*
 import org.http4s.client.Client
 import org.http4s.dsl.Http4sDsl
 import org.http4s.headers.Authorization
-import org.http4s.implicits._
+import org.http4s.implicits.*
 import org.http4s.blaze.server.BlazeServerBuilder
 import cats.MonadThrow
 
@@ -30,7 +30,7 @@ trait Login[F[_]] {
 }
 
 object Login {
-  def apply[F[_]](implicit F: Login[F]): Login[F] = F
+  def apply[F[_]](using F: Login[F]): Login[F] = F
 
   final case class Tokens(access: Token, refresh: RefreshToken)
 
@@ -128,7 +128,7 @@ object Login {
 
   def routes[F[_]: MonadThrow](saveCode: Code => F[Unit], finishServer: F[Unit]): HttpRoutes[F] = {
     val dsl = new Http4sDsl[F] {}
-    import dsl._
+    import dsl.*
 
     HttpRoutes.of { case req @ GET -> Root / "login" =>
       val codeF = req.uri.params.get("code").map(Code(_)).liftTo[F](new Throwable("No code in URI!"))
