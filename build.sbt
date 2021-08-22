@@ -70,9 +70,9 @@ val commonSettings = Seq(
   Compile / packageDoc / publishArtifact := false
 )
 
-val core = project
-  .enablePlugins(ScalaJSPlugin)
-  .settings(commonSettings)
+// val core = project
+// .enablePlugins(ScalaJSPlugin)
+// .settings(commonSettings)
 
 /*
 val front = project
@@ -138,5 +138,5 @@ val root =
     .enablePlugins(BuildInfoPlugin)
     .enablePlugins(JavaAppPackaging)
     .enablePlugins(GraalVMNativeImagePlugin)
-    .dependsOn(core)
-    .aggregate(core /* , front */ )
+// .dependsOn(core)
+// .aggregate(core /* , front */ )
