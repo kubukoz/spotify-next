@@ -17,21 +17,29 @@ import scala.concurrent.duration.*
 
 object SpotifyChoice {
 
+  enum Choice {
+    case Sonos(room: String)
+    case Spotify
+
+    def fold[A](sonos: String => A, spotify: => A): A = this match {
+      case Sonos(room) => sonos(room)
+      case Spotify     => spotify
+    }
+
+  }
+
   /** Stateful instantiation of an effect that chooses values. Think F[ReadOnlyRef[F, A]] - the outer effect allocates state, the inner
     * effect (F[F[...]]) calculates the current value.
     *
     * The result returned can differ between calls to the inner F, but will share state with all calls of the inner F inside the same outer
     * F.
     */
-  def choose[F[_]: Concurrent: UserOutput: DeviceInfo: SonosInfo, A](
-    makeForSonos: String => A,
-    makeForSpotify: A
-  ): F[F[A]] =
+  def choose[F[_]: Concurrent: UserOutput: DeviceInfo: SonosInfo]: F[F[Choice]] =
     Ref[F].of(false).flatMap { isRestrictedRef =>
       Ref[F].of(Option.empty[String]).map { lastSonosRoom =>
-        val spotifyInstanceF = lastSonosRoom.set(None).as(makeForSpotify)
+        val spotifyInstanceF = lastSonosRoom.set(None).as(Choice.Spotify)
 
-        val sonosInstanceF: F[Option[A]] = {
+        val sonosInstanceF: F[Option[Choice]] = {
           val fetchZones: F[Option[sonos.SonosZones]] =
             UserOutput[F].print(UserMessage.CheckingSonos) *>
               SonosInfo[F].zones
@@ -56,7 +64,7 @@ object SpotifyChoice {
                 UserOutput[F].print(UserMessage.SonosNotFound).as(none)
 
               case Some(roomName) =>
-                makeForSonos(roomName).some.pure[F]
+                Choice.Sonos(roomName).some.pure[F]
             }
         }
 

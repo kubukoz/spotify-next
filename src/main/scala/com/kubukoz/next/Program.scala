@@ -66,9 +66,14 @@ object Program {
     given Spotify.SonosInfo[F] = Spotify.SonosInfo.instance(sonos.baseUri, client)
 
     SpotifyChoice
-      .choose[F, Spotify.Playback[F]](
-        room => Spotify.Playback.sonosInstance[F](sonos.baseUri, room, client),
-        Spotify.Playback.spotifyInstance[F](client)
+      .choose[F]
+      .map(
+        _.map(
+          _.fold(
+            room => Spotify.Playback.sonosInstance[F](sonos.baseUri, room, client),
+            Spotify.Playback.spotifyInstance[F](client)
+          )
+        )
       )
       .map(Spotify.Playback.suspend(_))
       .map { playback =>

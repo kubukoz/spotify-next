@@ -13,12 +13,7 @@ import com.kubukoz.next.api.sonos.Zone
 
 class SpotifyChoiceTests extends munit.CatsEffectSuite {
 
-  enum Choice {
-    case Sonos(room: String)
-    case Spotify
-  }
-
-  import Choice.*
+  import SpotifyChoice.Choice.*
   given UserOutput[IO] = _ => IO.unit
 
   given SonosInfo[IO] with {
@@ -34,7 +29,7 @@ class SpotifyChoiceTests extends munit.CatsEffectSuite {
       def isRestricted: IO[Boolean] = IO.pure(true)
     }
 
-    SpotifyChoice.choose[IO, Choice](Choice.Sonos.apply, Choice.Spotify).flatten.map {
+    SpotifyChoice.choose[IO].flatten.map {
       assertEquals(_, Sonos("home"))
     }
   }
@@ -43,7 +38,7 @@ class SpotifyChoiceTests extends munit.CatsEffectSuite {
       def isRestricted: IO[Boolean] = IO.pure(false)
     }
 
-    SpotifyChoice.choose[IO, Choice](Choice.Sonos.apply, Choice.Spotify).flatten.map {
+    SpotifyChoice.choose[IO].flatten.map {
       assertEquals(_, Spotify)
     }
   }
@@ -53,7 +48,7 @@ class SpotifyChoiceTests extends munit.CatsEffectSuite {
       given DeviceInfo[IO] = deviceInfo(available)
 
       SpotifyChoice
-        .choose[IO, Choice](Choice.Sonos.apply, Choice.Spotify)
+        .choose[IO]
         .flatMap { choose =>
           choose *> available.set(true) *> choose
         }
@@ -68,7 +63,7 @@ class SpotifyChoiceTests extends munit.CatsEffectSuite {
       given DeviceInfo[IO] = deviceInfo(available)
 
       SpotifyChoice
-        .choose[IO, Choice](Choice.Sonos.apply, Choice.Spotify)
+        .choose[IO]
         .flatMap { choose =>
           choose *> available.set(false) *> choose
         }
