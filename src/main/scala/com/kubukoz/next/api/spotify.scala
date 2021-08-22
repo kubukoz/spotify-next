@@ -1,24 +1,24 @@
 package com.kubukoz.next.api
 
 import scala.reflect.ClassTag
-
 import cats.data.NonEmptyList
-import com.kubukoz.next.Spotify.Error._
+import com.kubukoz.next.Spotify.Error.*
 import io.circe.Codec
 import io.circe.Decoder
 import io.circe.Encoder
-import io.circe.syntax._
+import io.circe.syntax.*
 import monocle.PLens
 import org.http4s.EntityDecoder
 import org.http4s.Uri
 import cats.Functor
-import cats.implicits._
+import cats.implicits.*
 import cats.effect.Concurrent
+import scala.reflect.TypeTest
 
 object spotify {
   private def asJsonWithType[T: Encoder.AsObject](t: T, tpe: String) = t.asJsonObject.add("type", tpe.asJson).asJson
 
-  private def byTypeDecoder[T](withType: (String, Decoder[_ <: T])*): Decoder[T] = Decoder[String].at("type").flatMap { tpe =>
+  private def byTypeDecoder[T](withType: (String, Decoder[? <: T])*): Decoder[T] = Decoder[String].at("type").flatMap { tpe =>
     withType
       .collectFirst { case (`tpe`, decoder) =>
         decoder
@@ -27,9 +27,9 @@ object spotify {
       .fold(unknown => Decoder.failedWithMessage[T](s"Unknown type: $unknown"), _.widen[T])
   }
 
-  implicit def optionCodec[A: Codec]: Codec[Option[A]] = Codec.from(Decoder.decodeOption[A], Encoder.encodeOption[A])
+  given [A: Codec]: Codec[Option[A]] = Codec.from(Decoder.decodeOption[A], Encoder.encodeOption[A])
 
-  implicit val uriCodec: Codec[Uri] = Codec.from(
+  given Codec[Uri] = Codec.from(
     Decoder[String].emap(s => Uri.fromString(s).leftMap(failure => failure.details)),
     Encoder[String].contramap(_.renderString)
   )
@@ -40,7 +40,7 @@ object spotify {
 
   object TrackUri {
 
-    implicit val codec: Codec[TrackUri] = Codec.from(
+    given Codec[TrackUri] = Codec.from(
       Decoder[String].emap {
         case s"spotify:track:$trackId" => TrackUri(trackId).asRight
         case s                         => s"Not a spotify:track:{trackId}: $s".asLeft
@@ -68,7 +68,7 @@ object spotify {
 
   }
 
-  final case class Player[_Ctx, _Item](context: _Ctx, item: _Item, progress_ms: Int) {
+  final case class Player[_Ctx, _Item](context: _Ctx, item: _Item, progress_ms: Int, device: Device) {
     private def itemLens[NewItem]: PLens[Player[_Ctx, _Item], Player[_Ctx, NewItem], _Item, NewItem] =
       PLens[Player[_Ctx, _Item], Player[_Ctx, NewItem], _Item, NewItem](_.item)(i => _.copy(item = i))
 
@@ -77,27 +77,29 @@ object spotify {
 
     // It may not seem like it, but this is traverse.
     def unwrapContext[F[_], Ctx2](
-      implicit ev: _Ctx <:< F[Ctx2],
+      using ev: _Ctx <:< F[Ctx2],
       fFunctor: Functor[F]
     ): F[Player[Ctx2, _Item]] =
       contextLens[Ctx2]
         .modifyF[F](ev.apply)(this)
 
     def unwrapItem[F[_], Item2](
-      implicit ev: _Item <:< F[Item2],
+      using ev: _Item <:< F[Item2],
       fFunctor: Functor[F]
     ): F[Player[_Ctx, Item2]] =
       itemLens[Item2]
         .modifyF[F](ev.apply)(this)
 
-    def narrowContext[DesiredContext <: _Ctx: ClassTag]: Either[InvalidContext[_Ctx], Player[DesiredContext, _Item]] =
+    def narrowContext[DesiredContext <: _Ctx](
+      using TypeTest[_Ctx, DesiredContext]
+    ): Either[InvalidContext[_Ctx], Player[DesiredContext, _Item]] =
       contextLens[DesiredContext]
         .modifyF {
           case desired: DesiredContext => desired.asRight
           case other                   => InvalidContext(other).asLeft
         }(this)
 
-    def narrowItem[DesiredItem <: _Item: ClassTag]: Either[InvalidItem[_Item], Player[_Ctx, DesiredItem]] =
+    def narrowItem[DesiredItem <: _Item](using TypeTest[_Item, DesiredItem]): Either[InvalidItem[_Item], Player[_Ctx, DesiredItem]] =
       itemLens[DesiredItem].modifyF {
         case desired: DesiredItem => desired.asRight
         case other                => InvalidItem(other).asLeft
@@ -106,8 +108,8 @@ object spotify {
   }
 
   object Player {
-    implicit def codec[_Ctx: Codec, _Item: Codec]: Codec[Player[_Ctx, _Item]] =
-      Codec.forProduct3("context", "item", "progress_ms")(apply[_Ctx, _Item])(p => (p.context, p.item, p.progress_ms))
+    given [_Ctx: Codec, _Item: Codec]: Codec[Player[_Ctx, _Item]] =
+      Codec.forProduct4("context", "item", "progress_ms", "device")(apply[_Ctx, _Item])(p => (p.context, p.item, p.progress_ms, p.device))
   }
 
   enum PlayerContext {
@@ -120,7 +122,7 @@ object spotify {
 
   object PlaylistUri {
 
-    implicit val codec: Codec[PlaylistUri] = Codec.from(
+    given Codec[PlaylistUri] = Codec.from(
       Decoder[String].emap {
         case s"spotify:user:$userId:playlist:$playlistId" => PlaylistUri(playlistId, userId.some).asRight
         case s"spotify:playlist:$playlistId"              => PlaylistUri(playlistId, none).asRight
@@ -141,7 +143,7 @@ object spotify {
 
   object PlayerContext {
 
-    implicit val codec: Codec[PlayerContext] = Codec.from(
+    given Codec[PlayerContext] = Codec.from(
       byTypeDecoder(
         "playlist" -> Decoder.derived[playlist],
         "album" -> Decoder.derived[album],
@@ -174,6 +176,8 @@ object spotify {
 
   }
 
+  final case class Device(is_restricted: Boolean) derives Codec.AsObject
+
   enum Anything {
     case Void
   }
@@ -181,7 +185,7 @@ object spotify {
   val anything: Anything = Anything.Void
 
   object Anything {
-    implicit def entityCodec[F[_]: Concurrent]: EntityDecoder[F, Anything] = EntityDecoder.void[F].map(_ => anything)
+    given [F[_]: Concurrent]: EntityDecoder[F, Anything] = EntityDecoder.void[F].map(_ => anything)
   }
 
   final case class TokenResponse(access_token: String, refresh_token: String) derives Codec.AsObject

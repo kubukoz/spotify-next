@@ -2,13 +2,13 @@ package com.kubukoz.next
 
 import cats.Show
 import cats.effect.std
-import cats.implicits._
+import cats.implicits.*
 import cats.~>
 import com.kubukoz.next.api.spotify.Item
 import com.kubukoz.next.api.spotify.Player
 import com.kubukoz.next.api.spotify.PlayerContext
+import com.kubukoz.next.api.sonos.SonosZones
 import org.http4s.Uri
-
 import java.nio.file.Path
 
 enum UserMessage {
@@ -17,11 +17,19 @@ enum UserMessage {
   case SavedConfig(path: Path)
   case SavedToken
   case RefreshedToken
+
   // playback
   case SwitchingToNext
   case RemovingCurrentTrack(player: Player[PlayerContext.playlist, Item.track])
   case TooCloseToEnd
   case Seeking(desiredProgressPercent: Int)
+
+  // sonos
+  case CheckingSonos
+  case SonosNotFound
+  case SonosFound(zones: SonosZones, roomName: String)
+  case DeviceRestricted
+  case DirectControl
 }
 
 trait UserOutput[F[_]] {
@@ -30,12 +38,12 @@ trait UserOutput[F[_]] {
 }
 
 object UserOutput {
-  def apply[F[_]](implicit F: UserOutput[F]): UserOutput[F] = F
+  def apply[F[_]](using F: UserOutput[F]): UserOutput[F] = F
 
-  def toConsole[F[_]: std.Console]: UserOutput[F] = {
-    implicit val showPath: Show[Path] = Show.fromToString
+  def toConsole[F[_]: std.Console](sonosBaseUrl: Uri): UserOutput[F] = {
+    given Show[Path] = Show.fromToString
 
-    import UserMessage._
+    import UserMessage.*
 
     val stringify: UserMessage => String = {
       case GoToUri(uri)                         => show"Go to $uri"
@@ -48,6 +56,11 @@ object UserOutput {
         show"""Removing track "${player.item.name}" (${player.item.uri.toFullUri}) from playlist ${player.context.uri.playlist}"""
       case TooCloseToEnd                        => "Too close to song's ending, rewinding to beginning"
       case Seeking(desiredProgressPercent)      => show"Seeking to $desiredProgressPercent%"
+      case CheckingSonos                        => show"Checking if Sonos API is available at $sonosBaseUrl..."
+      case SonosNotFound                        => "Sonos not found, using fallback"
+      case SonosFound(zones, roomName)          => show"Found ${zones.zones.size} zone(s), will use room $roomName"
+      case DeviceRestricted                     => "Device restricted, trying to switch to Sonos API control..."
+      case DirectControl                        => "Switching to direct Spotify API control..."
     }
 
     msg => std.Console[F].println(stringify(msg))

@@ -6,10 +6,11 @@ import cats.effect.Resource
 import cats.effect.kernel.Async
 import cats.effect.kernel.Ref
 import cats.effect.std.Console
-import cats.implicits._
+import cats.implicits.*
 import com.kubukoz.next.util.Config
 import com.kubukoz.next.util.Config.Token
 import com.kubukoz.next.util.middlewares
+import com.kubukoz.next.api.sonos
 import fs2.io.file.Files
 import monocle.Getter
 import org.http4s.client.Client
@@ -17,7 +18,6 @@ import org.http4s.blaze.client.BlazeClientBuilder
 import org.http4s.client.middleware.FollowRedirect
 import org.http4s.client.middleware.RequestLogger
 import org.http4s.client.middleware.ResponseLogger
-
 import java.lang.System
 import java.nio.file.Paths
 
@@ -41,10 +41,10 @@ object Program {
       .map(ResponseLogger(logHeaders = true, logBody = true))
 
   def apiClient[F[_]: Console: ConfigLoader: LoginProcess: MonadCancelThrow](
-    implicit SC: fs2.Compiler[F, F]
+    using SC: fs2.Compiler[F, F]
   ): Client[F] => Client[F] = {
-    implicit val configAsk: Config.Ask[F] = ConfigLoader[F].configAsk
-    implicit val tokenAsk: Token.Ask[F] = Token.askBy(configAsk)(Getter(_.token))
+    given ca: Config.Ask[F] = ConfigLoader[F].configAsk
+    given ta: Token.Ask[F] = Token.askBy(ca)(Getter(_.token))
 
     val loginOrRefreshToken: F[Unit] =
       Config
@@ -61,11 +61,28 @@ object Program {
       .compose(middlewares.withToken[F])
   }
 
-  def makeSpotify[F[_]: UserOutput: Concurrent](client: Client[F]): Spotify[F] = {
-    implicit val theClient = client
-    implicit val playback: Spotify.Playback[F] = Spotify.Playback.spotify[F](client)
+  def makeSpotify[F[_]: UserOutput: Concurrent](client: Client[F]): F[Spotify[F]] = {
+    given Spotify.DeviceInfo[F] = Spotify.DeviceInfo.instance(client)
+    given Spotify.SonosInfo[F] = Spotify.SonosInfo.instance(sonos.baseUri, client)
 
-    Spotify.instance[F]
+    SpotifyChoice
+      .choose[F]
+      .map(
+        _.map(
+          _.fold(
+            room => Spotify.Playback.sonosInstance[F](sonos.baseUri, room, client),
+            Spotify.Playback.spotifyInstance[F](client)
+          )
+        )
+      )
+      .map(Spotify.Playback.suspend(_))
+      .map { playback =>
+        given Spotify.Playback[F] = playback
+
+        given Client[F] = client
+
+        Spotify.instance[F]
+      }
   }
 
 }
