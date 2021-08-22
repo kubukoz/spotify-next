@@ -61,7 +61,9 @@ val commonSettings = Seq(
     "2000"
   ),
   libraryDependencies ++= Seq(
-    "org.typelevel" %%% "cats-effect" % "3.1.1"
+    "org.typelevel" %%% "cats-effect" % "3.1.1",
+    "org.scalameta" %%% "munit" % "0.7.28" % Test,
+    "org.typelevel" %% "munit-cats-effect-3" % "1.0.5" % Test
   ),
   addCompilerPlugins,
   Compile / doc / sources := Nil,
@@ -113,7 +115,7 @@ val front = project
   )
   .dependsOn(core)
  */
-val next =
+val root =
   project
     .in(file("."))
     .settings(commonSettings)

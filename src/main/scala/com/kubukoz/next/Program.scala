@@ -65,9 +65,8 @@ object Program {
     given Spotify.DeviceInfo[F] = Spotify.DeviceInfo.instance(client)
     given Spotify.SonosInfo[F] = Spotify.SonosInfo.instance(sonos.baseUri, client)
 
-    Spotify
-      .Playback
-      .build[F, Spotify.Playback[F]](
+    SpotifyChoice
+      .choose[F, Spotify.Playback[F]](
         room => Spotify.Playback.sonosInstance[F](sonos.baseUri, room, client),
         Spotify.Playback.spotifyInstance[F](client)
       )
