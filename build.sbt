@@ -66,8 +66,7 @@ val commonSettings = Seq(
     "org.typelevel" %% "munit-cats-effect-3" % "1.0.5" % Test
   ),
   addCompilerPlugins,
-  Compile / doc / sources := Nil,
-  Compile / packageDoc / publishArtifact := false
+  Compile / doc / sources := Nil
 )
 
 // val core = project
