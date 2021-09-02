@@ -40,10 +40,6 @@ object SpotifyChoice {
         val spotifyInstanceF = lastSonosRoom.set(None).as(Choice.Spotify)
 
         val sonosInstanceF: F[Option[Choice]] = {
-          val fetchZones: F[Option[sonos.SonosZones]] =
-            UserOutput[F].print(UserMessage.CheckingSonos) *>
-              SonosInfo[F].zones
-
           def extractRoom(zones: sonos.SonosZones): F[String] = {
             val roomName = zones.zones.head.coordinator.roomName
 
@@ -54,7 +50,7 @@ object SpotifyChoice {
           val roomF: F[Option[String]] =
             OptionT(lastSonosRoom.get)
               .orElse(
-                OptionT(fetchZones).semiflatMap(extractRoom)
+                OptionT(SonosInfo[F].zones).semiflatMap(extractRoom)
               )
               .value
 
