@@ -62,7 +62,8 @@ object Program {
   }
 
   def makeSpotify[F[_]: UserOutput: Concurrent](client: Client[F]): F[Spotify[F]] = {
-    given Spotify.DeviceInfo[F] = Spotify.DeviceInfo.instance(client)
+    given Client[F] = client
+    given Spotify.DeviceInfo[F] = Spotify.DeviceInfo.instance
     given Spotify.SonosInfo[F] = Spotify.SonosInfo.instance(sonos.baseUri, client)
 
     SpotifyChoice

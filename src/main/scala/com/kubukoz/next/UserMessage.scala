@@ -22,6 +22,7 @@ enum UserMessage {
   case SwitchingToNext
   case RemovingCurrentTrack(player: Player[PlayerContext.playlist, Item.track])
   case TooCloseToEnd
+  case Jumping(sectionNumber: Int, sectionsTotal: Int, percentTotal: Int)
   case Seeking(desiredProgressPercent: Int)
 
   // sonos
@@ -56,11 +57,13 @@ object UserOutput {
         show"""Removing track "${player.item.name}" (${player.item.uri.toFullUri}) from playlist ${player.context.uri.playlist}"""
       case TooCloseToEnd                        => "Too close to song's ending, rewinding to beginning"
       case Seeking(desiredProgressPercent)      => show"Seeking to $desiredProgressPercent%"
-      case CheckingSonos                        => show"Checking if Sonos API is available at $sonosBaseUrl..."
-      case SonosNotFound                        => "Sonos not found, using fallback"
-      case SonosFound(zones, roomName)          => show"Found ${zones.zones.size} zone(s), will use room $roomName"
-      case DeviceRestricted                     => "Device restricted, trying to switch to Sonos API control..."
-      case DirectControl                        => "Switching to direct Spotify API control..."
+      case Jumping(sectionNumber, sectionsTotal, percentTotal) =>
+        show"Jumping to section $sectionNumber/$sectionsTotal ($percentTotal%)"
+      case CheckingSonos                                       => show"Checking if Sonos API is available at $sonosBaseUrl..."
+      case SonosNotFound                                       => "Sonos not found, using fallback"
+      case SonosFound(zones, roomName)                         => show"Found ${zones.zones.size} zone(s), will use room $roomName"
+      case DeviceRestricted                                    => "Device restricted, trying to switch to Sonos API control..."
+      case DirectControl                                       => "Switching to direct Spotify API control..."
     }
 
     msg => std.Console[F].println(stringify(msg))
