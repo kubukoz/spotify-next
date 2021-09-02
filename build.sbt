@@ -61,16 +61,17 @@ val commonSettings = Seq(
     "2000"
   ),
   libraryDependencies ++= Seq(
-    "org.typelevel" %%% "cats-effect" % "3.1.1"
+    "org.typelevel" %%% "cats-effect" % "3.2.5",
+    "org.scalameta" %%% "munit" % "0.7.29" % Test,
+    "org.typelevel" %% "munit-cats-effect-3" % "1.0.5" % Test
   ),
   addCompilerPlugins,
-  Compile / doc / sources := Nil,
-  Compile / packageDoc / publishArtifact := false
+  Compile / doc / sources := Nil
 )
 
-val core = project
-  .enablePlugins(ScalaJSPlugin)
-  .settings(commonSettings)
+// val core = project
+// .enablePlugins(ScalaJSPlugin)
+// .settings(commonSettings)
 
 /*
 val front = project
@@ -113,7 +114,7 @@ val front = project
   )
   .dependsOn(core)
  */
-val next =
+val root =
   project
     .in(file("."))
     .settings(commonSettings)
@@ -121,11 +122,11 @@ val next =
       libraryDependencies ++= Seq(
         "org.typelevel" %% "cats-mtl" % "1.2.1",
         "com.monovore" %% "decline-effect" % "2.1.0",
-        "org.http4s" %% "http4s-dsl" % "0.23.0",
-        "org.http4s" %% "http4s-blaze-server" % "0.23.0",
-        "org.http4s" %% "http4s-blaze-client" % "0.23.0",
-        "org.http4s" %% "http4s-circe" % "0.23.0",
-        "ch.qos.logback" % "logback-classic" % "1.2.5",
+        "org.http4s" %% "http4s-dsl" % "0.23.2",
+        "org.http4s" %% "http4s-blaze-server" % "0.23.2",
+        "org.http4s" %% "http4s-blaze-client" % "0.23.2",
+        "org.http4s" %% "http4s-circe" % "0.23.2",
+        "ch.qos.logback" % "logback-classic" % "1.2.3",
         "io.circe" %% "circe-parser" % "0.14.1",
         "dev.optics" %% "monocle-core" % "3.0.0"
       ),
@@ -136,5 +137,5 @@ val next =
     .enablePlugins(BuildInfoPlugin)
     .enablePlugins(JavaAppPackaging)
     .enablePlugins(GraalVMNativeImagePlugin)
-    .dependsOn(core)
-    .aggregate(core /* , front */ )
+// .dependsOn(core)
+// .aggregate(core /* , front */ )

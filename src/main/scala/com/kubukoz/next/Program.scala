@@ -62,14 +62,19 @@ object Program {
   }
 
   def makeSpotify[F[_]: UserOutput: Concurrent](client: Client[F]): F[Spotify[F]] = {
-    given Spotify.DeviceInfo[F] = Spotify.DeviceInfo.instance(client)
+    given Client[F] = client
+    given Spotify.DeviceInfo[F] = Spotify.DeviceInfo.instance
     given Spotify.SonosInfo[F] = Spotify.SonosInfo.instance(sonos.baseUri, client)
 
-    Spotify
-      .Playback
-      .build[F, Spotify.Playback[F]](
-        room => Spotify.Playback.sonosInstance[F](sonos.baseUri, room, client),
-        Spotify.Playback.spotifyInstance[F](client)
+    SpotifyChoice
+      .choose[F]
+      .map(
+        _.map(
+          _.fold(
+            room => Spotify.Playback.sonosInstance[F](sonos.baseUri, room, client),
+            Spotify.Playback.spotifyInstance[F](client)
+          )
+        )
       )
       .map(Spotify.Playback.suspend(_))
       .map { playback =>

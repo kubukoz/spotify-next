@@ -1,27 +1,27 @@
 package com.kubukoz.next
 
-import cats.data.Kleisli
-import cats.data.OptionT
 import cats.FlatMap
-import cats.effect.Ref
+import cats.data.OptionT
 import cats.effect.Concurrent
+import cats.effect.Ref
 import cats.implicits.*
+import com.kubukoz.next.api.sonos
+import com.kubukoz.next.api.spotify.AudioAnalysis
 import com.kubukoz.next.api.spotify.Item
 import com.kubukoz.next.api.spotify.Player
 import com.kubukoz.next.api.spotify.PlayerContext
+import com.kubukoz.next.api.spotify.TrackUri
 import io.circe.syntax.*
 import org.http4s.Method.DELETE
 import org.http4s.Method.POST
 import org.http4s.Method.PUT
 import org.http4s.Request
 import org.http4s.Status
+import org.http4s.Uri
 import org.http4s.circe.CirceEntityCodec.*
 import org.http4s.client.Client
-import com.kubukoz.next.api.spotify.AudioAnalysis
-import com.kubukoz.next.api.spotify.TrackUri
-import com.kubukoz.next.api.sonos
 import scala.concurrent.duration.*
-import org.http4s.Uri
+import scala.util.chaining.*
 
 trait Spotify[F[_]] {
   def skipTrack: F[Unit]
@@ -66,19 +66,18 @@ object Spotify {
           Playback[F].nextTrack
 
       val dropTrack: F[Unit] =
-        methods.player[F].run(client).flatMap(requirePlaylist(_)).flatMap(requireTrack).flatMap { player =>
+        methods.player[F].flatMap(requirePlaylist(_)).flatMap(requireTrack).flatMap { player =>
           val trackUri = player.item.uri
           val playlistId = player.context.uri.playlist
 
           UserOutput[F].print(UserMessage.RemovingCurrentTrack(player)) *>
             skipTrack *>
-            methods.removeTrack[F](trackUri, playlistId).run(client)
+            methods.removeTrack[F](trackUri, playlistId)
         }
 
       def fastForward(percentage: Int): F[Unit] =
         methods
           .player[F]
-          .run(client)
           .flatMap(requireTrack)
           .fproduct { player =>
             val currentLength = player.progress_ms
@@ -98,7 +97,7 @@ object Spotify {
 
       def jumpSection: F[Unit] = methods
         .player[F]
-        .flatMapF(requireTrack)
+        .flatMap(requireTrack)
         .flatMap { player =>
           val track = player.item
 
@@ -106,17 +105,27 @@ object Spotify {
 
           methods
             .audioAnalysis[F](track.uri)
-            .flatMapF {
-              _.sections
-                .map(_.start.seconds)
-                .find(_ > currentLength)
-                .toOptionT
-                .getOrElseF(UserOutput[F].print(UserMessage.TooCloseToEnd).as(Duration.Zero))
-                .map(_.toMillis.toInt)
+            .flatMap { analysis =>
+              analysis
+                .sections
+                .zipWithIndex
+                .find { case (section, _) => section.start.seconds > currentLength }
+                .traverse { case (section, index) =>
+                  val percentage = (section.start.seconds * 100 / track.duration_ms.millis).toInt
+
+                  UserOutput[F].print(
+                    UserMessage.Jumping(
+                      sectionNumber = index + 1,
+                      sectionsTotal = analysis.sections.length,
+                      percentTotal = percentage
+                    )
+                  ) *>
+                    Playback[F].seek(section.start.seconds.toMillis.toInt)
+                }
+                .pipe(OptionT(_))
+                .getOrElseF(UserOutput[F].print(UserMessage.TooCloseToEnd) *> Playback[F].seek(0))
             }
         }
-        .flatMapF(Playback[F].seek)
-        .run(client)
         .void
 
     }
@@ -158,69 +167,6 @@ object Spotify {
       def seek(ms: Int): F[Unit] = choose.flatMap(_.seek(ms))
     }
 
-    /** Stateful instantiation of an effect that chooses values. Think F[ReadOnlyRef[F, A]] - the outer effect allocates state, the inner
-      * effect (F[F[...]]) calculates the current value.
-      *
-      * The result returned can differ between calls to the inner F, but will share state with all calls of the inner F inside the same
-      * outer F.
-      */
-    def build[F[_]: Concurrent: UserOutput: DeviceInfo: SonosInfo, A](
-      makeForSonos: String => A,
-      makeForSpotify: A
-    ): F[F[A]] =
-      Ref[F].of(false).flatMap { isRestrictedRef =>
-        Ref[F].of(Option.empty[String]).map { lastSonosRoom =>
-          val spotifyInstanceF = lastSonosRoom.set(None).as(makeForSpotify)
-
-          val sonosInstanceF: F[Option[A]] = {
-            val fetchZones: F[Option[sonos.SonosZones]] =
-              UserOutput[F].print(UserMessage.CheckingSonos) *>
-                SonosInfo[F].zones
-
-            def extractRoom(zones: sonos.SonosZones): F[String] = {
-              val roomName = zones.zones.head.coordinator.roomName
-
-              UserOutput[F].print(UserMessage.SonosFound(zones, roomName)) *>
-                lastSonosRoom.set(roomName.some).as(roomName)
-            }
-
-            val roomF: F[Option[String]] =
-              OptionT(lastSonosRoom.get)
-                .orElse(
-                  OptionT(fetchZones).semiflatMap(extractRoom)
-                )
-                .value
-
-            roomF
-              .flatMap {
-                case None =>
-                  UserOutput[F].print(UserMessage.SonosNotFound).as(none)
-
-                case Some(roomName) =>
-                  makeForSonos(roomName).some.pure[F]
-              }
-          }
-
-          def showChange(nowRestricted: Boolean): F[Unit] =
-            UserOutput[F].print {
-              if (nowRestricted) UserMessage.DeviceRestricted
-              else UserMessage.DirectControl
-            }
-
-          DeviceInfo[F]
-            .isRestricted
-            .flatTap { newValue =>
-              isRestrictedRef.getAndSet(newValue).flatMap { oldValue =>
-                showChange(newValue).unlessA(oldValue === newValue)
-              }
-            }
-            .ifM(
-              ifTrue = OptionT(sonosInstanceF).getOrElseF(spotifyInstanceF),
-              ifFalse = spotifyInstanceF
-            )
-        }
-      }
-
   }
 
   trait DeviceInfo[F[_]] {
@@ -230,8 +176,8 @@ object Spotify {
   object DeviceInfo {
     def apply[F[_]](using F: DeviceInfo[F]): DeviceInfo[F] = F
 
-    def instance[F[_]: Concurrent](client: Client[F]): DeviceInfo[F] = new DeviceInfo[F] {
-      val isRestricted: F[Boolean] = methods.player[F].run(client).map(_.device.is_restricted)
+    def instance[F[_]: Concurrent: Client]: DeviceInfo[F] = new DeviceInfo[F] {
+      val isRestricted: F[Boolean] = methods.player[F].map(_.device.is_restricted)
     }
 
   }
@@ -262,30 +208,24 @@ object Spotify {
 
     val SpotifyApi = uri"https://api.spotify.com"
 
-    type Method[F[_], A] = Kleisli[F, Client[F], A]
-
-    def player[F[_]: Concurrent]: Method[F, Player[Option[PlayerContext], Option[Item]]] =
-      Kleisli {
-        _.expectOr(SpotifyApi / "v1" / "me" / "player") {
-          case response if response.status === Status.NoContent => NotPlaying.pure[F].widen
-          case response                                         => InvalidStatus(response.status).pure[F].widen
-        }
+    def player[F[_]: Concurrent: Client]: F[Player[Option[PlayerContext], Option[Item]]] =
+      summon[Client[F]].expectOr(SpotifyApi / "v1" / "me" / "player") {
+        case response if response.status === Status.NoContent => NotPlaying.pure[F].widen
+        case response                                         => InvalidStatus(response.status).pure[F].widen
       }
 
-    def removeTrack[F[_]: Concurrent](trackUri: TrackUri, playlistId: String): Method[F, Unit] =
-      Kleisli {
-        _.expect[api.spotify.Anything](
+    def removeTrack[F[_]: Concurrent: Client](trackUri: TrackUri, playlistId: String): F[Unit] =
+      summon[Client[F]]
+        .expect[api.spotify.Anything](
           Request[F](DELETE, SpotifyApi / "v1" / "playlists" / playlistId / "tracks")
             .withEntity(Map("tracks" := List(Map("uri" := trackUri.toFullUri))).asJson)
-        ).void
-      }
-
-    def audioAnalysis[F[_]: Concurrent](trackUri: TrackUri): Method[F, AudioAnalysis] =
-      Kleisli {
-        _.expect(
-          SpotifyApi / "v1" / "audio-analysis" / trackUri.id
         )
-      }
+        .void
+
+    def audioAnalysis[F[_]: Concurrent: Client](trackUri: TrackUri): F[AudioAnalysis] =
+      summon[Client[F]].expect(
+        SpotifyApi / "v1" / "audio-analysis" / trackUri.id
+      )
 
   }
 
