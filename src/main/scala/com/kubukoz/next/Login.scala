@@ -82,12 +82,10 @@ object Login {
         }
 
       def mkServer(config: Config, route: HttpRoutes[F]) =
-        Resource.eval(Async[F].executionContext).flatMap { ec =>
-          BlazeServerBuilder[F](ec)
-            .withHttpApp(route.orNotFound)
-            .bindHttp(port = config.loginPort)
-            .resource
-        }
+        BlazeServerBuilder[F]
+          .withHttpApp(route.orNotFound)
+          .bindHttp(port = config.loginPort)
+          .resource
 
       def getTokens(code: Code, config: Config): F[Tokens] = {
 
