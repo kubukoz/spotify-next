@@ -31,7 +31,7 @@ This will create a launcher at `./target/universal/stage/bin/spotify-next`.
 ## Usage
 
 The application requires some configuration (e.g. the client ID for the Spotify Web API).
-It's stored in a file at `~/.spotify-next.json`.
+It's stored in a file at `$XDG_CONFIG_HOME/spotify-next/config.json` or `$HOME/.config/spotify-next/config.json` (whichever works first).
 When you first run the application, or if that file is deleted, the application will ask and attempt to create one.
 
 The configuration defines the port for the embedded HTTP server used for authentication. The server will only start when the login flow is triggered, and stop afterwards.

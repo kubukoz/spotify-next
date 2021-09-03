@@ -14,6 +14,7 @@ import cats.effect.std.Console
 import fs2.io.file.Files
 import cats.FlatMap
 import cats.MonadThrow
+import fs2.Pipe
 
 trait ConfigLoader[F[_]] {
   def saveConfig(config: Config): F[Unit]
@@ -58,9 +59,9 @@ object ConfigLoader {
   def default[F[_]: Files: MonadThrow](configPath: Path)(using fs2.Compiler[F, F]): ConfigLoader[F] =
     new ConfigLoader[F] {
 
-      private val createOrOverwriteFile =
-        Files[F]
-          .writeAll(configPath, List(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING))
+      private val createOrOverwriteFile: Pipe[F, Byte, Nothing] = bytes =>
+        fs2.Stream.exec(Files[F].createDirectories(configPath.getParent).void) ++
+          bytes.through(Files[F].writeAll(configPath, List(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)))
 
       def saveConfig(config: Config): F[Unit] =
         fs2

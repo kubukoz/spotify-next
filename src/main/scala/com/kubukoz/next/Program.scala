@@ -1,6 +1,7 @@
 package com.kubukoz.next
 
 import cats.effect.Concurrent
+import cats.effect.Sync
 import cats.effect.MonadCancelThrow
 import cats.effect.Resource
 import cats.effect.kernel.Async
@@ -20,15 +21,44 @@ import org.http4s.client.middleware.RequestLogger
 import org.http4s.client.middleware.ResponseLogger
 import java.lang.System
 import java.nio.file.Paths
+import java.nio.file.Path
+import cats.data.OptionT
+import cats.MonadThrow
 
 object Program {
-  val configPath = Paths.get(System.getProperty("user.home")).resolve(".spotify-next.json")
 
-  def makeLoader[F[_]: Files: Ref.Make: UserOutput: Console: fs2.Compiler.Target]: F[ConfigLoader[F]] =
-    ConfigLoader
-      .cached[F]
-      .compose(ConfigLoader.withCreateFileIfMissing[F](configPath))
-      .apply(ConfigLoader.default[F](configPath))
+  trait System[F[_]] {
+    def getenv(name: String): F[Option[String]]
+  }
+
+  object System {
+    def apply[F[_]](using F: System[F]): System[F] = F
+
+    given [F[_]: Sync]: System[F] = name => Sync[F].delay(java.lang.System.getenv(name)).map(Option(_))
+  }
+
+  private def configPath[F[_]: System: MonadThrow]: F[Path] =
+    OptionT(System[F].getenv("XDG_CONFIG_HOME"))
+      .map(Paths.get(_))
+      .getOrElseF(
+        System[F]
+          .getenv("HOME")
+          .flatMap(_.liftTo[F](new Throwable("HOME not defined, I don't even")))
+          .map(Paths.get(_))
+          .map(_.resolve(".config"))
+      )
+      .map(
+        _.resolve("spotify-next")
+          .resolve("config.json")
+      )
+
+  def makeLoader[F[_]: Files: System: Ref.Make: UserOutput: Console: fs2.Compiler.Target]: F[ConfigLoader[F]] =
+    configPath[F].flatMap { p =>
+      ConfigLoader
+        .cached[F]
+        .compose(ConfigLoader.withCreateFileIfMissing[F](p))
+        .apply(ConfigLoader.default[F](p))
+    }
 
   def makeBasicClient[F[_]: Async]: Resource[F, Client[F]] =
     Resource
