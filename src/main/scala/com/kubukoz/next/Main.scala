@@ -53,22 +53,20 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
   def makeProgram[F[_]: Async: Console]: Resource[F, Runner[F]] = {
     given UserOutput[F] = UserOutput.toConsole(sonos.baseUri)
 
+    val dummy = Async[F].unit.toResource
+
     for {
-      cl        <- makeLoader[F].toResource
-      rawClient <- makeBasicClient[F]
-    } yield {
-      given ConfigLoader[F] = cl
+      given ConfigLoader[F] <- makeLoader[F].toResource
+      rawClient             <- makeBasicClient[F]
       given Config.Ask[F] = ConfigLoader[F].configAsk
+      _                     <- dummy
       given Login[F] = Login.blaze[F](rawClient)
+      _                     <- dummy
       given LoginProcess[F] = LoginProcess.instance[F]
-      makeSpotify[F](apiClient[F].apply(rawClient)).map { s =>
-        given Spotify[F] = s
+      given Spotify[F]      <- makeSpotify[F](apiClient[F].apply(rawClient)).toResource
+    } yield Runner.instance[F]
 
-        Runner.instance[F]
-      }
-
-    }
-  }.flatMap(_.toResource)
+  }
 
   val mainOpts: Opts[IO[Unit]] = Choice
     .opts
