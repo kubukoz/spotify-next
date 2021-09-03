@@ -3,7 +3,6 @@ package com.kubukoz.next
 import com.kubukoz.next.util.Config
 import io.circe.syntax.*
 import io.circe.Printer
-import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.nio.file.NoSuchFileException
 import com.kubukoz.next.util.ConsoleRead
@@ -15,6 +14,8 @@ import fs2.io.file.Files
 import cats.FlatMap
 import cats.MonadThrow
 import fs2.Pipe
+import fs2.io.file.Path
+import fs2.io.file.Flags
 
 trait ConfigLoader[F[_]] {
   def saveConfig(config: Config): F[Unit]
@@ -60,23 +61,25 @@ object ConfigLoader {
     new ConfigLoader[F] {
 
       private val createOrOverwriteFile: Pipe[F, Byte, Nothing] = bytes =>
-        fs2.Stream.exec(Files[F].createDirectories(configPath.getParent).void) ++
-          bytes.through(Files[F].writeAll(configPath, List(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)))
+        fs2.Stream.exec(configPath.parent.traverse_(Files[F].createDirectories)) ++
+          bytes.through(
+            Files[F].writeAll(configPath, Flags.Write)
+          )
 
       def saveConfig(config: Config): F[Unit] =
         fs2
           .Stream
           .emit(config)
           .map(_.asJson.printWith(Printer.spaces2.copy(colonLeft = "")))
-          .through(fs2.text.utf8Encode[F])
+          .through(fs2.text.utf8.encode[F])
           .through(createOrOverwriteFile)
           .compile
           .drain
 
       val loadConfig: F[Config] =
         Files[F]
-          .readAll(configPath, 4096)
-          .through(fs2.text.utf8Decode[F])
+          .readAll(configPath)
+          .through(fs2.text.utf8.decode[F])
           .compile
           .string
           .flatMap(io.circe.parser.decode[Config](_).liftTo[F])

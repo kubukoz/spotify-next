@@ -9,7 +9,7 @@ import com.kubukoz.next.api.spotify.Player
 import com.kubukoz.next.api.spotify.PlayerContext
 import com.kubukoz.next.api.sonos.SonosZones
 import org.http4s.Uri
-import java.nio.file.Path
+import fs2.io.file.Path
 
 enum UserMessage {
   case GoToUri(uri: Uri)

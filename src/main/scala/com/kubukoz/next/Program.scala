@@ -21,7 +21,7 @@ import org.http4s.client.middleware.RequestLogger
 import org.http4s.client.middleware.ResponseLogger
 import java.lang.System
 import java.nio.file.Paths
-import java.nio.file.Path
+import fs2.io.file.Path
 import cats.data.OptionT
 import cats.MonadThrow
 
@@ -37,20 +37,18 @@ object Program {
     given [F[_]: Sync]: System[F] = name => Sync[F].delay(java.lang.System.getenv(name)).map(Option(_))
   }
 
-  private def configPath[F[_]: System: MonadThrow]: F[Path] =
-    OptionT(System[F].getenv("XDG_CONFIG_HOME"))
-      .map(Paths.get(_))
-      .getOrElseF(
-        System[F]
-          .getenv("HOME")
-          .flatMap(_.liftTo[F](new Throwable("HOME not defined, I don't even")))
-          .map(Paths.get(_))
-          .map(_.resolve(".config"))
-      )
-      .map(
-        _.resolve("spotify-next")
-          .resolve("config.json")
-      )
+  private def configPath[F[_]: System: MonadThrow]: F[Path] = {
+    val xdgConfig = OptionT(System[F].getenv("XDG_CONFIG_HOME")).map(Path(_))
+    val homeConfig = System[F]
+      .getenv("HOME")
+      .flatMap(_.liftTo[F](new Throwable("HOME not defined, I don't even")))
+      .map(Path(_))
+      .map(_.resolve(".config"))
+
+    xdgConfig
+      .getOrElseF(homeConfig)
+      .map(_.resolve("spotify-next").resolve("config.json"))
+  }
 
   def makeLoader[F[_]: Files: System: Ref.Make: UserOutput: Console: fs2.Compiler.Target]: F[ConfigLoader[F]] =
     configPath[F].flatMap { p =>
