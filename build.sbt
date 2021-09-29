@@ -114,6 +114,21 @@ val front = project
   )
   .dependsOn(core)
  */
+
+val nativeImageSettings: Seq[Setting[_]] = Seq(
+  Compile / mainClass := Some("com.kubukoz.next.Main"),
+  nativeImageVersion := "21.2.0",
+  nativeImageOptions ++= Seq(
+    s"-H:ReflectionConfigurationFiles=${(Compile / resourceDirectory).value / "reflect-config.json"}",
+    s"-H:ResourceConfigurationFiles=${(Compile / resourceDirectory).value / "resource-config.json"}",
+    "-H:+ReportExceptionStackTraces",
+    "--no-fallback",
+    "--allow-incomplete-classpath"
+  ),
+  nativeImageAgentMerge := true,
+  nativeImageReady := { () => () }
+)
+
 val root =
   project
     .in(file("."))
@@ -131,11 +146,12 @@ val root =
         "dev.optics" %% "monocle-core" % "3.0.0"
       ),
       buildInfoKeys := Seq[BuildInfoKey](version),
-      buildInfoPackage := "com.kubukoz.next"
+      buildInfoPackage := "com.kubukoz.next",
+      nativeImageSettings
     )
     .settings(name := "spotify-next")
     .enablePlugins(BuildInfoPlugin)
     .enablePlugins(JavaAppPackaging)
-    .enablePlugins(GraalVMNativeImagePlugin)
+    .enablePlugins(NativeImagePlugin)
 // .dependsOn(core)
 // .aggregate(core /* , front */ )
