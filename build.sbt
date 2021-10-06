@@ -136,7 +136,7 @@ val root =
     .settings(
       libraryDependencies ++= Seq(
         "org.typelevel" %% "cats-mtl" % "1.2.1",
-        "com.monovore" %% "decline-effect" % "2.1.0",
+        "com.monovore" %% "decline-effect" % "2.2.0",
         "org.http4s" %% "http4s-dsl" % "0.23.5",
         "org.http4s" %% "http4s-blaze-server" % "0.23.5",
         "org.http4s" %% "http4s-blaze-client" % "0.23.5",
