@@ -47,7 +47,7 @@ def crossPlugin(x: sbt.librarymanagement.ModuleID) = compilerPlugin(x.cross(Cros
 
 val addCompilerPlugins = libraryDependencies ++= {
   List(
-    crossPlugin("org.polyvariant" % "better-tostring" % "0.3.8")
+    crossPlugin("org.polyvariant" % "better-tostring" % "0.3.9")
   )
 }
 
@@ -63,7 +63,7 @@ val commonSettings = Seq(
   libraryDependencies ++= Seq(
     "org.typelevel" %%% "cats-effect" % "3.2.9",
     "org.scalameta" %%% "munit" % "0.7.29" % Test,
-    "org.typelevel" %% "munit-cats-effect-3" % "1.0.5" % Test
+    "org.typelevel" %% "munit-cats-effect-3" % "1.0.6" % Test
   ),
   addCompilerPlugins,
   Compile / doc / sources := Nil
@@ -114,6 +114,21 @@ val front = project
   )
   .dependsOn(core)
  */
+
+val nativeImageSettings: Seq[Setting[_]] = Seq(
+  Compile / mainClass := Some("com.kubukoz.next.Main"),
+  nativeImageVersion := "21.2.0",
+  nativeImageOptions ++= Seq(
+    s"-H:ReflectionConfigurationFiles=${(Compile / resourceDirectory).value / "reflect-config.json"}",
+    s"-H:ResourceConfigurationFiles=${(Compile / resourceDirectory).value / "resource-config.json"}",
+    "-H:+ReportExceptionStackTraces",
+    "--no-fallback",
+    "--allow-incomplete-classpath"
+  ),
+  nativeImageAgentMerge := true,
+  nativeImageReady := { () => () }
+)
+
 val root =
   project
     .in(file("."))
@@ -121,21 +136,22 @@ val root =
     .settings(
       libraryDependencies ++= Seq(
         "org.typelevel" %% "cats-mtl" % "1.2.1",
-        "com.monovore" %% "decline-effect" % "2.2.0",
-        "org.http4s" %% "http4s-dsl" % "0.23.4",
-        "org.http4s" %% "http4s-blaze-server" % "0.23.4",
-        "org.http4s" %% "http4s-blaze-client" % "0.23.4",
-        "org.http4s" %% "http4s-circe" % "0.23.4",
+        "com.monovore" %% "decline-effect" % "2.1.0",
+        "org.http4s" %% "http4s-dsl" % "0.23.5",
+        "org.http4s" %% "http4s-blaze-server" % "0.23.5",
+        "org.http4s" %% "http4s-blaze-client" % "0.23.5",
+        "org.http4s" %% "http4s-circe" % "0.23.5",
         "ch.qos.logback" % "logback-classic" % "1.2.6",
         "io.circe" %% "circe-parser" % "0.14.1",
         "dev.optics" %% "monocle-core" % "3.0.0"
       ),
       buildInfoKeys := Seq[BuildInfoKey](version),
-      buildInfoPackage := "com.kubukoz.next"
+      buildInfoPackage := "com.kubukoz.next",
+      nativeImageSettings
     )
     .settings(name := "spotify-next")
     .enablePlugins(BuildInfoPlugin)
     .enablePlugins(JavaAppPackaging)
-    .enablePlugins(GraalVMNativeImagePlugin)
+    .enablePlugins(NativeImagePlugin)
 // .dependsOn(core)
 // .aggregate(core /* , front */ )
