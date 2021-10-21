@@ -44,6 +44,8 @@ object Choice {
       )
       .reduceK
 
+  val repl: Opts[Unit] = Opts
+    .subcommand("repl", "Run application in interactive mode")(Opts.unit)
 }
 
 object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: Gather great music.", version = BuildInfo.version) {
@@ -103,9 +105,6 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
         }
   }.compile.drain
 
-  val repl: Opts[Unit] = Opts
-    .subcommand("repl", "Run application in interactive mode")(Opts.unit)
-
   val main: Opts[IO[ExitCode]] =
-    (mainOpts <+> repl.as(runRepl)).map(_.as(ExitCode.Success))
+    (mainOpts <+> Choice.repl.as(runRepl)).map(_.as(ExitCode.Success))
 }
