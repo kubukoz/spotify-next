@@ -22,6 +22,46 @@ extension (s: String)
 
 extension [A](a: A) def asId: Id[A] = a
 
+enum OptionsTree {
+  case Union(left: OptionsTree, right: OptionsTree)
+  case Both(left: OptionsTree, right: OptionsTree)
+  case Command(name: String, header: String, options: OptionsTree)
+  case Option(opt: Opt[?], repeated: Boolean)
+  case HelpFlag(flag: OptionsTree)
+  case Unit
+
+  def render: String = this match {
+    case Union(left, right)             =>
+      s"""Union(
+      |${("left = " + left.render).indent(1)},
+      |${("right = " + right.render).indent(1)}
+      |)""".stripMargin
+    case Both(left, right)              =>
+      s"""Both(
+      |${("left = " + left.render).indent(1)},
+      |${("right = " + right.render).indent(1)}
+      |)""".stripMargin
+    case Command(name, header, options) =>
+      s"""Command(
+      |  name = $name,
+      |  header = $header,
+      |${("options = " + options.render).indent(1)}
+      |)""".stripMargin
+    case Option(opt, repeated)          =>
+      s"""Option(
+      |  opt = $opt,
+      |  repeated = $repeated
+      |)""".stripMargin
+    case HelpFlag(flag)                 =>
+      s"""HelpFlag(
+      |${("flag = " + flag.render).indent(1)}
+      |)""".stripMargin
+    case Unit                           =>
+      "Unit"
+  }
+
+}
+
 object Completions extends App {
 
   val spotifyNext = {
@@ -51,7 +91,13 @@ object Completions extends App {
                   Opts.option[String]("user", "The user running the command", "u", "u") <+>
                   Opts.flag("quiet", "Whether to run the command without output", "q")
               ).void
-            )
+            ),
+            (
+              Opts.option[Int]("rows", "The amount of rows in the table", "r", "rows") <+>
+                Opts.option[String]("indexName", "The name of the index") <+>
+                Opts.flag("immutable", "Whether the table is immutable", "i") <+>
+                Opts.flag("mutable", "Whether the table is mutable", "m")
+            ).void
           )
           .reduceK
     }
@@ -67,8 +113,29 @@ object Completions extends App {
           Opts.flag("mutable", "Whether the table is mutable", "m")
       )
 
-  val example = singleCommand
+  val example = spotifyNext
   println(genCompletions("spotify-next", example).render)
+  // println(convert(example).render)
+
+  def convert(opts: Opts[Any]): OptionsTree = {
+    import Opts.*
+
+    opts match {
+      case OrElse(a, b)                     => OptionsTree.Union(convert(a), convert(b))
+      case Subcommand(a)                    =>
+        OptionsTree.Command(
+          a.name,
+          a.header,
+          convert(a.options)
+        )
+      case Opts.Repeated(opt)               => OptionsTree.Option(opt, true)
+      case Opts.Single(opt)                 => OptionsTree.Option(opt, false)
+      case Opts.Validate(opt, _)            => convert(opt)
+      case Opts.App(a, b)                   => OptionsTree.Both(convert(a), convert(b))
+      case HelpFlag(flag)                   => OptionsTree.HelpFlag(convert(flag))
+      case Pure(_) | Env(_, _, _) | Missing => OptionsTree.Unit
+    }
+  }
 
   def genCompletions[A](programName: String, opts: Opts[A]): ScriptNode = {
     val alias = s"_$programName"
@@ -173,10 +240,11 @@ enum ScriptNode {
               arg.render
             }
             .map(_.surround('\''))
-            .mkString(" ")
+            .toNel
+            .foldMap(_.mkString_(" ", " ", ""))
 
           s"""${list.command})
-           |  _arguments -C $argStrings
+           |  _arguments -C$argStrings
            |  ;;""".stripMargin.indent(1)
         }
         .mkString(
