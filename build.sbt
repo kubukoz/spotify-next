@@ -22,6 +22,8 @@ ThisBuild / githubWorkflowJavaVersions := Seq(GraalVM11)
 ThisBuild / githubWorkflowTargetTags := Seq("v*")
 ThisBuild / githubWorkflowPublishTargetBranches := List(RefPredicate.StartsWith(Ref.Tag("v")), RefPredicate.Equals(Ref.Branch("main")))
 
+ThisBuild / githubWorkflowOSes := Seq("macos-10.15")
+
 ThisBuild / githubWorkflowPublish := Seq(
   WorkflowStep.Sbt(List("nativeImage")),
   WorkflowStep.Use(
@@ -32,7 +34,18 @@ ThisBuild / githubWorkflowPublish := Seq(
 ThisBuild / githubWorkflowGeneratedCI ~= {
   _.map {
     case job if job.id == "publish" =>
-      job.copy(oses = List("macos-10.15"))
+      job.copy(
+        oses = List("macos-10.15")
+        // steps = job.steps.map {
+        //   case step: WorkflowStep.Use if step.name.exists(_.startsWith("Download target directories")) =>
+        //     step
+        //       .copy(
+        //         params = step.params + ("name" -> step.params("name").replace("${{ matrix.os }}", "ubuntu-latest"))
+        //       )
+
+        //   case step => step
+        // }
+      )
     case job                        =>
       job
   }
