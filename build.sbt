@@ -25,10 +25,17 @@ ThisBuild / githubWorkflowPublishTargetBranches := List(RefPredicate.StartsWith(
 ThisBuild / githubWorkflowOSes := Seq("macos-10.15")
 
 ThisBuild / githubWorkflowPublish := Seq(
-  WorkflowStep.Sbt(List("nativeImage")),
+  WorkflowStep.Sbt(
+    List("ci-release")
+  ),
+  WorkflowStep.Sbt(
+    List("nativeImage"),
+    cond = Some("startsWith(github.ref, 'refs/tags/')")
+  ),
   WorkflowStep.Use(
     UseRef.Public("softprops", "action-gh-release", "v1"),
-    params = Map("files" -> "target/native-image/spotify-next")
+    params = Map("files" -> "target/native-image/spotify-next"),
+    cond = Some("startsWith(github.ref, 'refs/tags/')")
   )
 )
 ThisBuild / githubWorkflowGeneratedCI ~= {
