@@ -13,19 +13,30 @@ inThisBuild(
     )
   )
 )
+Global / onChangedBuildSource := ReloadOnSourceChanges
 
-(ThisBuild / scalaVersion) := "3.0.1"
+(ThisBuild / scalaVersion) := "3.1.0"
 
 val GraalVM11 = "graalvm-ce-java11@20.3.0"
 ThisBuild / githubWorkflowJavaVersions := Seq(GraalVM11)
 ThisBuild / githubWorkflowTargetTags := Seq("v*")
 ThisBuild / githubWorkflowPublishTargetBranches := List(RefPredicate.StartsWith(Ref.Tag("v")), RefPredicate.Equals(Ref.Branch("main")))
 
-ThisBuild / githubWorkflowPublishPreamble := Seq(
-  WorkflowStep.Use(UseRef.Public("olafurpg", "setup-gpg", "v3"))
+ThisBuild / githubWorkflowPublish := Seq(
+  WorkflowStep.Sbt(List("nativeImage")),
+  WorkflowStep.Use(
+    UseRef.Public("softprops", "action-gh-release", "v1"),
+    params = Map("files" -> "target/native-image/spotify-next")
+  )
 )
-
-ThisBuild / githubWorkflowPublish := Seq(WorkflowStep.Sbt(List("ci-release")))
+ThisBuild / githubWorkflowGeneratedCI ~= {
+  _.map {
+    case job if job.id == "publish" =>
+      job.copy(oses = List("macos-10.15"))
+    case job                        =>
+      job
+  }
+}
 
 ThisBuild / githubWorkflowEnv ++= List(
   "PGP_PASSPHRASE",

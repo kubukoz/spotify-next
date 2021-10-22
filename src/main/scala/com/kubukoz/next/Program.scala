@@ -59,11 +59,8 @@ object Program {
     }
 
   def makeBasicClient[F[_]: Async]: Resource[F, Client[F]] =
-    Resource
-      .eval(Async[F].executionContext)
-      .flatMap { ec =>
-        BlazeClientBuilder(ec).resource
-      }
+    BlazeClientBuilder[F]
+      .resource
       .map(FollowRedirect(maxRedirects = 5))
       .map(RequestLogger(logHeaders = true, logBody = true))
       .map(ResponseLogger(logHeaders = true, logBody = true))
