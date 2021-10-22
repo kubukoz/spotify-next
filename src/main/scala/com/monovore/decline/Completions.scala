@@ -24,7 +24,7 @@ extension [A](a: A) def asId: Id[A] = a
 
 object Completions extends App {
 
-  val exampleOpts = {
+  val spotifyNext = {
 
     object Choice {
       val ffOpts = Opts.argument[Int]("step").withDefault(10).map(_ => ())
@@ -59,7 +59,16 @@ object Completions extends App {
     Choice.opts
   }
 
-  println(genCompletions("spotify-next", exampleOpts).render)
+  val singleCommand =
+    Opts.argument[String]("tableName") <+>
+      Opts.option[Int]("rows", "The amount of rows in the table", "r", "rows") <+>
+      Opts.option[String]("indexName", "The name of the index") <+> (
+        Opts.flag("immutable", "Whether the table is immutable", "i") <+>
+          Opts.flag("mutable", "Whether the table is mutable", "m")
+      )
+
+  val example = singleCommand
+  println(genCompletions("spotify-next", example).render)
 
   def genCompletions[A](programName: String, opts: Opts[A]): ScriptNode = {
     val alias = s"_$programName"
@@ -94,9 +103,13 @@ object Completions extends App {
 
     val args = alternatives.map { cmd =>
       MatchArgsElem(cmd.name, findArgs(cmd.options).flatMap(collectArgs))
+    } :+ {
+      //it's a hack, but it works!
+      if (alternatives.isEmpty)
+        MatchArgsElem("*", findArgs(opts).flatMap(collectArgs))
+      else
+        MatchArgsElem("*", Nil)
     }
-
-    // args.foreach(Console.err.println(_))
 
     ScriptNode
       .Template(
@@ -106,16 +119,14 @@ object Completions extends App {
             .FunctionDef(
               alias,
               ScriptNode.Template(
-                List(
-                  ScriptNode
-                    .DescribeCommands(
-                      alternatives
-                        .map { cmd =>
-                          DescribeCommandsElem(cmd.name, cmd.header)
-                        }
-                    ),
+                alternatives
+                  .map { cmd =>
+                    DescribeCommandsElem(cmd.name, cmd.header)
+                  }
+                  .toNel
+                  .map(ScriptNode.DescribeCommands.apply)
+                  .toList :+
                   ScriptNode.MatchArgs(args)
-                )
               )
             )
           // ScriptNode.FunctionCallPassArgs(alias)
@@ -127,7 +138,7 @@ object Completions extends App {
 
 enum ScriptNode {
   case CompdefHeader(programName: String)
-  case DescribeCommands(commands: List[DescribeCommandsElem])
+  case DescribeCommands(commands: NonEmptyList[DescribeCommandsElem])
   case MatchArgs(argLists: List[MatchArgsElem])
   case Template(stats: List[ScriptNode])
   case FunctionDef(name: String, body: Template)
@@ -153,19 +164,18 @@ enum ScriptNode {
         )
     case ScriptNode.MatchArgs(lists)       =>
       lists
-        .collect {
-          case list if list.args.nonEmpty =>
-            // todo: examples?
+        .collect { list =>
+          // todo: examples?
 
-            val argStrings = list
-              .args
-              .flatMap { arg =>
-                arg.render
-              }
-              .map(_.surround('\''))
-              .mkString(" ")
+          val argStrings = list
+            .args
+            .flatMap { arg =>
+              arg.render
+            }
+            .map(_.surround('\''))
+            .mkString(" ")
 
-            s"""${list.command})
+          s"""${list.command})
            |  _arguments -C $argStrings
            |  ;;""".stripMargin.indent(1)
         }
@@ -173,13 +183,7 @@ enum ScriptNode {
           "case $words[1] in\n\n",
           "\n\n",
           // todo: common opts here (help, version)
-          """
-            |
-            |  *)
-            |    _arguments -C
-            |    ;;
-            |
-            |esac""".stripMargin
+          "\n\nesac".stripMargin
         )
 
     case FunctionDef(name, template) =>
