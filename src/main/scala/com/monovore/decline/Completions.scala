@@ -3,6 +3,10 @@ package com.monovore.decline
 import com.monovore.decline.Opts
 import cats.implicits.*
 import cats.arrow.Choice
+import cats.Alternative
+import cats.data.NonEmptyList
+import cats.Id
+import cats.catsInstancesForId
 
 extension (s: String)
 
@@ -16,33 +20,83 @@ extension (s: String)
 
   def surround(char: Char): String = s"$char$s$char"
 
-object Completions extends App {
-  println(genCompletions("spotify-next", com.kubukoz.next.Choice.opts <+> com.kubukoz.next.Choice.repl))
+extension [A](a: A) def asId: Id[A] = a
 
-  def genCompletions[A](programName: String, opts: Opts[A]): String = {
+object Completions extends App {
+
+  val exampleOpts = {
+
+    object Choice {
+      val ffOpts = Opts.argument[Int]("step").withDefault(10).map(_ => ())
+
+      val opts: Opts[Unit] =
+        NonEmptyList
+          .of[Opts[Unit]](
+            Opts.subcommand("login", "Log into Spotify")(Opts(())),
+            Opts.subcommand("skip", "Skip to next track without any changes")(Opts(())),
+            Opts.subcommand("drop", "Drop current track from the current playlist and skip to the next track")(
+              Opts(())
+            ),
+            Opts.subcommand("forward", "Fast forward the current track by a percentage of its length (10% by default)")(
+              ffOpts
+            ),
+            Opts.subcommand("jump", "Fast forward the current track to the next section")(Opts(())),
+            Opts.subcommand("s", "Alias for `skip`")(Opts(())),
+            Opts.subcommand("d", "Alias for `drop`")(Opts(())),
+            Opts.subcommand("f", "Alias for `forward`")(ffOpts),
+            Opts.subcommand("j", "Alias for `jump`")(Opts(())),
+            Opts.subcommand("repl", "Run application in interactive mode")(
+              (
+                Opts.argument[String]("command").map(_ => ()) <+>
+                  Opts.option[String]("user", "The user running the command", "u", "u") <+>
+                  Opts.flag("quiet", "Whether to run the command without output", "q")
+              ).void
+            )
+          )
+          .reduceK
+    }
+
+    Choice.opts
+  }
+
+  println(genCompletions("spotify-next", exampleOpts).render)
+
+  def genCompletions[A](programName: String, opts: Opts[A]): ScriptNode = {
     val alias = s"_$programName"
     import Opts.*
 
     def findAlts(o: Opts[Any]): List[Command[Any]] = o match {
       case OrElse(a, b)    => findAlts(a) ++ findAlts(b)
       case Subcommand(opt) => List(opt)
-      case _               => Nil
+      case Pure(_) | Missing | Env(_, _, _) | Repeated(_) | Opts.App(_, _) | Opts.Validate(_, _) | Opts.HelpFlag(_) | Opts.Single(_) => Nil
     }
 
     def findArgs(o: Opts[Any]): List[Opt[?]] = o match {
-      case OrElse(a, b)   => findArgs(a) ++ findArgs(b)
-      case Validate(v, _) => findArgs(v)
-      case Single(a)      => List(a)
-      case x              =>
-        // println(s"ignoring ${x.getClass.getName}")
+      case OrElse(a, b)                                                               => findArgs(a) ++ findArgs(b)
+      case Validate(v, _)                                                             => findArgs(v)
+      case Single(a)                                                                  => List(a)
+      case Repeated(o)                                                                => List(o)
+      case App(a, b)                                                                  => findArgs(a) ++ findArgs(b)
+      //nested subcommands not supported here yet
+      case (Pure(_) | Missing | Env(_, _, _) | Opts.HelpFlag(_) | Opts.Subcommand(_)) =>
         Nil
     }
 
     val alternatives = findAlts(opts)
 
     def collectArgs(o: Opt[?]): List[MatchArgsArg] = o match {
-      case Opt.Argument(arg) => List(MatchArgsArg(arg))
+      case Opt.Argument(name)       => List(MatchArgsArg.Argument(name))
+      case Opt.Flag(names, help, _) =>
+        List(MatchArgsArg.Flag(names, help))
+
+      case Opt.Regular(names, _, help, _) => List(MatchArgsArg.Option(names, help))
     }
+
+    val args = alternatives.map { cmd =>
+      MatchArgsElem(cmd.name, findArgs(cmd.options).flatMap(collectArgs))
+    }
+
+    // args.foreach(Console.err.println(_))
 
     ScriptNode
       .Template(
@@ -60,18 +114,13 @@ object Completions extends App {
                           DescribeCommandsElem(cmd.name, cmd.header)
                         }
                     ),
-                  ScriptNode
-                    .MatchArgs(
-                      alternatives.map { cmd =>
-                        MatchArgsElem(cmd.name, findArgs(cmd.options).flatMap(collectArgs))
-                      }
-                    )
+                  ScriptNode.MatchArgs(args)
                 )
               )
             )
+          // ScriptNode.FunctionCallPassArgs(alias)
         )
       )
-      .render
   }
 
 }
@@ -82,6 +131,7 @@ enum ScriptNode {
   case MatchArgs(argLists: List[MatchArgsElem])
   case Template(stats: List[ScriptNode])
   case FunctionDef(name: String, body: Template)
+  case FunctionCallPassArgs(name: String)
 
   def render: String = this match {
     case CompdefHeader(programName) =>
@@ -104,12 +154,19 @@ enum ScriptNode {
     case ScriptNode.MatchArgs(lists)       =>
       lists
         .collect {
-          case list if list.command == "forward" || list.command == "f" =>
-            // |  _arguments -C ${list.args.map(a => (a.text + "[foo]").surround('\"')).mkString(" ")}
+          case list if list.args.nonEmpty =>
+            // todo: examples?
 
-            // todo: examples aren't always going to be available. Can we still give a name hint?
+            val argStrings = list
+              .args
+              .flatMap { arg =>
+                arg.render
+              }
+              .map(_.surround('\''))
+              .mkString(" ")
+
             s"""${list.command})
-           |  _arguments '::step:(10 20 50)'
+           |  _arguments -C $argStrings
            |  ;;""".stripMargin.indent(1)
         }
         .mkString(
@@ -126,12 +183,14 @@ enum ScriptNode {
         )
 
     case FunctionDef(name, template) =>
-      s"function $name(){\n${template.render.indent(1)}\n}\n"
+      s"function $name(){\n${template.render.indent(1)}\n}"
 
     case Template(stats) =>
       stats
         .map(_.render)
         .mkString_("\n\n")
+
+    case FunctionCallPassArgs(name) => s"$name \"$$@\""
   }
 
 }
@@ -142,4 +201,21 @@ final case class DescribeCommandsElem(command: String, description: String) {
 
 final case class MatchArgsElem(command: String, args: List[MatchArgsArg])
 
-final case class MatchArgsArg(text: String)
+enum MatchArgsArg {
+  case Argument(name: String)
+  case Flag(names: List[Opts.Name], description: String)
+  case Option(names: List[Opts.Name], description: String)
+
+  def render: List[String] = this match {
+    case MatchArgsArg.Argument(name)             => List(":" + name)
+    case MatchArgsArg.Flag(names, description)   =>
+      names.map(_.toString).map { name =>
+        s"$name[$description]"
+      }
+    case MatchArgsArg.Option(names, description) =>
+      names.map(_.toString).map { name =>
+        s"$name[$description]"
+      }
+  }
+
+}

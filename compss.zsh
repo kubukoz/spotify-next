@@ -21,11 +21,15 @@ function _spotify-next(){
   case $words[1] in
 
     forward)
-      _arguments '::step:(10 20 50)'
+      _arguments -C ':step'
       ;;
 
     f)
-      _arguments '::step:(10 20 50)'
+      _arguments -C ':step'
+      ;;
+
+    repl)
+      _arguments -C '--user[The user running the command]' '-u[The user running the command]' '--quiet[Whether to run the command without output]' '-q[Whether to run the command without output]' ':command'
       ;;
 
     *)
@@ -34,4 +38,3 @@ function _spotify-next(){
 
   esac
 }
-
