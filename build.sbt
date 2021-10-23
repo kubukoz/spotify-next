@@ -41,18 +41,7 @@ ThisBuild / githubWorkflowPublish := Seq(
 ThisBuild / githubWorkflowGeneratedCI ~= {
   _.map {
     case job if job.id == "publish" =>
-      job.copy(
-        oses = List("macos-10.15")
-        // steps = job.steps.map {
-        //   case step: WorkflowStep.Use if step.name.exists(_.startsWith("Download target directories")) =>
-        //     step
-        //       .copy(
-        //         params = step.params + ("name" -> step.params("name").replace("${{ matrix.os }}", "ubuntu-latest"))
-        //       )
-
-        //   case step => step
-        // }
-      )
+      job.copy(oses = List("macos-10.15"))
     case job                        =>
       job
   }
@@ -149,6 +138,7 @@ val front = project
 val nativeImageSettings: Seq[Setting[_]] = Seq(
   Compile / mainClass := Some("com.kubukoz.next.Main"),
   nativeImageVersion := "21.2.0",
+  nativeImageAgentOutputDir := (Compile / resourceDirectory).value,
   nativeImageOptions ++= Seq(
     s"-H:ReflectionConfigurationFiles=${(Compile / resourceDirectory).value / "reflect-config.json"}",
     s"-H:ResourceConfigurationFiles=${(Compile / resourceDirectory).value / "resource-config.json"}",
