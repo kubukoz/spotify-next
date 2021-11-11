@@ -162,7 +162,7 @@ val root =
         "org.http4s" %% "http4s-blaze-server" % "0.23.6",
         "org.http4s" %% "http4s-blaze-client" % "0.23.6",
         "org.http4s" %% "http4s-circe" % "0.23.6",
-        "ch.qos.logback" % "logback-classic" % "1.2.6",
+        "ch.qos.logback" % "logback-classic" % "1.2.7",
         "io.circe" %% "circe-parser" % "0.14.1",
         "dev.optics" %% "monocle-core" % "3.0.0"
       ),
