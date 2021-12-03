@@ -119,4 +119,4 @@ jobs:
       - if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
-          files: target/native-image/spotify-next
+          files: target/native-image/spotify-next-${{ matrix.os }}

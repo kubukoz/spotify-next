@@ -34,7 +34,7 @@ ThisBuild / githubWorkflowPublish := Seq(
   ),
   WorkflowStep.Use(
     UseRef.Public("softprops", "action-gh-release", "v1"),
-    params = Map("files" -> "target/native-image/spotify-next"),
+    params = Map("files" -> "target/native-image/spotify-next-${{ matrix.os }}"),
     cond = Some("startsWith(github.ref, 'refs/tags/')")
   )
 )
