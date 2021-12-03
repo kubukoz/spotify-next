@@ -117,7 +117,7 @@ jobs:
   publish-native:
     name: Publish native images
     needs: [build]
-    if: github.event_name != 'pull_request' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main')
+    if: startsWith(github.ref, 'refs/tags/')
     strategy:
       matrix:
         os: [macos-10.15]
@@ -157,12 +157,10 @@ jobs:
           tar xf targets.tar
           rm targets.tar
 
-      - if: startsWith(github.ref, 'refs/tags/')
-        run: sbt ++${{ matrix.scala }} nativeImage
+      - run: sbt ++${{ matrix.scala }} nativeImage
 
       - run: mv target/native-image/spotify-next target/native-image/spotify-next-${{ matrix.os }}
 
-      - if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
+      - uses: softprops/action-gh-release@v1
         with:
           files: target/native-image/spotify-next

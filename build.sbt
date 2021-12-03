@@ -38,12 +38,12 @@ ThisBuild / githubWorkflowGeneratedCI ~= {
           id = "publish-native",
           name = "Publish native images",
           oses = List("macos-10.15"),
+          cond = Some("startsWith(github.ref, 'refs/tags/')"),
           steps = job.steps.flatMap {
             case step if step.id.contains("release") =>
               List(
                 WorkflowStep.Sbt(
-                  List("nativeImage"),
-                  cond = Some("startsWith(github.ref, 'refs/tags/')")
+                  List("nativeImage")
                 ),
                 WorkflowStep.Run(
                   List(
@@ -52,8 +52,7 @@ ThisBuild / githubWorkflowGeneratedCI ~= {
                 ),
                 WorkflowStep.Use(
                   UseRef.Public("softprops", "action-gh-release", "v1"),
-                  params = Map("files" -> "target/native-image/spotify-next"),
-                  cond = Some("startsWith(github.ref, 'refs/tags/')")
+                  params = Map("files" -> "target/native-image/spotify-next")
                 )
               )
             case step                                =>
