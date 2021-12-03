@@ -160,7 +160,9 @@ jobs:
       - if: startsWith(github.ref, 'refs/tags/')
         run: sbt ++${{ matrix.scala }} nativeImage
 
+      - run: mv target/native-image/spotify-next target/native-image/spotify-next-${{ matrix.os }}
+
       - if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
-          files: target/native-image/spotify-next-${{ matrix.os }}
+          files: target/native-image/spotify-next

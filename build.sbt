@@ -45,9 +45,14 @@ ThisBuild / githubWorkflowGeneratedCI ~= {
                   List("nativeImage"),
                   cond = Some("startsWith(github.ref, 'refs/tags/')")
                 ),
+                WorkflowStep.Run(
+                  List(
+                    "mv target/native-image/spotify-next target/native-image/spotify-next-${{ matrix.os }}"
+                  )
+                ),
                 WorkflowStep.Use(
                   UseRef.Public("softprops", "action-gh-release", "v1"),
-                  params = Map("files" -> "target/native-image/spotify-next-${{ matrix.os }}"),
+                  params = Map("files" -> "target/native-image/spotify-next"),
                   cond = Some("startsWith(github.ref, 'refs/tags/')")
                 )
               )
