@@ -52,7 +52,7 @@ ThisBuild / githubWorkflowGeneratedCI ~= {
                 ),
                 WorkflowStep.Use(
                   UseRef.Public("softprops", "action-gh-release", "v1"),
-                  params = Map("files" -> "target/native-image/spotify-next")
+                  params = Map("files" -> "target/native-image/spotify-next-${{ matrix.os }}")
                 )
               )
             case step                                =>
