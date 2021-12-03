@@ -26,24 +26,38 @@ ThisBuild / githubWorkflowOSes := Seq("macos-10.15")
 
 ThisBuild / githubWorkflowPublish := Seq(
   WorkflowStep.Sbt(
-    List("ci-release")
-  ),
-  WorkflowStep.Sbt(
-    List("nativeImage"),
-    cond = Some("startsWith(github.ref, 'refs/tags/')")
-  ),
-  WorkflowStep.Use(
-    UseRef.Public("softprops", "action-gh-release", "v1"),
-    params = Map("files" -> "target/native-image/spotify-next-${{ matrix.os }}"),
-    cond = Some("startsWith(github.ref, 'refs/tags/')")
+    List("ci-release"),
+    id = Some("release")
   )
 )
 ThisBuild / githubWorkflowGeneratedCI ~= {
-  _.map {
+  _.flatMap {
     case job if job.id == "publish" =>
-      job.copy(oses = List("macos-10.15"))
+      job.copy(oses = List("macos-10.15")) ::
+        job.copy(
+          id = "publish-native",
+          name = "Publish native images",
+          oses = List("macos-10.15"),
+          steps = job.steps.flatMap {
+            case step if step.id.contains("release") =>
+              List(
+                WorkflowStep.Sbt(
+                  List("nativeImage"),
+                  cond = Some("startsWith(github.ref, 'refs/tags/')")
+                ),
+                WorkflowStep.Use(
+                  UseRef.Public("softprops", "action-gh-release", "v1"),
+                  params = Map("files" -> "target/native-image/spotify-next-${{ matrix.os }}"),
+                  cond = Some("startsWith(github.ref, 'refs/tags/')")
+                )
+              )
+            case step                                =>
+              step :: Nil
+          }
+        ) ::
+        Nil
     case job                        =>
-      job
+      job :: Nil
   }
 }
 
