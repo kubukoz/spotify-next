@@ -41,7 +41,7 @@ object App {
   import scala.concurrent.duration.*
 
   val component: FunctionalComponent[Unit] = FunctionalComponent { _ =>
-    //using a core model
+    // using a core model
     val (state, setState) = Hooks.useState(Model(NonEmptyList.of(('a', 0))))
 
     val handleClicked = SyncIO {
@@ -60,7 +60,7 @@ object App {
       )
     }
 
-    //just a POC of using cats-effect here
+    // just a POC of using cats-effect here
     Hooks.useEffect { () =>
       val theIO = IO(handleClicked.unsafeRunSync()).delayBy(16.millis)
 
