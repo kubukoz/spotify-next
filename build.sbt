@@ -175,12 +175,21 @@ val root =
     .settings(
       libraryDependencies ++= Seq(
         "org.typelevel" %% "cats-mtl" % "1.2.1",
+<<<<<<< HEAD
         "com.monovore" %% "decline-effect" % "2.1.0",
         "org.http4s" %% "http4s-dsl" % "0.23.7",
         "org.http4s" %% "http4s-blaze-server" % "0.23.7",
         "org.http4s" %% "http4s-blaze-client" % "0.23.7",
         "org.http4s" %% "http4s-circe" % "0.23.7",
         "ch.qos.logback" % "logback-classic" % "1.2.10",
+=======
+        "com.monovore" %% "decline-effect" % "2.2.0",
+        "org.http4s" %% "http4s-dsl" % "0.23.6",
+        "org.http4s" %% "http4s-blaze-server" % "0.23.6",
+        "org.http4s" %% "http4s-blaze-client" % "0.23.6",
+        "org.http4s" %% "http4s-circe" % "0.23.6",
+        "ch.qos.logback" % "logback-classic" % "1.2.6",
+>>>>>>> steward/update/decline-effect-2.2.0
         "io.circe" %% "circe-parser" % "0.14.1",
         "dev.optics" %% "monocle-core" % "3.0.0"
       ),
