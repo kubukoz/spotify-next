@@ -7,9 +7,9 @@ import cats.effect.kernel.RefSource
 import cats.implicits.*
 import com.kubukoz.next.Spotify.DeviceInfo
 import com.kubukoz.next.Spotify.SonosInfo
-import com.kubukoz.next.api.sonos.Coordinator
-import com.kubukoz.next.api.sonos.SonosZones
-import com.kubukoz.next.api.sonos.Zone
+import com.kubukoz.next.sonos.GetZonesOutput
+import com.kubukoz.next.sonos.Zone
+import com.kubukoz.next.sonos.ZoneCoordinator
 
 class SpotifyChoiceTests extends munit.CatsEffectSuite {
 
@@ -17,7 +17,7 @@ class SpotifyChoiceTests extends munit.CatsEffectSuite {
   given UserOutput[IO] = _ => IO.unit
 
   given SonosInfo[IO] with {
-    def zones: IO[Option[SonosZones]] = Some(SonosZones(NonEmptyList.of(Zone(Coordinator("home"))))).pure[IO]
+    def zones: IO[Option[GetZonesOutput]] = Some(GetZonesOutput(List(Zone(ZoneCoordinator("home"))))).pure[IO]
   }
 
   def deviceInfo(available: RefSource[IO, Boolean]) = new DeviceInfo[IO] {

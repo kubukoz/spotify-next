@@ -13,6 +13,7 @@ import com.kubukoz.next.api.spotify.PlayerContext
 import com.kubukoz.next.api.spotify.TrackUri
 import io.circe.syntax.*
 import scala.concurrent.duration.*
+import com.kubukoz.next.sonos.GetZonesOutput
 
 object SpotifyChoice {
 
@@ -39,7 +40,7 @@ object SpotifyChoice {
         val spotifyInstanceF = lastSonosRoom.set(None).as(Choice.Spotify)
 
         val sonosInstanceF: F[Option[Choice]] = {
-          def extractRoom(zones: sonos.SonosZones): F[String] = {
+          def extractRoom(zones: GetZonesOutput): F[String] = {
             val roomName = zones.zones.head.coordinator.roomName
 
             UserOutput[F].print(UserMessage.SonosFound(zones, roomName)) *>

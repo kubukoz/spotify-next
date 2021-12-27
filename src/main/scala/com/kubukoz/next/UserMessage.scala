@@ -7,9 +7,9 @@ import cats.~>
 import com.kubukoz.next.api.spotify.Item
 import com.kubukoz.next.api.spotify.Player
 import com.kubukoz.next.api.spotify.PlayerContext
-import com.kubukoz.next.api.sonos.SonosZones
 import org.http4s.Uri
 import fs2.io.file.Path
+import com.kubukoz.next.sonos.GetZonesOutput
 
 enum UserMessage {
   case GoToUri(uri: Uri)
@@ -28,7 +28,7 @@ enum UserMessage {
   // sonos
   case CheckingSonos
   case SonosNotFound
-  case SonosFound(zones: SonosZones, roomName: String)
+  case SonosFound(zones: GetZonesOutput, roomName: String)
   case DeviceRestricted
   case DirectControl
 }

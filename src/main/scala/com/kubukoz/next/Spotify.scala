@@ -23,7 +23,11 @@ import scala.concurrent.duration.*
 import scala.util.chaining.*
 import com.kubukoz.next.spotify.SpotifyApi
 import com.kubukoz.next.spotify.Track
-import com.kubukoz.next.spotify.AudioAnalysisOutput
+import com.kubukoz.next.spotify.AudioAnalysis
+import com.kubukoz.next.sonos.SonosApi
+import com.kubukoz.next.sonos.GetZonesOutput
+import cats.MonadError
+import cats.ApplicativeError
 
 trait Spotify[F[_]] {
   def skipTrack: F[Unit]
@@ -106,7 +110,7 @@ object Spotify {
           val currentLength = player.progress_ms.millis
 
           (implicitly[SpotifyApi[F]]
-            .audioAnalysis(track.uri.id): F[AudioAnalysisOutput])
+            .getAudioAnalysis(track.uri.id): F[AudioAnalysis])
             .flatMap { analysis =>
               analysis
                 .sections
@@ -140,19 +144,19 @@ object Spotify {
   object Playback {
     def apply[F[_]](using F: Playback[F]): Playback[F] = F
 
-    def spotifyInstance[F[_]: Concurrent: SpotifyApi](client: Client[F]): Playback[F] = new Playback[F] {
+    def spotifyInstance[F[_]: SpotifyApi]: Playback[F] = new Playback[F] {
       val nextTrack: F[Unit] = summon[SpotifyApi[F]].nextTrack()
       def seek(ms: Int): F[Unit] = summon[SpotifyApi[F]].seek(ms)
     }
 
-    def sonosInstance[F[_]: Concurrent](baseUrl: Uri, room: String, client: Client[F]): Playback[F] = new Playback[F] {
+    def sonosInstance[F[_]: SonosApi](room: String): Playback[F] = new Playback[F] {
       val nextTrack: F[Unit] =
-        client.expect[api.spotify.Anything](baseUrl / room / "next").void
+        summon[SonosApi[F]].nextTrack(room)
 
       def seek(ms: Int): F[Unit] = {
-        val seconds = ms.millis.toSeconds.toString
+        val seconds = ms.millis.toSeconds.toInt
 
-        client.expect[api.spotify.Anything](baseUrl / room / "timeseek" / seconds).void
+        summon[SonosApi[F]].seek(room, seconds)
       }
 
     }
@@ -178,33 +182,26 @@ object Spotify {
   }
 
   trait SonosInfo[F[_]] {
-    def zones: F[Option[sonos.SonosZones]]
+    def zones: F[Option[GetZonesOutput]]
   }
 
   object SonosInfo {
     def apply[F[_]](using F: SonosInfo[F]): SonosInfo[F] = F
 
-    def instance[F[_]: Concurrent: UserOutput](sonosBaseUrl: Uri, client: Client[F]): SonosInfo[F] = new SonosInfo[F] {
+    def instance[F[_]: UserOutput: SonosApi](using ApplicativeError[F, ?]): SonosInfo[F] =
+      new SonosInfo[F] {
 
-      def zones: F[Option[sonos.SonosZones]] = UserOutput[F].print(UserMessage.CheckingSonos) *>
-        client
-          .get(sonosBaseUrl / "zones") {
-            case response if response.status.isSuccess => response.as[sonos.SonosZones].map(_.some)
-            case _                                     => none[sonos.SonosZones].pure[F]
-          }
-          .handleError(_ => None)
+        def zones: F[Option[GetZonesOutput]] = UserOutput[F].print(UserMessage.CheckingSonos) *>
+          (summon[SonosApi[F]].getZones(): F[GetZonesOutput]).map(_.some) // .attempt.map(_.toOption)
 
-    }
+      }
 
   }
 
   private object methods {
-    import org.http4s.syntax.all.*
-
-    val SpotifyApi = uri"https://api.spotify.com"
 
     def player[F[_]: Concurrent: Client]: F[Player[Option[PlayerContext], Option[Item]]] =
-      summon[Client[F]].expectOr(SpotifyApi / "v1" / "me" / "player") {
+      summon[Client[F]].expectOr(com.kubukoz.next.api.spotify.baseUri / "v1" / "me" / "player") {
         case response if response.status === Status.NoContent => NotPlaying.pure[F].widen
         case response                                         => InvalidStatus(response.status).pure[F].widen
       }

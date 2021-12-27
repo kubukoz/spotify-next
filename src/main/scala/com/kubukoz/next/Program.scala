@@ -28,6 +28,8 @@ import org.http4s.implicits.*
 import smithy4s.http4s.SimpleRestJsonBuilder
 import com.kubukoz.next.spotify.SpotifyApiGen
 import com.kubukoz.next.spotify.SpotifyApi
+import com.kubukoz.next.sonos.SonosApiGen
+import com.kubukoz.next.sonos.SonosApi
 
 object Program {
 
@@ -93,28 +95,31 @@ object Program {
   def makeSpotify[F[_]: UserOutput: Concurrent](client: Client[F]): F[Spotify[F]] = {
     given Client[F] = client
 
-    SimpleRestJsonBuilder(SpotifyApiGen).client[F](client, uri"https://api.spotify.com").liftTo[F].flatMap { api =>
-      given SpotifyApi[F] = api
+    SimpleRestJsonBuilder(SpotifyApiGen).client[F](client, com.kubukoz.next.api.spotify.baseUri).liftTo[F].flatMap { spotifyApi =>
+      SimpleRestJsonBuilder(SonosApiGen).client[F](client, sonos.baseUri).liftTo[F].flatMap { sonosApi =>
+        given SpotifyApi[F] = spotifyApi
+        given SonosApi[F] = sonosApi
 
-      given Spotify.DeviceInfo[F] = Spotify.DeviceInfo.instance
-      given Spotify.SonosInfo[F] = Spotify.SonosInfo.instance(sonos.baseUri, client)
+        given Spotify.DeviceInfo[F] = Spotify.DeviceInfo.instance
+        given Spotify.SonosInfo[F] = Spotify.SonosInfo.instance
 
-      SpotifyChoice
-        .choose[F]
-        .map(
-          _.map(
-            _.fold(
-              room => Spotify.Playback.sonosInstance[F](sonos.baseUri, room, client),
-              Spotify.Playback.spotifyInstance[F](client)
+        SpotifyChoice
+          .choose[F]
+          .map(
+            _.map(
+              _.fold(
+                room => Spotify.Playback.sonosInstance[F](room),
+                Spotify.Playback.spotifyInstance[F]
+              )
             )
           )
-        )
-        .map(Spotify.Playback.suspend(_))
-        .map { playback =>
-          given Spotify.Playback[F] = playback
+          .map(Spotify.Playback.suspend(_))
+          .map { playback =>
+            given Spotify.Playback[F] = playback
 
-          Spotify.instance[F]
-        }
+            Spotify.instance[F]
+          }
+      }
     }
   }
 

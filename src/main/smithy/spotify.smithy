@@ -5,7 +5,7 @@ use smithy4s.api#simpleRestJson
 @simpleRestJson
 service SpotifyApi {
   version: "0.0.0",
-  operations: [NextTrack, Seek, RemoveTrack, AudioAnalysis]
+  operations: [NextTrack, Seek, RemoveTrack, GetAudioAnalysis]
 }
 
 @http(method: "POST", uri: "/v1/me/player/next")
@@ -49,9 +49,9 @@ structure Track {
 
 @http(method: "GET", uri: "/v1/audio-analysis/{trackId}")
 @readonly
-operation AudioAnalysis {
+operation GetAudioAnalysis {
   input: AudioAnalysisInput,
-  output: AudioAnalysisOutput
+  output: AudioAnalysis
 }
 
 structure AudioAnalysisInput {
@@ -60,7 +60,7 @@ structure AudioAnalysisInput {
   trackId: String
 }
 
-structure AudioAnalysisOutput {
+structure AudioAnalysis {
   @required
   sections: Sections
 }

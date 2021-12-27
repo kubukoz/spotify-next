@@ -14,8 +14,11 @@ import cats.Functor
 import cats.implicits.*
 import cats.effect.Concurrent
 import scala.reflect.TypeTest
+import org.http4s.implicits.*
 
 object spotify {
+  val baseUri: Uri = uri"https://api.spotify.com"
+
   private def asJsonWithType[T: Encoder.AsObject](t: T, tpe: String) = t.asJsonObject.add("type", tpe.asJson).asJson
 
   private def byTypeDecoder[T](withType: (String, Decoder[? <: T])*): Decoder[T] = Decoder[String].at("type").flatMap { tpe =>
