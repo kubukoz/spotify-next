@@ -13,6 +13,7 @@ import com.monovore.decline.*
 import com.monovore.decline.effect.*
 import cats.effect.implicits.*
 import java.io.EOFException
+import ConsolePolyfill.*
 
 enum Choice {
   case Login
@@ -50,7 +51,7 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
 
   import Program.*
 
-  def makeProgram[F[_]: Async: Console]: Resource[F, Runner[F]] = {
+  def makeProgram[F[_]: Async: Console: Env]: Resource[F, Runner[F]] = {
     given UserOutput[F] = UserOutput.toConsole(sonos.baseUri)
 
     val dummy = Async[F].unit.toResource
@@ -76,7 +77,7 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
 
   val runRepl: IO[Unit] = {
     // EOF thrown on Ctrl+D
-    val prompt = IO.print("next> ") *> IO.readLine.map(_.some).recover { case _: EOFException => none[String] }
+    val prompt = IO.printCrossCompat("next> ") *> IO.readLineCrossCompat.map(_.some).recover { case _: EOFException => none[String] }
 
     val input = fs2
       .Stream

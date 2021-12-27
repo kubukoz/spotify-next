@@ -1,21 +1,22 @@
 package com.kubukoz.next
 
-import com.kubukoz.next.util.Config
-import io.circe.syntax.*
-import io.circe.Printer
-import java.nio.file.StandardOpenOption
-import java.nio.file.NoSuchFileException
-import com.kubukoz.next.util.ConsoleRead
-import cats.effect.*
-import cats.implicits.*
 import cats.Applicative
-import cats.effect.std.Console
-import fs2.io.file.Files
 import cats.FlatMap
 import cats.MonadThrow
+import cats.effect.*
+import cats.effect.std.Console
+import cats.implicits.*
+import com.kubukoz.next.util.Config
+import com.kubukoz.next.util.ConsoleRead
 import fs2.Pipe
-import fs2.io.file.Path
+import fs2.io.file.Files
 import fs2.io.file.Flags
+import fs2.io.file.Path
+import io.circe.Printer
+import io.circe.syntax.*
+import ConsolePolyfill.*
+import java.nio.file.StandardOpenOption
+import fs2.io.file.NoSuchFileException
 
 trait ConfigLoader[F[_]] {
   def saveConfig(config: Config): F[Unit]
@@ -34,14 +35,16 @@ object ConfigLoader {
         }
       }
 
-  def withCreateFileIfMissing[F[_]: UserOutput: Console: MonadThrow](configPath: Path): ConfigLoader[F] => ConfigLoader[F] = {
+  def withCreateFileIfMissing[F[_]: UserOutput: Console: ConsolePolyfill: MonadThrow](
+    configPath: Path
+  ): ConfigLoader[F] => ConfigLoader[F] = {
 
     val validInput = "Y"
 
-    def askToCreateFile(originalException: NoSuchFileException): F[Config] =
+    def askToCreateFile(originalException: Throwable): F[Config] =
       for {
         _            <- UserOutput[F].print(UserMessage.ConfigFileNotFound(configPath, validInput))
-        _            <- Console[F].readLine.map(_.trim).ensure(originalException)(_.equalsIgnoreCase(validInput))
+        _            <- Console[F].readLineCrossCompat.map(_.trim).ensure(originalException)(_.equalsIgnoreCase(validInput))
         clientId     <- ConsoleRead.readWithPrompt[F, String]("Client ID")
         clientSecret <- ConsoleRead.readWithPrompt[F, String]("Client secret")
       } yield Config(clientId, clientSecret, Config.defaultPort, none, none)

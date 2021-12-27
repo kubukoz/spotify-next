@@ -15,32 +15,21 @@ import com.kubukoz.next.api.sonos
 import fs2.io.file.Files
 import monocle.Getter
 import org.http4s.client.Client
-import org.http4s.blaze.client.BlazeClientBuilder
 import org.http4s.client.middleware.FollowRedirect
 import org.http4s.client.middleware.RequestLogger
 import org.http4s.client.middleware.ResponseLogger
-import java.lang.System
 import java.nio.file.Paths
 import fs2.io.file.Path
 import cats.data.OptionT
 import cats.MonadThrow
+import org.http4s.ember.client.EmberClientBuilder
 
 object Program {
 
-  trait System[F[_]] {
-    def getenv(name: String): F[Option[String]]
-  }
-
-  object System {
-    def apply[F[_]](using F: System[F]): System[F] = F
-
-    given [F[_]: Sync]: System[F] = name => Sync[F].delay(java.lang.System.getenv(name)).map(Option(_))
-  }
-
-  private def configPath[F[_]: System: MonadThrow]: F[Path] = {
-    val xdgConfig = OptionT(System[F].getenv("XDG_CONFIG_HOME")).map(Path(_))
-    val homeConfig = System[F]
-      .getenv("HOME")
+  private def configPath[F[_]: Env: MonadThrow]: F[Path] = {
+    val xdgConfig = OptionT(Env[F].get("XDG_CONFIG_HOME")).map(Path(_))
+    val homeConfig = Env[F]
+      .get("HOME")
       .flatMap(_.liftTo[F](new Throwable("HOME not defined, I don't even")))
       .map(Path(_))
       .map(_.resolve(".config"))
@@ -50,7 +39,7 @@ object Program {
       .map(_.resolve("spotify-next").resolve("config.json"))
   }
 
-  def makeLoader[F[_]: Files: System: Ref.Make: UserOutput: Console: fs2.Compiler.Target]: F[ConfigLoader[F]] =
+  def makeLoader[F[_]: Files: Env: Ref.Make: UserOutput: Console: ConsolePolyfill: fs2.Compiler.Target]: F[ConfigLoader[F]] =
     configPath[F].flatMap { p =>
       ConfigLoader
         .cached[F]
@@ -59,8 +48,9 @@ object Program {
     }
 
   def makeBasicClient[F[_]: Async]: Resource[F, Client[F]] =
-    BlazeClientBuilder[F]
-      .resource
+    EmberClientBuilder
+      .default[F]
+      .build
       .map(FollowRedirect(maxRedirects = 5))
       .map(RequestLogger(logHeaders = true, logBody = true))
       .map(ResponseLogger(logHeaders = true, logBody = true))

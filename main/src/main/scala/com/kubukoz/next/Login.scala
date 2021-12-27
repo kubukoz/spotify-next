@@ -21,8 +21,9 @@ import org.http4s.client.Client
 import org.http4s.dsl.Http4sDsl
 import org.http4s.headers.Authorization
 import org.http4s.implicits.*
-import org.http4s.blaze.server.BlazeServerBuilder
 import cats.MonadThrow
+import org.http4s.ember.server.EmberServerBuilder
+import com.comcast.ip4s.*
 
 trait Login[F[_]] {
   def server: F[Tokens]
@@ -82,10 +83,12 @@ object Login {
         }
 
       def mkServer(config: Config, route: HttpRoutes[F]) =
-        BlazeServerBuilder[F]
+        EmberServerBuilder
+          .default[F]
           .withHttpApp(route.orNotFound)
-          .bindHttp(port = config.loginPort)
-          .resource
+          .withPort(config.loginPort)
+          .withHost(host"0.0.0.0")
+          .build
 
       def getTokens(code: Code, config: Config): F[Tokens] = {
 
