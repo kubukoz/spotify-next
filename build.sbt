@@ -173,6 +173,7 @@ val root =
     .settings(commonSettings)
     .settings(
       libraryDependencies ++= Seq(
+        "com.disneystreaming.smithy4s" %% "smithy4s-http4s" % smithy4sVersion.value,
         "org.typelevel" %% "cats-mtl" % "1.2.1",
         "com.monovore" %% "decline-effect" % "2.2.0",
         "org.http4s" %% "http4s-dsl" % "0.23.7",
@@ -191,5 +192,6 @@ val root =
     .enablePlugins(BuildInfoPlugin)
     .enablePlugins(JavaAppPackaging)
     .enablePlugins(NativeImagePlugin)
+    .enablePlugins(Smithy4sCodegenPlugin)
 // .dependsOn(core)
 // .aggregate(core /* , front */ )
