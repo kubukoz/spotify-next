@@ -20,8 +20,7 @@ structure NextTrackInput {
 }
 
 
-@http(method: "PUT", uri: "/{room}/timeseek/{seconds}")
-@idempotent
+@http(method: "GET", uri: "/{room}/timeseek/{seconds}")
 operation Seek {
   input: SeekInput,
 }
