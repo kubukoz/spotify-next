@@ -43,6 +43,7 @@ operation GetZones {
 }
 
 structure GetZonesOutput {
+  @httpPayload
   @required
   zones: Zones
 }
