@@ -192,7 +192,7 @@ object Spotify {
       new SonosInfo[F] {
 
         def zones: F[Option[GetZonesOutput]] = UserOutput[F].print(UserMessage.CheckingSonos) *>
-          (summon[SonosApi[F]].getZones(): F[GetZonesOutput]).map(_.some) // .attempt.map(_.toOption)
+          (summon[SonosApi[F]].getZones(): F[GetZonesOutput]).attempt.map(_.toOption)
 
       }
 
