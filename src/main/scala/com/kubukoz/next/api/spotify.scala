@@ -167,15 +167,6 @@ object spotify {
 
   }
 
-  final case class AudioAnalysis(sections: List[AudioAnalysis.Section]) derives Codec.AsObject
-
-  object AudioAnalysis {
-
-    // start: seconds
-    final case class Section(start: Double) derives Codec.AsObject
-
-  }
-
   final case class Device(is_restricted: Boolean) derives Codec.AsObject
 
   enum Anything {

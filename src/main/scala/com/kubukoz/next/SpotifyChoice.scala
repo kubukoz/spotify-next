@@ -7,7 +7,6 @@ import cats.implicits.*
 import com.kubukoz.next.Spotify.DeviceInfo
 import com.kubukoz.next.Spotify.SonosInfo
 import com.kubukoz.next.api.sonos
-import com.kubukoz.next.api.spotify.AudioAnalysis
 import com.kubukoz.next.api.spotify.Item
 import com.kubukoz.next.api.spotify.Player
 import com.kubukoz.next.api.spotify.PlayerContext

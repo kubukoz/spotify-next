@@ -6,7 +6,6 @@ import cats.effect.Concurrent
 import cats.effect.Ref
 import cats.implicits.*
 import com.kubukoz.next.api.sonos
-import com.kubukoz.next.api.spotify.AudioAnalysis
 import com.kubukoz.next.api.spotify.Item
 import com.kubukoz.next.api.spotify.Player
 import com.kubukoz.next.api.spotify.PlayerContext
@@ -22,6 +21,9 @@ import org.http4s.circe.CirceEntityCodec.*
 import org.http4s.client.Client
 import scala.concurrent.duration.*
 import scala.util.chaining.*
+import com.kubukoz.next.spotify.SpotifyApi
+import com.kubukoz.next.spotify.Track
+import com.kubukoz.next.spotify.AudioAnalysisOutput
 
 trait Spotify[F[_]] {
   def skipTrack: F[Unit]
@@ -45,7 +47,7 @@ object Spotify {
 
   import Error.*
 
-  def instance[F[_]: Playback: Client: UserOutput: Concurrent]: Spotify[F] =
+  def instance[F[_]: Playback: Client: UserOutput: Concurrent: SpotifyApi]: Spotify[F] =
     new Spotify[F] {
       val client = implicitly[Client[F]]
 
@@ -72,7 +74,7 @@ object Spotify {
 
           UserOutput[F].print(UserMessage.RemovingCurrentTrack(player)) *>
             skipTrack *>
-            methods.removeTrack[F](trackUri, playlistId)
+            implicitly[SpotifyApi[F]].removeTrack(playlistId, List(Track(trackUri.toFullUri)))
         }
 
       def fastForward(percentage: Int): F[Unit] =
@@ -103,15 +105,15 @@ object Spotify {
 
           val currentLength = player.progress_ms.millis
 
-          methods
-            .audioAnalysis[F](track.uri)
+          (implicitly[SpotifyApi[F]]
+            .audioAnalysis(track.uri.id): F[AudioAnalysisOutput])
             .flatMap { analysis =>
               analysis
                 .sections
                 .zipWithIndex
-                .find { case (section, _) => section.start.seconds > currentLength }
+                .find { case (section, _) => section.startSeconds.seconds > currentLength }
                 .traverse { case (section, index) =>
-                  val percentage = (section.start.seconds * 100 / track.duration_ms.millis).toInt
+                  val percentage = (section.startSeconds.seconds * 100 / track.duration_ms.millis).toInt
 
                   UserOutput[F].print(
                     UserMessage.Jumping(
@@ -120,7 +122,7 @@ object Spotify {
                       percentTotal = percentage
                     )
                   ) *>
-                    Playback[F].seek(section.start.seconds.toMillis.toInt)
+                    Playback[F].seek(section.startSeconds.seconds.toMillis.toInt)
                 }
                 .pipe(OptionT(_))
                 .getOrElseF(UserOutput[F].print(UserMessage.TooCloseToEnd) *> Playback[F].seek(0))
@@ -138,16 +140,9 @@ object Spotify {
   object Playback {
     def apply[F[_]](using F: Playback[F]): Playback[F] = F
 
-    def spotifyInstance[F[_]: Concurrent](client: Client[F]): Playback[F] = new Playback[F] {
-      val nextTrack: F[Unit] =
-        client.expect[api.spotify.Anything](Request[F](POST, methods.SpotifyApi / "v1" / "me" / "player" / "next")).void
-
-      def seek(ms: Int): F[Unit] = {
-        val uri = (methods.SpotifyApi / "v1" / "me" / "player" / "seek").withQueryParam("position_ms", ms)
-
-        client.expect[api.spotify.Anything](Request[F](PUT, uri)).void
-      }
-
+    def spotifyInstance[F[_]: Concurrent: SpotifyApi](client: Client[F]): Playback[F] = new Playback[F] {
+      val nextTrack: F[Unit] = summon[SpotifyApi[F]].nextTrack()
+      def seek(ms: Int): F[Unit] = summon[SpotifyApi[F]].seek(ms)
     }
 
     def sonosInstance[F[_]: Concurrent](baseUrl: Uri, room: String, client: Client[F]): Playback[F] = new Playback[F] {
@@ -213,19 +208,6 @@ object Spotify {
         case response if response.status === Status.NoContent => NotPlaying.pure[F].widen
         case response                                         => InvalidStatus(response.status).pure[F].widen
       }
-
-    def removeTrack[F[_]: Concurrent: Client](trackUri: TrackUri, playlistId: String): F[Unit] =
-      summon[Client[F]]
-        .expect[api.spotify.Anything](
-          Request[F](DELETE, SpotifyApi / "v1" / "playlists" / playlistId / "tracks")
-            .withEntity(Map("tracks" := List(Map("uri" := trackUri.toFullUri))).asJson)
-        )
-        .void
-
-    def audioAnalysis[F[_]: Concurrent: Client](trackUri: TrackUri): F[AudioAnalysis] =
-      summon[Client[F]].expect(
-        SpotifyApi / "v1" / "audio-analysis" / trackUri.id
-      )
 
   }
 

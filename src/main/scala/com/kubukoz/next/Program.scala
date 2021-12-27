@@ -24,6 +24,10 @@ import java.nio.file.Paths
 import fs2.io.file.Path
 import cats.data.OptionT
 import cats.MonadThrow
+import org.http4s.implicits.*
+import smithy4s.http4s.SimpleRestJsonBuilder
+import com.kubukoz.next.spotify.SpotifyApiGen
+import com.kubukoz.next.spotify.SpotifyApi
 
 object Program {
 
@@ -88,27 +92,30 @@ object Program {
 
   def makeSpotify[F[_]: UserOutput: Concurrent](client: Client[F]): F[Spotify[F]] = {
     given Client[F] = client
-    given Spotify.DeviceInfo[F] = Spotify.DeviceInfo.instance
-    given Spotify.SonosInfo[F] = Spotify.SonosInfo.instance(sonos.baseUri, client)
 
-    SpotifyChoice
-      .choose[F]
-      .map(
-        _.map(
-          _.fold(
-            room => Spotify.Playback.sonosInstance[F](sonos.baseUri, room, client),
-            Spotify.Playback.spotifyInstance[F](client)
+    SimpleRestJsonBuilder(SpotifyApiGen).client[F](client, uri"https://api.spotify.com").liftTo[F].flatMap { api =>
+      given SpotifyApi[F] = api
+
+      given Spotify.DeviceInfo[F] = Spotify.DeviceInfo.instance
+      given Spotify.SonosInfo[F] = Spotify.SonosInfo.instance(sonos.baseUri, client)
+
+      SpotifyChoice
+        .choose[F]
+        .map(
+          _.map(
+            _.fold(
+              room => Spotify.Playback.sonosInstance[F](sonos.baseUri, room, client),
+              Spotify.Playback.spotifyInstance[F](client)
+            )
           )
         )
-      )
-      .map(Spotify.Playback.suspend(_))
-      .map { playback =>
-        given Spotify.Playback[F] = playback
+        .map(Spotify.Playback.suspend(_))
+        .map { playback =>
+          given Spotify.Playback[F] = playback
 
-        given Client[F] = client
-
-        Spotify.instance[F]
-      }
+          Spotify.instance[F]
+        }
+    }
   }
 
 }
