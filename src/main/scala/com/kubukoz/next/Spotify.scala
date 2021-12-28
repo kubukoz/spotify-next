@@ -78,7 +78,7 @@ object Spotify {
 
           UserOutput[F].print(UserMessage.RemovingCurrentTrack(player)) *>
             skipTrack *>
-            implicitly[SpotifyApi[F]].removeTrack(playlistId, List(Track(trackUri.toFullUri)))
+            SpotifyApi[F].removeTrack(playlistId, List(Track(trackUri.toFullUri)))
         }
 
       def fastForward(percentage: Int): F[Unit] =
@@ -109,8 +109,8 @@ object Spotify {
 
           val currentLength = player.progress_ms.millis
 
-          (implicitly[SpotifyApi[F]]
-            .getAudioAnalysis(track.uri.id): F[AudioAnalysis])
+          SpotifyApi[F]
+            .getAudioAnalysis(track.uri.id)
             .flatMap { analysis =>
               analysis
                 .sections
@@ -145,18 +145,18 @@ object Spotify {
     def apply[F[_]](using F: Playback[F]): Playback[F] = F
 
     def spotifyInstance[F[_]: SpotifyApi]: Playback[F] = new Playback[F] {
-      val nextTrack: F[Unit] = summon[SpotifyApi[F]].nextTrack()
-      def seek(ms: Int): F[Unit] = summon[SpotifyApi[F]].seek(ms)
+      val nextTrack: F[Unit] = SpotifyApi[F].nextTrack()
+      def seek(ms: Int): F[Unit] = SpotifyApi[F].seek(ms)
     }
 
     def sonosInstance[F[_]: SonosApi](room: String): Playback[F] = new Playback[F] {
       val nextTrack: F[Unit] =
-        summon[SonosApi[F]].nextTrack(room)
+        SonosApi[F].nextTrack(room)
 
       def seek(ms: Int): F[Unit] = {
         val seconds = ms.millis.toSeconds.toInt
 
-        summon[SonosApi[F]].seek(room, seconds)
+        SonosApi[F].seek(room, seconds)
       }
 
     }
@@ -192,7 +192,7 @@ object Spotify {
       new SonosInfo[F] {
 
         def zones: F[Option[GetZonesOutput]] = UserOutput[F].print(UserMessage.CheckingSonos) *>
-          (summon[SonosApi[F]].getZones(): F[GetZonesOutput]).attempt.map(_.toOption)
+          SonosApi[F].getZones().attempt.map(_.toOption)
 
       }
 
