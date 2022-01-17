@@ -1,5 +1,6 @@
 {
+  "imports": ["./src/main/smithy"],
   "mavenDependencies": [
-    "com.disneystreaming.smithy4s:smithy4s-protocol_2.13:0.9.1"
+    "com.disneystreaming.smithy4s:smithy4s-protocol_2.13:0.11.0"
   ]
 }
