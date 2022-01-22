@@ -1,28 +1,40 @@
 package com.kubukoz.next
 
+import cats.MonadThrow
+import cats.effect.IO
+import cats.effect.IOApp
 import cats.effect.kernel.Async
 import cats.effect.kernel.Deferred
 import cats.effect.kernel.Resource
 import cats.implicits.*
+import cats.mtl.Ask
 import com.kubukoz.next.SonosLogin.Tokens
 import com.kubukoz.next.api.spotify.RefreshedTokenResponse
 import com.kubukoz.next.api.spotify.TokenResponse
 import com.kubukoz.next.util.Config
 import com.kubukoz.next.util.Config.RefreshToken
 import com.kubukoz.next.util.Config.Token
+import com.kubukoz.next.util.middlewares
+import fs2.io.file.Path
 import org.http4s.BasicCredentials
+import org.http4s.HttpApp
 import org.http4s.HttpRoutes
+import org.http4s.MediaType
 import org.http4s.Method.POST
 import org.http4s.Request
+import org.http4s.Response
 import org.http4s.Uri
 import org.http4s.UrlForm
+import org.http4s.blaze.client.BlazeClientBuilder
+import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.circe.CirceEntityCodec.*
 import org.http4s.client.Client
+import org.http4s.client.middleware.Logger
 import org.http4s.dsl.Http4sDsl
 import org.http4s.headers.Authorization
 import org.http4s.implicits.*
-import org.http4s.blaze.server.BlazeServerBuilder
-import cats.MonadThrow
+
+import java.nio.file.Paths
 
 trait SonosLogin[F[_]] {
   def server: F[Tokens]
@@ -50,9 +62,9 @@ object SonosLogin {
         Config
           .ask[F]
           .map { config =>
-            Request[F](POST, uri"https://accounts.spotify.com/api/token")
+            Request[F](POST, uri"https://api.sonos.com/login/v3/oauth/access")
               .withEntity(body)
-              .putHeaders(Authorization(BasicCredentials(config.clientId, config.clientSecret)))
+              .putHeaders(Authorization(BasicCredentials(config.sonosClientId, config.sonosClientSecret)))
           }
           .flatMap(client.fetchAs[RefreshedTokenResponse])
           .map(_.access_token)
@@ -60,22 +72,18 @@ object SonosLogin {
       }
 
       val scopes = Set(
-        "playlist-read-private",
-        "playlist-modify-private",
-        "playlist-modify-public",
-        "streaming",
-        "user-read-playback-state"
+        "playback-control-all"
       )
 
       private val showUri = Config
         .ask[F]
         .map { config =>
-          uri"https://accounts.spotify.com/authorize"
-            .withQueryParam("client_id", config.clientId)
-            .withQueryParam("client_secret", config.clientSecret)
+          uri"https://api.sonos.com/login/v3/oauth"
+            .withQueryParam("client_id", config.sonosClientId)
             .withQueryParam("scope", scopes.mkString(" "))
             .withQueryParam("redirect_uri", config.redirectUri)
             .withQueryParam("response_type", "code")
+            .withQueryParam("state", "demo")
         }
         .flatMap { uri =>
           UserOutput[F].print(UserMessage.GoToUri(uri))
@@ -92,13 +100,15 @@ object SonosLogin {
         val body = UrlForm(
           "grant_type" -> "authorization_code",
           "code" -> code.value,
-          "redirect_uri" -> config.redirectUri,
-          "client_id" -> config.clientId,
-          "client_secret" -> config.clientSecret
+          "redirect_uri" -> config.redirectUri
         )
 
         client
-          .expect[TokenResponse](Request[F](POST, uri"https://accounts.spotify.com/api/token").withEntity(body))
+          .expect[TokenResponse](
+            Request[F](POST, uri"https://api.sonos.com/login/v3/oauth/access")
+              .withEntity(body)
+              .putHeaders(Authorization(BasicCredentials(config.sonosClientId, config.sonosClientSecret)))
+          )
           .map { response =>
             Tokens(Token(response.access_token), RefreshToken(response.refresh_token))
           }

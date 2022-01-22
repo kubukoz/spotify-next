@@ -8,6 +8,8 @@ import cats.implicits.*
 final case class Config(
   clientId: String,
   clientSecret: String,
+  sonosClientId: String,
+  sonosClientSecret: String,
   loginPort: Int,
   token: Option[Config.Token],
   refreshToken: Option[Config.RefreshToken]

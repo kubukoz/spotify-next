@@ -40,11 +40,13 @@ object ConfigLoader {
 
     def askToCreateFile(originalException: NoSuchFileException): F[Config] =
       for {
-        _            <- UserOutput[F].print(UserMessage.ConfigFileNotFound(configPath, validInput))
-        _            <- Console[F].readLine.map(_.trim).ensure(originalException)(_.equalsIgnoreCase(validInput))
-        clientId     <- ConsoleRead.readWithPrompt[F, String]("Client ID")
-        clientSecret <- ConsoleRead.readWithPrompt[F, String]("Client secret")
-      } yield Config(clientId, clientSecret, Config.defaultPort, none, none)
+        _                 <- UserOutput[F].print(UserMessage.ConfigFileNotFound(configPath, validInput))
+        _                 <- Console[F].readLine.map(_.trim).ensure(originalException)(_.equalsIgnoreCase(validInput))
+        clientId          <- ConsoleRead.readWithPrompt[F, String]("Client ID")
+        clientSecret      <- ConsoleRead.readWithPrompt[F, String]("Client secret")
+        sonosClientId     <- ConsoleRead.readWithPrompt[F, String]("Sonos Client ID")
+        sonosClientSecret <- ConsoleRead.readWithPrompt[F, String]("Sonos Client secret")
+      } yield Config(clientId, clientSecret, sonosClientId, sonosClientSecret, Config.defaultPort, none, none)
 
     underlying =>
       new ConfigLoader[F] {

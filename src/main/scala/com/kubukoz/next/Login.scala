@@ -72,7 +72,6 @@ object Login {
         .map { config =>
           uri"https://accounts.spotify.com/authorize"
             .withQueryParam("client_id", config.clientId)
-            .withQueryParam("client_secret", config.clientSecret)
             .withQueryParam("scope", scopes.mkString(" "))
             .withQueryParam("redirect_uri", config.redirectUri)
             .withQueryParam("response_type", "code")
