@@ -67,7 +67,7 @@ object OAuth {
         }
     }
 
-    def getAuthorizeUri: F[Uri] = {
+    val getAuthorizeUri: F[Uri] = {
       val scopes = Set(
         "playlist-read-private",
         "playlist-modify-private",
@@ -84,6 +84,64 @@ object OAuth {
             .withQueryParam("scope", scopes.mkString(" "))
             .withQueryParam("redirect_uri", config.redirectUri)
             .withQueryParam("response_type", "code")
+        }
+    }
+
+  }
+
+  def sonos[F[_]: Config.Ask: Concurrent](client: Client[F]): OAuth[F] = new OAuth[F] {
+
+    def refreshToken(token: RefreshToken): F[Token] = {
+      val body = UrlForm(
+        "grant_type" -> "refresh_token",
+        "refresh_token" -> token.value
+      )
+
+      Config
+        .ask[F]
+        .map { config =>
+          Request[F](POST, uri"https://api.sonos.com/login/v3/oauth/access")
+            .withEntity(body)
+            .putHeaders(Authorization(BasicCredentials(config.sonosClientId, config.sonosClientSecret)))
+        }
+        .flatMap(client.fetchAs[RefreshedTokenResponse])
+        .map(_.access_token)
+        .map(Token(_))
+    }
+
+    def getTokens(code: Code): F[Tokens] = Config.ask[F].flatMap { config =>
+
+      val body = UrlForm(
+        "grant_type" -> "authorization_code",
+        "code" -> code.value,
+        "redirect_uri" -> config.redirectUri
+      )
+
+      client
+        .expect[TokenResponse](
+          Request[F](POST, uri"https://api.sonos.com/login/v3/oauth/access")
+            .withEntity(body)
+            .putHeaders(Authorization(BasicCredentials(config.sonosClientId, config.sonosClientSecret)))
+        )
+        .map { response =>
+          Tokens(Token(response.access_token), RefreshToken(response.refresh_token))
+        }
+    }
+
+    val getAuthorizeUri: F[Uri] = {
+      val scopes = Set(
+        "playback-control-all"
+      )
+
+      Config
+        .ask[F]
+        .map { config =>
+          uri"https://api.sonos.com/login/v3/oauth"
+            .withQueryParam("client_id", config.sonosClientId)
+            .withQueryParam("scope", scopes.mkString(" "))
+            .withQueryParam("redirect_uri", config.redirectUri)
+            .withQueryParam("response_type", "code")
+            .withQueryParam("state", "demo")
         }
     }
 
