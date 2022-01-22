@@ -60,7 +60,7 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
       rawClient             <- makeBasicClient[F]
       given Config.Ask[F] = ConfigLoader[F].configAsk
       _                     <- dummy
-      given Login[F] = Login.blaze[F](OAuth.spotify[F](rawClient))
+      given Login[F] = Login.blaze[F](OAuth.fromKernel[F](rawClient, OAuth.spotify))
       _                     <- dummy
       given LoginProcess[F] = LoginProcess.instance[F]
       given Spotify[F]      <- makeSpotify[F](apiClient[F].apply(rawClient)).toResource
