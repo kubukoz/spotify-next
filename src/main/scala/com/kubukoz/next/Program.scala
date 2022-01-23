@@ -76,27 +76,22 @@ object Program {
   def apiClient[F[_]: Console: ConfigLoader: MonadCancelThrow](
     loginProcess: LoginProcess[F],
     refreshTokenProcess: RefreshTokenProcess[F],
-    getToken: Config => Option[Token],
-    // todo drop this
-    getRefreshToken: Config => Option[RefreshToken]
+    getToken: Config => Option[Token]
   )(
     using SC: fs2.Compiler[F, F]
   ): Client[F] => Client[F] = {
-    given ca: Config.Ask[F] = ConfigLoader[F].configAsk
-
     val loginOrRefreshToken: F[Unit] =
-      Config
-        .ask[F]
-        .map(getRefreshToken)
-        .flatMap {
-          case None               => loginProcess.login
-          case Some(refreshToken) => refreshTokenProcess.refreshUserToken(refreshToken)
-        }
+      refreshTokenProcess
+        .canRefreshToken
+        .ifM(
+          ifTrue = refreshTokenProcess.refreshUserToken,
+          ifFalse = loginProcess.login
+        )
 
     middlewares
       .logFailedResponse[F]
       .compose(middlewares.retryUnauthorizedWith(loginOrRefreshToken))
-      .compose(middlewares.withToken[F](Config.ask[F].map(getToken)))
+      .compose(middlewares.withToken[F](ConfigLoader[F].loadConfig.map(getToken)))
   }
 
   def makeSpotify[F[_]: UserOutput: Concurrent](spotifyClient: Client[F], sonosClient: Client[F]): F[Spotify[F]] =

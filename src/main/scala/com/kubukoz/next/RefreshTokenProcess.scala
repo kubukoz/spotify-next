@@ -2,29 +2,38 @@ package com.kubukoz.next
 
 import cats.implicits.*
 import com.kubukoz.next.util.Config
-import cats.Monad
 import monocle.Lens
 import com.kubukoz.next.util.Config.RefreshToken
 import com.kubukoz.next.util.Config.Token
+import cats.MonadThrow
 
 trait RefreshTokenProcess[F[_]] {
-  def refreshUserToken(refreshToken: Config.RefreshToken): F[Unit]
+  def canRefreshToken: F[Boolean]
+  def refreshUserToken: F[Unit]
 }
 
 object RefreshTokenProcess {
   def apply[F[_]](using F: RefreshTokenProcess[F]): RefreshTokenProcess[F] = F
 
-  def instance[F[_]: UserOutput: ConfigLoader: Monad](
+  def instance[F[_]: UserOutput: ConfigLoader: MonadThrow](
     loginAlg: Login[F],
     tokensLens: Lens[Config, (Option[Token], Option[RefreshToken])]
   ): RefreshTokenProcess[F] = new RefreshTokenProcess[F] {
 
-    def refreshUserToken(refreshToken: Config.RefreshToken): F[Unit] = for {
-      newToken <- loginAlg.refreshToken(refreshToken)
-      config   <- ConfigLoader[F].loadConfig
+    val refreshTokenGetter = tokensLens.asGetter.map(_._2)
+
+    val canRefreshToken: F[Boolean] =
+      ConfigLoader[F].loadConfig.map { config =>
+        refreshTokenGetter.get(config).isDefined
+      }
+
+    val refreshUserToken: F[Unit] = for {
+      config       <- ConfigLoader[F].loadConfig
+      refreshToken <- refreshTokenGetter.get(config).liftTo[F](new Throwable("Refresh token not found! Can't refresh token."))
+      newToken     <- loginAlg.refreshToken(refreshToken)
       newConfig = tokensLens.replace((newToken.some, refreshToken.some))(config)
-      _        <- ConfigLoader[F].saveConfig(newConfig)
-      _        <- UserOutput[F].print(UserMessage.RefreshedToken)
+      _            <- ConfigLoader[F].saveConfig(newConfig)
+      _            <- UserOutput[F].print(UserMessage.RefreshedToken)
     } yield ()
 
   }
