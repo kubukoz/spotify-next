@@ -32,6 +32,9 @@ import com.kubukoz.next.sonos.SonosApiGen
 import com.kubukoz.next.sonos.SonosApi
 import org.http4s.Request
 import com.kubukoz.next.util.Config.RefreshToken
+import org.http4s.MediaType
+import org.http4s.Charset
+import org.http4s.headers.`Content-Type`
 
 object Program {
 
@@ -93,6 +96,9 @@ object Program {
       .compose(middlewares.retryUnauthorizedWith(loginOrRefreshToken))
       .compose(middlewares.withToken[F](ConfigLoader[F].loadConfig.map(getToken)))
   }
+
+  def sonosContentType[F[_]: MonadCancelThrow]: Client[F] => Client[F] =
+    middlewares.defaultContentType(`Content-Type`(MediaType.application.json, Charset.`UTF-8`))
 
   def makeSpotify[F[_]: UserOutput: Concurrent](spotifyClient: Client[F], sonosClient: Client[F]): F[Spotify[F]] =
     SimpleRestJsonBuilder(SpotifyApiGen).client[F](spotifyClient, com.kubukoz.next.api.spotify.baseUri).liftTo[F].flatMap { spotifyApi =>

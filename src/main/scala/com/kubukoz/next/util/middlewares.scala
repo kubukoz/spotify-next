@@ -12,7 +12,9 @@ import org.http4s.Request
 import org.http4s.Response
 import org.http4s.Status
 import org.http4s.client.Client
+import org.http4s.headers.`Content-Type`
 import org.http4s.headers.Authorization
+import org.http4s.EntityEncoder
 
 object middlewares {
 
@@ -61,7 +63,7 @@ object middlewares {
       Console[F].println("Loaded token is empty, any API calls will probably have to be retried...")
 
     def withToken(token: String): Request[F] => Request[F] =
-      _.withHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, token)))
+      _.putHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, token)))
 
     client =>
       Client[F] { req =>
@@ -71,5 +73,15 @@ object middlewares {
         }
       }
   }
+
+  def defaultContentType[F[_]: MonadCancelThrow](tpe: `Content-Type`): Client[F] => Client[F] = client =>
+    Client[F] { req =>
+      client
+        .run(
+          req.transformHeaders { headers =>
+            headers.get[`Content-Type`].fold(headers.put(tpe))(_ => headers)
+          }
+        )
+    }
 
 }

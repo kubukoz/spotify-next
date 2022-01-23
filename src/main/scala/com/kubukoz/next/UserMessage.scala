@@ -9,7 +9,8 @@ import com.kubukoz.next.api.spotify.Player
 import com.kubukoz.next.api.spotify.PlayerContext
 import org.http4s.Uri
 import fs2.io.file.Path
-import com.kubukoz.next.sonos.GetZonesOutput
+import cats.data.NonEmptyList
+import com.kubukoz.next.Spotify.SonosInfo
 
 enum UserMessage {
   case GoToUri(uri: Uri)
@@ -28,7 +29,7 @@ enum UserMessage {
   // sonos
   case CheckingSonos
   case SonosNotFound
-  case SonosFound(zones: GetZonesOutput, roomName: String)
+  case SonosFound(groups: NonEmptyList[SonosInfo.Group], group: SonosInfo.Group)
   case DeviceRestricted
   case DirectControl
 }
@@ -61,9 +62,9 @@ object UserOutput {
         show"Jumping to section $sectionNumber/$sectionsTotal ($percentTotal%)"
       case CheckingSonos                                       => show"Checking if Sonos API is available at $sonosBaseUrl..."
       case SonosNotFound                                       => "Sonos not found, using fallback"
-      case SonosFound(zones, roomName)                         => show"Found ${zones.zones.size} zone(s), will use room $roomName"
-      case DeviceRestricted                                    => "Device restricted, trying to switch to Sonos API control..."
-      case DirectControl                                       => "Switching to direct Spotify API control..."
+      case SonosFound(groups, group) => show"Found ${groups.size} zone(s), will use group ${group.name} (${group.id})"
+      case DeviceRestricted          => "Device restricted, trying to switch to Sonos API control..."
+      case DirectControl             => "Switching to direct Spotify API control..."
     }
 
     msg => std.Console[F].println(stringify(msg))

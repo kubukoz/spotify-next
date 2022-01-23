@@ -13,15 +13,15 @@ import com.kubukoz.next.api.spotify.PlayerContext
 import com.kubukoz.next.api.spotify.TrackUri
 import io.circe.syntax.*
 import scala.concurrent.duration.*
-import com.kubukoz.next.sonos.GetZonesOutput
+import cats.data.NonEmptyList
 
 object SpotifyChoice {
 
   enum Choice {
-    case Sonos(room: String)
+    case Sonos(room: SonosInfo.Group)
     case Spotify
 
-    def fold[A](sonos: String => A, spotify: => A): A = this match {
+    def fold[A](sonos: SonosInfo.Group => A, spotify: => A): A = this match {
       case Sonos(room) => sonos(room)
       case Spotify     => spotify
     }
@@ -36,21 +36,21 @@ object SpotifyChoice {
     */
   def choose[F[_]: Concurrent: UserOutput: DeviceInfo: SonosInfo]: F[F[Choice]] =
     Ref[F].of(false).flatMap { isRestrictedRef =>
-      Ref[F].of(Option.empty[String]).map { lastSonosRoom =>
+      Ref[F].of(Option.empty[SonosInfo.Group]).map { lastSonosRoom =>
         val spotifyInstanceF = lastSonosRoom.set(None).as(Choice.Spotify)
 
         val sonosInstanceF: F[Option[Choice]] = {
-          def extractRoom(zones: GetZonesOutput): F[String] = {
-            val roomName = zones.zones.head.coordinator.roomName
+          def extractRoom(groups: NonEmptyList[SonosInfo.Group]): F[SonosInfo.Group] = {
+            val group = groups.head
 
-            UserOutput[F].print(UserMessage.SonosFound(zones, roomName)) *>
-              lastSonosRoom.set(roomName.some).as(roomName)
+            UserOutput[F].print(UserMessage.SonosFound(groups, group)) *>
+              lastSonosRoom.set(group.some).as(group)
           }
 
-          val roomF: F[Option[String]] =
+          val roomF: F[Option[SonosInfo.Group]] =
             OptionT(lastSonosRoom.get)
               .orElse(
-                OptionT(SonosInfo[F].zones).semiflatMap(extractRoom)
+                OptionT(SonosInfo[F].zones.map(_.toNel)).semiflatMap(extractRoom)
               )
               .value
 

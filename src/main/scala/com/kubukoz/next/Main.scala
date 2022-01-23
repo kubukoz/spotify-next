@@ -85,8 +85,7 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
             sonosLoginProcess,
             RefreshTokenProcess.instance(sonosLogin, Config.sonosTokensLens),
             _.sonosToken
-          )
-            .apply(rawClient)
+          ).andThen(sonosContentType).apply(rawClient)
         ).toResource
     } yield Runner.instance[F](LoginProcess.combineAll(spotifyLoginProcess :: sonosLoginProcess :: Nil))
 

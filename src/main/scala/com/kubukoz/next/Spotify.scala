@@ -1,6 +1,8 @@
 package com.kubukoz.next
 
+import cats.ApplicativeError
 import cats.FlatMap
+import cats.MonadError
 import cats.data.OptionT
 import cats.effect.Concurrent
 import cats.effect.Ref
@@ -10,6 +12,13 @@ import com.kubukoz.next.api.spotify.Item
 import com.kubukoz.next.api.spotify.Player
 import com.kubukoz.next.api.spotify.PlayerContext
 import com.kubukoz.next.api.spotify.TrackUri
+import com.kubukoz.next.sonos.GroupId
+import com.kubukoz.next.sonos.Milliseconds
+import com.kubukoz.next.sonos.SeekInputBody
+import com.kubukoz.next.sonos.SonosApi
+import com.kubukoz.next.spotify.AudioAnalysis
+import com.kubukoz.next.spotify.SpotifyApi
+import com.kubukoz.next.spotify.Track
 import io.circe.syntax.*
 import org.http4s.Method.DELETE
 import org.http4s.Method.POST
@@ -19,15 +28,9 @@ import org.http4s.Status
 import org.http4s.Uri
 import org.http4s.circe.CirceEntityCodec.*
 import org.http4s.client.Client
+
 import scala.concurrent.duration.*
 import scala.util.chaining.*
-import com.kubukoz.next.spotify.SpotifyApi
-import com.kubukoz.next.spotify.Track
-import com.kubukoz.next.spotify.AudioAnalysis
-import com.kubukoz.next.sonos.SonosApi
-import com.kubukoz.next.sonos.GetZonesOutput
-import cats.MonadError
-import cats.ApplicativeError
 
 trait Spotify[F[_]] {
   def skipTrack: F[Unit]
@@ -148,15 +151,13 @@ object Spotify {
       def seek(ms: Int): F[Unit] = SpotifyApi[F].seek(ms)
     }
 
-    def sonosInstance[F[_]: SonosApi](room: String): Playback[F] = new Playback[F] {
+    def sonosInstance[F[_]: SonosApi](group: SonosInfo.Group): Playback[F] = new Playback[F] {
+
       val nextTrack: F[Unit] =
-        SonosApi[F].nextTrack(room)
+        SonosApi[F].nextTrack(GroupId(group.id))
 
-      def seek(ms: Int): F[Unit] = {
-        val seconds = ms.millis.toSeconds.toInt
-
-        SonosApi[F].seek(room, seconds)
-      }
+      def seek(ms: Int): F[Unit] =
+        SonosApi[F].seek(GroupId(group.id), SeekInputBody(Milliseconds(ms)))
 
     }
 
@@ -181,17 +182,25 @@ object Spotify {
   }
 
   trait SonosInfo[F[_]] {
-    def zones: F[Option[GetZonesOutput]]
+    def zones: F[List[SonosInfo.Group]]
   }
 
   object SonosInfo {
     def apply[F[_]](using F: SonosInfo[F]): SonosInfo[F] = F
 
-    def instance[F[_]: UserOutput: SonosApi](using ApplicativeError[F, ?]): SonosInfo[F] =
+    case class Group(id: String, name: String)
+
+    def instance[F[_]: UserOutput: SonosApi](using MonadError[F, ?]): SonosInfo[F] =
       new SonosInfo[F] {
 
-        def zones: F[Option[GetZonesOutput]] = UserOutput[F].print(UserMessage.CheckingSonos) *>
-          SonosApi[F].getZones().attempt.map(_.toOption)
+        def zones: F[List[SonosInfo.Group]] = UserOutput[F].print(UserMessage.CheckingSonos) *>
+          SonosApi[F].getHouseholds().flatMap {
+            _.households.flatTraverse { household =>
+              SonosApi[F].getGroups(household.id).map {
+                _.groups.map(group => Group(group.id.value, group.name))
+              }
+            }
+          }
 
       }
 

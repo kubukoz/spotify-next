@@ -5,10 +5,10 @@ use smithy4s.api#simpleRestJson
 @simpleRestJson
 service SonosApi {
   version: "0.0.0",
-  operations: [NextTrack, Seek, GetZones]
+  operations: [NextTrack, Seek, GetHouseholds, GetGroups]
 }
 
-@http(method: "POST", uri: "/{room}/next")
+@http(method: "POST", uri: "/groups/{groupId}/playback/skipToNextTrack")
 operation NextTrack {
   input: NextTrackInput,
 }
@@ -16,11 +16,13 @@ operation NextTrack {
 structure NextTrackInput {
   @required
   @httpLabel
-  room: String
+  groupId: GroupId,
 }
 
+string GroupId
 
-@http(method: "GET", uri: "/todo/{room}/timeseek/{seconds}")
+
+@http(method: "POST", uri: "/groups/{groupId}/playback/seek")
 operation Seek {
   input: SeekInput,
 }
@@ -28,36 +30,67 @@ operation Seek {
 structure SeekInput {
   @required
   @httpLabel
-  room: String,
+  groupId: GroupId,
+  @required
+  @httpPayload
+  body: SeekInputBody
+}
+
+structure SeekInputBody {
+  @required
+  @jsonName("position_millis")
+  positionMillis: Milliseconds
+}
+
+integer Milliseconds
+
+@http(method: "GET", uri: "/households")
+@readonly
+operation GetHouseholds {
+  output: GetHouseholdsOutput
+}
+
+structure GetHouseholdsOutput {
+  @required
+  households: Households
+}
+
+list Households {
+  member: Household
+}
+
+structure Household {
+  @required
+  id: HouseholdId
+}
+
+string HouseholdId
+
+@http(method: "GET", uri: "/households/{householdId}/groups")
+@readonly
+operation GetGroups {
+  input: GetGroupsInput,
+  output: GetGroupsOutput
+}
+
+structure GetGroupsInput {
   @required
   @httpLabel
-  seconds: Integer
+  householdId: HouseholdId,
 }
 
-
-@http(method: "GET", uri: "/zones")
-@readonly
-operation GetZones {
-  output: GetZonesOutput
-}
-
-structure GetZonesOutput {
-  @httpPayload
+structure GetGroupsOutput {
   @required
-  zones: Zones
+  groups: Groups
 }
 
-@length(min: 1)
-list Zones {
-  member: Zone
+list Groups {
+  member: Group
 }
 
-structure Zone {
+structure Group {
   @required
-  coordinator: ZoneCoordinator
-}
-
-structure ZoneCoordinator {
+  id: GroupId,
   @required
-  roomName: String
+  name: String
 }
