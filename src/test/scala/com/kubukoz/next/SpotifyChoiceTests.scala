@@ -13,8 +13,10 @@ class SpotifyChoiceTests extends munit.CatsEffectSuite {
   import SpotifyChoice.Choice.*
   given UserOutput[IO] = _ => IO.unit
 
+  val home = SonosInfo.Group("grid", "home")
+
   given SonosInfo[IO] with {
-    def zones: IO[List[String]] = List("home").pure[IO]
+    def zones: IO[List[SonosInfo.Group]] = List(home).pure[IO]
   }
 
   def deviceInfo(available: RefSource[IO, Boolean]) = new DeviceInfo[IO] {
@@ -27,7 +29,7 @@ class SpotifyChoiceTests extends munit.CatsEffectSuite {
     }
 
     SpotifyChoice.choose[IO].flatten.map {
-      assertEquals(_, Sonos("home"))
+      assertEquals(_, Sonos(home))
     }
   }
   test("available") {
@@ -65,7 +67,7 @@ class SpotifyChoiceTests extends munit.CatsEffectSuite {
           choose *> available.set(false) *> choose
         }
         .map {
-          assertEquals(_, Sonos("home"))
+          assertEquals(_, Sonos(home))
         }
     }
   }
