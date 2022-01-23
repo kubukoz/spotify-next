@@ -93,9 +93,9 @@ val commonSettings = Seq(
   scalacOptions ++= List(
     "-rewrite",
     "-source",
-    "future-migration",
-    "-Ximport-suggestion-timeout",
-    "2000"
+    "future-migration"
+    // "-Ximport-suggestion-timeout",
+    // "2000"
   ),
   libraryDependencies ++= Seq(
     "org.typelevel" %%% "cats-effect" % "3.1.1",
