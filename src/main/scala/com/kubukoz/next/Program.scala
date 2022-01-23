@@ -30,6 +30,8 @@ import com.kubukoz.next.spotify.SpotifyApiGen
 import com.kubukoz.next.spotify.SpotifyApi
 import com.kubukoz.next.sonos.SonosApiGen
 import com.kubukoz.next.sonos.SonosApi
+import org.http4s.Request
+import com.kubukoz.next.util.Config.RefreshToken
 
 object Program {
 
@@ -71,37 +73,40 @@ object Program {
       .map(RequestLogger(logHeaders = true, logBody = true))
       .map(ResponseLogger(logHeaders = true, logBody = true))
 
-  def apiClient[F[_]: Console: ConfigLoader: LoginProcess: MonadCancelThrow](
+  def apiClient[F[_]: Console: ConfigLoader: MonadCancelThrow](
+    loginProcess: LoginProcess[F],
+    refreshTokenProcess: RefreshTokenProcess[F],
+    getToken: Config => Option[Token],
+    // todo drop this
+    getRefreshToken: Config => Option[RefreshToken]
+  )(
     using SC: fs2.Compiler[F, F]
   ): Client[F] => Client[F] = {
     given ca: Config.Ask[F] = ConfigLoader[F].configAsk
-    given ta: Token.Ask[F] = Token.askBy(ca)(Getter(_.token))
 
     val loginOrRefreshToken: F[Unit] =
       Config
         .ask[F]
-        .map(_.refreshToken)
+        .map(getRefreshToken)
         .flatMap {
-          case None               => LoginProcess[F].login
-          case Some(refreshToken) => LoginProcess[F].refreshUserToken(refreshToken)
+          case None               => loginProcess.login
+          case Some(refreshToken) => refreshTokenProcess.refreshUserToken(refreshToken)
         }
 
     middlewares
       .logFailedResponse[F]
       .compose(middlewares.retryUnauthorizedWith(loginOrRefreshToken))
-      .compose(middlewares.withToken[F])
+      .compose(middlewares.withToken[F](Config.ask[F].map(getToken)))
   }
 
-  def makeSpotify[F[_]: UserOutput: Concurrent](client: Client[F]): F[Spotify[F]] = {
-    given Client[F] = client
-
-    SimpleRestJsonBuilder(SpotifyApiGen).client[F](client, com.kubukoz.next.api.spotify.baseUri).liftTo[F].flatMap { spotifyApi =>
-      SimpleRestJsonBuilder(SonosApiGen).client[F](client, sonos.baseUri).liftTo[F].flatMap { sonosApi =>
+  def makeSpotify[F[_]: UserOutput: Concurrent](spotifyClient: Client[F], sonosClient: Client[F]): F[Spotify[F]] =
+    SimpleRestJsonBuilder(SpotifyApiGen).client[F](spotifyClient, com.kubukoz.next.api.spotify.baseUri).liftTo[F].flatMap { spotifyApi =>
+      SimpleRestJsonBuilder(SonosApiGen).client[F](sonosClient, sonos.baseUri).liftTo[F].flatMap { sonosApi =>
         given SpotifyApi[F] = spotifyApi
         given SonosApi[F] = sonosApi
 
-        given Spotify.DeviceInfo[F] = Spotify.DeviceInfo.instance
-        given Spotify.SonosInfo[F] = Spotify.SonosInfo.instance
+        given Spotify.DeviceInfo[F] = Spotify.DeviceInfo.instance(spotifyClient)
+        given Spotify.SonosInfo[F] = Spotify.SonosInfo.instance[F]
 
         SpotifyChoice
           .choose[F]
@@ -117,10 +122,9 @@ object Program {
           .map { playback =>
             given Spotify.Playback[F] = playback
 
-            Spotify.instance[F]
+            Spotify.instance[F](spotifyClient)
           }
       }
     }
-  }
 
 }

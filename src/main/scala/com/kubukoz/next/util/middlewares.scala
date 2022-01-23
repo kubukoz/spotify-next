@@ -4,6 +4,7 @@ import cats.effect.MonadCancelThrow
 import cats.effect.Resource
 import cats.effect.std.Console
 import cats.implicits.*
+import cats.effect.implicits.*
 import com.kubukoz.next.util.Config.Token
 import org.http4s.AuthScheme
 import org.http4s.Credentials
@@ -54,8 +55,7 @@ object middlewares {
     }
   }
 
-  def withToken[F[_]: Token.Ask: MonadCancelThrow: Console]: Client[F] => Client[F] = {
-    val loadToken = Resource.eval(Token.ask[F])
+  def withToken[F[_]: MonadCancelThrow: Console](getToken: F[Option[Token]]): Client[F] => Client[F] = {
 
     val warnEmptyToken =
       Console[F].println("Loaded token is empty, any API calls will probably have to be retried...")
@@ -65,7 +65,7 @@ object middlewares {
 
     client =>
       Client[F] { req =>
-        loadToken.flatMap {
+        getToken.toResource.flatMap {
           case None        => Resource.eval(warnEmptyToken) *> client.run(req)
           case Some(token) => client.run(withToken(token.value.trim)(req))
         }

@@ -60,11 +60,36 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
       rawClient             <- makeBasicClient[F]
       given Config.Ask[F] = ConfigLoader[F].configAsk
       _                     <- dummy
-      given Login[F] = Login.blaze[F](OAuth.fromKernel[F](rawClient, OAuth.spotify))
-      _                     <- dummy
-      given LoginProcess[F] = LoginProcess.instance[F]
-      given Spotify[F]      <- makeSpotify[F](apiClient[F].apply(rawClient)).toResource
-    } yield Runner.instance[F]
+      spotifyLogin = Login.blaze[F](OAuth.fromKernel[F](rawClient, OAuth.spotify))
+      spotifyLoginProcess = LoginProcess
+                              .instance[F](
+                                spotifyLogin,
+                                Config.spotifyTokensLens
+                              )
+      sonosLogin = Login.blaze[F](OAuth.fromKernel[F](rawClient, OAuth.sonos))
+      sonosLoginProcess = LoginProcess
+                            .instance[F](
+                              sonosLogin,
+                              Config.sonosTokensLens
+                            )
+      given Spotify[F]      <-
+        makeSpotify[F](
+          apiClient(
+            spotifyLoginProcess,
+            RefreshTokenProcess.instance(spotifyLogin, Config.spotifyTokensLens),
+            _.token,
+            _.refreshToken
+          )
+            .apply(rawClient),
+          apiClient(
+            sonosLoginProcess,
+            RefreshTokenProcess.instance(sonosLogin, Config.sonosTokensLens),
+            _.sonosToken,
+            _.sonosRefreshToken
+          )
+            .apply(rawClient)
+        ).toResource
+    } yield Runner.instance[F](LoginProcess.combineAll(spotifyLoginProcess :: sonosLoginProcess :: Nil))
 
   }
 

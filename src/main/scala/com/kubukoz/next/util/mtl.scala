@@ -1,6 +1,5 @@
 package com.kubukoz.next.util
 
-import monocle.Getter
 import cats.Applicative
 import cats.implicits.*
 
@@ -9,8 +8,8 @@ trait AskFor[A] {
   def AskInstance[F[_]](using ask: Ask[F]): Ask[F] = ask
   def ask[F[_]](using ask: Ask[F]): F[A] = ask.ask
 
-  def askBy[F[_]: Applicative, Parent](askParent: cats.mtl.Ask[F, Parent])(getter: Getter[Parent, A]): Ask[F] = askLiftF(
-    askParent.reader(getter.get)
+  def askBy[F[_]: Applicative, Parent](askParent: cats.mtl.Ask[F, Parent])(f: Parent => A): Ask[F] = askLiftF(
+    askParent.reader(f)
   )
 
   def askLiftF[F[_]: Applicative](fa: F[A]): Ask[F] =

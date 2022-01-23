@@ -51,9 +51,8 @@ object Spotify {
 
   import Error.*
 
-  def instance[F[_]: Playback: Client: UserOutput: Concurrent: SpotifyApi]: Spotify[F] =
+  def instance[F[_]: Playback: UserOutput: Concurrent: SpotifyApi](client: Client[F]): Spotify[F] =
     new Spotify[F] {
-      val client = implicitly[Client[F]]
 
       private def requirePlaylist[A](player: Player[Option[PlayerContext], A]): F[Player[PlayerContext.playlist, A]] =
         player
@@ -72,7 +71,7 @@ object Spotify {
           Playback[F].nextTrack
 
       val dropTrack: F[Unit] =
-        methods.player[F].flatMap(requirePlaylist(_)).flatMap(requireTrack).flatMap { player =>
+        methods.player[F](client).flatMap(requirePlaylist(_)).flatMap(requireTrack).flatMap { player =>
           val trackUri = player.item.uri
           val playlistId = player.context.uri.playlist
 
@@ -83,7 +82,7 @@ object Spotify {
 
       def fastForward(percentage: Int): F[Unit] =
         methods
-          .player[F]
+          .player[F](client)
           .flatMap(requireTrack)
           .fproduct { player =>
             val currentLength = player.progress_ms
@@ -102,7 +101,7 @@ object Spotify {
           }
 
       def jumpSection: F[Unit] = methods
-        .player[F]
+        .player[F](client)
         .flatMap(requireTrack)
         .flatMap { player =>
           val track = player.item
@@ -175,8 +174,8 @@ object Spotify {
   object DeviceInfo {
     def apply[F[_]](using F: DeviceInfo[F]): DeviceInfo[F] = F
 
-    def instance[F[_]: Concurrent: Client]: DeviceInfo[F] = new DeviceInfo[F] {
-      val isRestricted: F[Boolean] = methods.player[F].map(_.device.is_restricted)
+    def instance[F[_]: Concurrent](client: Client[F]): DeviceInfo[F] = new DeviceInfo[F] {
+      val isRestricted: F[Boolean] = methods.player[F](client).map(_.device.is_restricted)
     }
 
   }
@@ -200,8 +199,8 @@ object Spotify {
 
   private object methods {
 
-    def player[F[_]: Concurrent: Client]: F[Player[Option[PlayerContext], Option[Item]]] =
-      summon[Client[F]].expectOr(com.kubukoz.next.api.spotify.baseUri / "v1" / "me" / "player") {
+    def player[F[_]: Concurrent](client: Client[F]): F[Player[Option[PlayerContext], Option[Item]]] =
+      client.expectOr(com.kubukoz.next.api.spotify.baseUri / "v1" / "me" / "player") {
         case response if response.status === Status.NoContent => NotPlaying.pure[F].widen
         case response                                         => InvalidStatus(response.status).pure[F].widen
       }
