@@ -15,6 +15,9 @@ import org.http4s.client.Client
 import org.http4s.headers.`Content-Type`
 import org.http4s.headers.Authorization
 import org.http4s.EntityEncoder
+import org.http4s.Uri.Path
+import java.nio.charset.StandardCharsets
+import org.http4s.Uri.Path.Segment
 
 object middlewares {
 
@@ -82,6 +85,27 @@ object middlewares {
             headers.get[`Content-Type`].fold(headers.put(tpe))(_ => headers)
           }
         )
+    }
+
+  // https://github.com/disneystreaming/smithy4s/issues/72
+  def fixupColons[F[_]: MonadCancelThrow]: Client[F] => Client[F] = client =>
+    Client { req =>
+
+      def fixupPath(path: Path): Path = Path(
+        segments = path.segments.map { seg =>
+          val decoded = seg.decoded(StandardCharsets.UTF_8, true, _ => false)
+
+          if (decoded.contains("%3A"))
+            Segment(decoded.replace("%3A", ":"))
+          else seg
+        },
+        absolute = path.absolute,
+        endsWithSlash = path.endsWithSlash
+      )
+
+      client.run(
+        req.withPathInfo(fixupPath(req.pathInfo))
+      )
     }
 
 }

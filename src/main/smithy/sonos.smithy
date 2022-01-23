@@ -38,7 +38,6 @@ structure SeekInput {
 
 structure SeekInputBody {
   @required
-  @jsonName("position_millis")
   positionMillis: Milliseconds
 }
 

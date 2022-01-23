@@ -97,8 +97,9 @@ object Program {
       .compose(middlewares.withToken[F](ConfigLoader[F].loadConfig.map(getToken)))
   }
 
-  def sonosContentType[F[_]: MonadCancelThrow]: Client[F] => Client[F] =
-    middlewares.defaultContentType(`Content-Type`(MediaType.application.json, Charset.`UTF-8`))
+  def sonosMiddlewares[F[_]: MonadCancelThrow]: Client[F] => Client[F] =
+    middlewares.defaultContentType(`Content-Type`(MediaType.application.json, Charset.`UTF-8`)) andThen
+      middlewares.fixupColons[F]
 
   def makeSpotify[F[_]: UserOutput: Concurrent](spotifyClient: Client[F], sonosClient: Client[F]): F[Spotify[F]] =
     SimpleRestJsonBuilder(SpotifyApiGen).client[F](spotifyClient, com.kubukoz.next.api.spotify.baseUri).liftTo[F].flatMap { spotifyApi =>
