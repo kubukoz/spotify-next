@@ -98,8 +98,7 @@ object Program {
   }
 
   def sonosMiddlewares[F[_]: MonadCancelThrow]: Client[F] => Client[F] =
-    middlewares.defaultContentType(`Content-Type`(MediaType.application.json, Charset.`UTF-8`)) andThen
-      middlewares.fixupColons[F]
+    middlewares.defaultContentType(`Content-Type`(MediaType.application.json, Charset.`UTF-8`))
 
   def makeSpotify[F[_]: UserOutput: Concurrent](spotifyClient: Client[F], sonosClient: Client[F]): F[Spotify[F]] =
     SimpleRestJsonBuilder(SpotifyApiGen).client[F](spotifyClient, com.kubukoz.next.api.spotify.baseUri).liftTo[F].flatMap { spotifyApi =>

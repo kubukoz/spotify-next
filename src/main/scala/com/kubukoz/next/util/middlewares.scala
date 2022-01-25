@@ -88,25 +88,4 @@ object middlewares {
         )
     }
 
-  // https://github.com/disneystreaming/smithy4s/issues/72
-  def fixupColons[F[_]: MonadCancelThrow]: Client[F] => Client[F] = client =>
-    Client { req =>
-
-      def fixupPath(path: Path): Path = Path(
-        segments = path.segments.map { seg =>
-          val decoded = seg.decoded(StandardCharsets.UTF_8, true, _ => false)
-
-          if (decoded.contains("%3A"))
-            Segment(decoded.replace("%3A", ":"))
-          else seg
-        },
-        absolute = path.absolute,
-        endsWithSlash = path.endsWithSlash
-      )
-
-      client.run(
-        req.withPathInfo(fixupPath(req.pathInfo))
-      )
-    }
-
 }
