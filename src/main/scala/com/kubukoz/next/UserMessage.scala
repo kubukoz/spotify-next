@@ -17,7 +17,7 @@ enum UserMessage {
   case ConfigFileNotFound(path: Path, validInput: String)
   case SavedConfig(path: Path)
   case SavedToken
-  case RefreshedToken
+  case RefreshedToken(kind: String)
 
   // playback
   case SwitchingToNext
@@ -52,7 +52,7 @@ object UserOutput {
       case ConfigFileNotFound(path, validInput) => show"Didn't find config file at $path. Should I create one? ($validInput/n)"
       case SavedConfig(path)                    => show"Saved config to new file at $path"
       case SavedToken                           => "Saved token to file"
-      case RefreshedToken                       => "Refreshed token"
+      case RefreshedToken(kind: String)         => s"Refreshed $kind token"
       case SwitchingToNext                      => "Switching to next track"
       case RemovingCurrentTrack(player)         =>
         show"""Removing track "${player.item.name}" (${player.item.uri.toFullUri}) from playlist ${player.context.uri.playlist}"""

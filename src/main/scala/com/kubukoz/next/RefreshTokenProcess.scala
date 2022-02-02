@@ -16,6 +16,7 @@ object RefreshTokenProcess {
   def apply[F[_]](using F: RefreshTokenProcess[F]): RefreshTokenProcess[F] = F
 
   def instance[F[_]: UserOutput: ConfigLoader: MonadThrow](
+    kind: String,
     loginAlg: Login[F],
     tokensLens: Lens[Config, (Option[Token], Option[RefreshToken])]
   ): RefreshTokenProcess[F] = new RefreshTokenProcess[F] {
@@ -33,7 +34,7 @@ object RefreshTokenProcess {
       newToken     <- loginAlg.refreshToken(refreshToken)
       newConfig = tokensLens.replace((newToken.some, refreshToken.some))(config)
       _            <- ConfigLoader[F].saveConfig(newConfig)
-      _            <- UserOutput[F].print(UserMessage.RefreshedToken)
+      _            <- UserOutput[F].print(UserMessage.RefreshedToken(kind: String))
     } yield ()
 
   }

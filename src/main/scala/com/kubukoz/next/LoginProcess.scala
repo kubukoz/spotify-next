@@ -37,4 +37,18 @@ object LoginProcess {
     val login: F[Unit] = loginProcesses.traverse_(_.login)
   }
 
+  extension [F[_]: Monad](loginProcess: LoginProcess[F])
+
+    def orRefresh(refresh: RefreshTokenProcess[F]): LoginProcess[F] = new LoginProcess[F] {
+
+      override val login: F[Unit] =
+        refresh
+          .canRefreshToken
+          .ifM(
+            ifTrue = refresh.refreshUserToken,
+            ifFalse = loginProcess.login
+          )
+
+    }
+
 }

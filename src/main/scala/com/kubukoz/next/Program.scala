@@ -78,24 +78,14 @@ object Program {
 
   def apiClient[F[_]: Console: ConfigLoader: MonadCancelThrow](
     loginProcess: LoginProcess[F],
-    refreshTokenProcess: RefreshTokenProcess[F],
     getToken: Config => Option[Token]
   )(
     using SC: fs2.Compiler[F, F]
-  ): Client[F] => Client[F] = {
-    val loginOrRefreshToken: F[Unit] =
-      refreshTokenProcess
-        .canRefreshToken
-        .ifM(
-          ifTrue = refreshTokenProcess.refreshUserToken,
-          ifFalse = loginProcess.login
-        )
-
+  ): Client[F] => Client[F] =
     middlewares
       .logFailedResponse[F]
-      .compose(middlewares.retryUnauthorizedWith(loginOrRefreshToken))
+      .compose(middlewares.retryUnauthorizedWith(loginProcess.login))
       .compose(middlewares.withToken[F](ConfigLoader[F].loadConfig.map(getToken)))
-  }
 
   def sonosMiddlewares[F[_]: MonadCancelThrow]: Client[F] => Client[F] =
     middlewares.defaultContentType(`Content-Type`(MediaType.application.json, Charset.`UTF-8`))

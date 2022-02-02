@@ -13,6 +13,7 @@ import com.monovore.decline.*
 import com.monovore.decline.effect.*
 import cats.effect.implicits.*
 import java.io.EOFException
+import LoginProcess.given
 
 enum Choice {
   case Login
@@ -67,27 +68,29 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
                                 spotifyLogin,
                                 Config.spotifyTokensLens
                               )
+                              .orRefresh(RefreshTokenProcess.instance("Spotify", spotifyLogin, Config.spotifyTokensLens))
       sonosLogin = Login.blaze[F](OAuth.fromKernel[F](rawClient, OAuth.sonos))
       sonosLoginProcess = LoginProcess
                             .instance[F](
                               sonosLogin,
                               Config.sonosTokensLens
                             )
+                            .orRefresh(RefreshTokenProcess.instance("Sonos", sonosLogin, Config.sonosTokensLens))
       given Spotify[F]      <-
         makeSpotify[F](
           apiClient(
             spotifyLoginProcess,
-            RefreshTokenProcess.instance(spotifyLogin, Config.spotifyTokensLens),
             _.token
           )
             .apply(rawClient),
           apiClient(
             sonosLoginProcess,
-            RefreshTokenProcess.instance(sonosLogin, Config.sonosTokensLens),
             _.sonosToken
           ).andThen(sonosMiddlewares).apply(rawClient)
         ).toResource
-    } yield Runner.instance[F](LoginProcess.combineAll(spotifyLoginProcess :: sonosLoginProcess :: Nil))
+    } yield Runner.instance[F](
+      LoginProcess.combineAll(spotifyLoginProcess :: sonosLoginProcess :: Nil)
+    )
 
   }
 
