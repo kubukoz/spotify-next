@@ -5,7 +5,43 @@ use smithy4s.api#simpleRestJson
 @simpleRestJson
 service SpotifyApi {
   version: "0.0.0",
-  operations: [NextTrack, Seek, RemoveTrack, GetAudioAnalysis]
+  operations: [NextTrack, Seek, RemoveTrack, GetAudioAnalysis, TransferPlayback, GetAvailableDevices]
+}
+
+@http(method: "PUT", uri: "/v1/me/player")
+@idempotent
+operation TransferPlayback {
+  input: TransferPlaybackInput
+}
+
+structure TransferPlaybackInput {
+  @jsonName("device_ids")
+  deviceIds: DeviceIds
+}
+
+list DeviceIds {
+  member: DeviceId
+}
+
+string DeviceId
+
+@http(method: "GET", uri: "/v1/me/player/devices")
+@readonly
+operation GetAvailableDevices {
+  output: GetAvailableDevicesOutput
+}
+
+structure GetAvailableDevicesOutput {
+  devices: Devices
+}
+
+list Devices {
+  member: Device
+}
+
+structure Device {
+  id: DeviceId,
+  name: String
 }
 
 @http(method: "POST", uri: "/v1/me/player/next")

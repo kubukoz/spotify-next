@@ -5,7 +5,18 @@ use smithy4s.api#simpleRestJson
 @simpleRestJson
 service SonosApi {
   version: "0.0.0",
-  operations: [NextTrack, Seek, GetHouseholds, GetGroups]
+  operations: [NextTrack, Seek, GetHouseholds, GetGroups, Play]
+}
+
+@http(method: "POST", uri: "/groups/{groupId}/playback/play")
+operation Play {
+  input: PlayInput
+}
+
+structure PlayInput {
+  @required
+  @httpLabel
+  groupId: GroupId
 }
 
 @http(method: "POST", uri: "/groups/{groupId}/playback/skipToNextTrack")
