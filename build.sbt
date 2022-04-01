@@ -21,7 +21,7 @@ ThisBuild / githubWorkflowJavaVersions := Seq(JavaSpec.graalvm("21.3.0", "11"))
 ThisBuild / githubWorkflowTargetTags := Seq("v*")
 ThisBuild / githubWorkflowPublishTargetBranches := List(RefPredicate.StartsWith(Ref.Tag("v")), RefPredicate.Equals(Ref.Branch("main")))
 
-ThisBuild / githubWorkflowOSes := Seq("macos-10.15")
+ThisBuild / githubWorkflowOSes := Seq("ubuntu-latest")
 
 ThisBuild / githubWorkflowPublish := Seq(
   WorkflowStep.Sbt(
@@ -29,40 +29,6 @@ ThisBuild / githubWorkflowPublish := Seq(
     id = Some("release")
   )
 )
-ThisBuild / githubWorkflowGeneratedCI ~= {
-  _.flatMap {
-    case job if job.id == "publish" =>
-      job.copy(oses = List("macos-10.15")) ::
-        job.copy(
-          id = "publish-native",
-          name = "Publish native images",
-          oses = List("macos-10.15"),
-          cond = Some("startsWith(github.ref, 'refs/tags/')"),
-          steps = job.steps.flatMap {
-            case step if step.id.contains("release") =>
-              List(
-                WorkflowStep.Sbt(
-                  List("nativeImage")
-                ),
-                WorkflowStep.Run(
-                  List(
-                    "mv target/native-image/spotify-next target/native-image/spotify-next-${{ matrix.os }}"
-                  )
-                ),
-                WorkflowStep.Use(
-                  UseRef.Public("softprops", "action-gh-release", "v1"),
-                  params = Map("files" -> "target/native-image/spotify-next-${{ matrix.os }}")
-                )
-              )
-            case step                                =>
-              step :: Nil
-          }
-        ) ::
-        Nil
-    case job                        =>
-      job :: Nil
-  }
-}
 
 ThisBuild / githubWorkflowEnv ++= List(
   "PGP_PASSPHRASE",
@@ -152,21 +118,6 @@ val front = project
   .dependsOn(core)
  */
 
-val nativeImageSettings: Seq[Setting[_]] = Seq(
-  Compile / mainClass := Some("com.kubukoz.next.Main"),
-  nativeImageVersion := "21.2.0",
-  nativeImageAgentOutputDir := (Compile / resourceDirectory).value,
-  nativeImageOptions ++= Seq(
-    s"-H:ReflectionConfigurationFiles=${(Compile / resourceDirectory).value / "reflect-config.json"}",
-    s"-H:ResourceConfigurationFiles=${(Compile / resourceDirectory).value / "resource-config.json"}",
-    "-H:+ReportExceptionStackTraces",
-    "--no-fallback",
-    "--allow-incomplete-classpath"
-  ),
-  nativeImageAgentMerge := true,
-  nativeImageReady := { () => () }
-)
-
 val root =
   project
     .in(file("."))
@@ -185,13 +136,11 @@ val root =
         "dev.optics" %% "monocle-core" % "3.1.0"
       ),
       buildInfoKeys := Seq[BuildInfoKey](version),
-      buildInfoPackage := "com.kubukoz.next",
-      nativeImageSettings
+      buildInfoPackage := "com.kubukoz.next"
     )
     .settings(name := "spotify-next")
     .enablePlugins(BuildInfoPlugin)
     .enablePlugins(JavaAppPackaging)
-    .enablePlugins(NativeImagePlugin)
     .enablePlugins(Smithy4sCodegenPlugin)
 // .dependsOn(core)
 // .aggregate(core /* , front */ )

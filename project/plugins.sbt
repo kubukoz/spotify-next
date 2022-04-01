@@ -7,6 +7,5 @@ addSbtPlugin("ch.epfl.scala" % "sbt-scalajs-bundler" % "0.20.0")
 
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.11.0")
 addSbtPlugin("com.codecommit" % "sbt-github-actions" % "0.14.2")
-addSbtPlugin("org.scalameta" % "sbt-native-image" % "0.3.2")
 
 addSbtPlugin("com.disneystreaming.smithy4s" % "smithy4s-sbt-codegen" % "0.12.8")
