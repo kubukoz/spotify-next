@@ -16,7 +16,7 @@ class SpotifyChoiceTests extends munit.CatsEffectSuite {
   val home = SonosInfo.Group("grid", "home")
 
   given SonosInfo[IO] with {
-    def zones: IO[List[SonosInfo.Group]] = List(home).pure[IO]
+    def zones: IO[Option[NonEmptyList[SonosInfo.Group]]] = NonEmptyList.one(home).some.pure[IO]
   }
 
   def deviceInfo(available: RefSource[IO, Boolean]) = new DeviceInfo[IO] {

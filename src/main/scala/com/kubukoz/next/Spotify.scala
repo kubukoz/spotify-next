@@ -31,12 +31,14 @@ import org.http4s.client.Client
 
 import scala.concurrent.duration.*
 import scala.util.chaining.*
+import cats.data.NonEmptyList
 
 trait Spotify[F[_]] {
   def skipTrack: F[Unit]
   def dropTrack: F[Unit]
   def fastForward(percentage: Int): F[Unit]
   def jumpSection: F[Unit]
+  def switch: F[Unit]
 }
 
 object Spotify {
@@ -54,7 +56,7 @@ object Spotify {
 
   import Error.*
 
-  def instance[F[_]: Playback: UserOutput: Concurrent: SpotifyApi](client: Client[F]): Spotify[F] =
+  def instance[F[_]: Playback: UserOutput: Concurrent: SpotifyApi: Switch](client: Client[F]): Spotify[F] =
     new Spotify[F] {
 
       private def requirePlaylist[A](player: Player[Option[PlayerContext], A]): F[Player[PlayerContext.playlist, A]] =
@@ -136,6 +138,8 @@ object Spotify {
         }
         .void
 
+      val switch: F[Unit] = Switch[F].switch
+
     }
 
   trait Playback[F[_]] {
@@ -146,12 +150,11 @@ object Spotify {
   object Playback {
     def apply[F[_]](using F: Playback[F]): Playback[F] = F
 
-    def spotifyInstance[F[_]: SpotifyApi]: Playback[F] = new Playback[F] {
+    def spotifyInstance[F[_]: SpotifyApi]: Playback[F] = new:
       val nextTrack: F[Unit] = SpotifyApi[F].nextTrack()
       def seek(ms: Int): F[Unit] = SpotifyApi[F].seek(ms)
-    }
 
-    def sonosInstance[F[_]: SonosApi](group: SonosInfo.Group): Playback[F] = new Playback[F] {
+    def sonosInstance[F[_]: SonosApi](group: SonosInfo.Group): Playback[F] = new:
 
       val nextTrack: F[Unit] =
         SonosApi[F].nextTrack(GroupId(group.id))
@@ -159,13 +162,50 @@ object Spotify {
       def seek(ms: Int): F[Unit] =
         SonosApi[F].seek(GroupId(group.id), SeekInputBody(Milliseconds(ms)))
 
-    }
-
-    def suspend[F[_]: FlatMap](choose: F[Playback[F]]): Playback[F] = new Playback[F] {
+    def suspend[F[_]: FlatMap](choose: F[Playback[F]]): Playback[F] = new:
       def nextTrack: F[Unit] = choose.flatMap(_.nextTrack)
       def seek(ms: Int): F[Unit] = choose.flatMap(_.seek(ms))
-    }
 
+  }
+
+  trait Switch[F[_]] {
+    def switch: F[Unit]
+  }
+
+  object Switch {
+    def apply[F[_]](using F: Switch[F]): Switch[F] = F
+
+    def spotifyInstance[F[_]: SpotifyApi: FlatMap: UserOutput]: Switch[F] = new:
+
+      val switch: F[Unit] =
+        SpotifyApi[F]
+          .getAvailableDevices()
+          .map(_.devices.toNel)
+          .flatMap {
+            case None =>
+              UserOutput[F].print(UserMessage.NoDevices)
+
+            case Some(devices) =>
+              val device = devices.head
+              UserOutput[F].print(UserMessage.SwitchingPlayback(PlaybackTarget.Spotify(device))) *>
+                SpotifyApi[F].transferPlayback(List(device.id))
+          }
+
+    def sonosInstance[F[_]: SonosApi: SonosInfo: UserOutput: FlatMap]: Switch[F] = new:
+
+      val switch: F[Unit] =
+        SonosInfo[F].zones.flatMap {
+          case None => UserOutput[F].print(UserMessage.SonosNotFound)
+
+          case Some(groups) =>
+            val group = groups.head
+
+            UserOutput[F].print(UserMessage.SwitchingPlayback(PlaybackTarget.Sonos(group))) *>
+              SonosApi[F].play(GroupId(group.id))
+        }
+
+    def suspend[F[_]: FlatMap](choose: F[Switch[F]]): Switch[F] = new:
+      val switch: F[Unit] = choose.flatMap(_.switch)
   }
 
   trait DeviceInfo[F[_]] {
@@ -182,7 +222,7 @@ object Spotify {
   }
 
   trait SonosInfo[F[_]] {
-    def zones: F[List[SonosInfo.Group]]
+    def zones: F[Option[NonEmptyList[SonosInfo.Group]]]
   }
 
   object SonosInfo {
@@ -190,17 +230,19 @@ object Spotify {
 
     case class Group(id: String, name: String)
 
-    def instance[F[_]: UserOutput: SonosApi](using MonadError[F, ?]): SonosInfo[F] =
+    def instance[F[_]: UserOutput: SonosApi](using MonadError[F, ?], fs2.Compiler[F, F]): SonosInfo[F] =
       new SonosInfo[F] {
 
-        def zones: F[List[SonosInfo.Group]] = UserOutput[F].print(UserMessage.CheckingSonos) *>
-          SonosApi[F].getHouseholds().flatMap {
-            _.households.flatTraverse { household =>
-              SonosApi[F].getGroups(household.id).map {
-                _.groups.map(group => Group(group.id.value, group.name))
-              }
-            }
-          }
+        val zones: F[Option[NonEmptyList[SonosInfo.Group]]] = UserOutput[F].print(UserMessage.CheckingSonos) *>
+          fs2
+            .Stream
+            .evals(SonosApi[F].getHouseholds().map(_.households))
+            .map(_.id)
+            .flatMap(SonosApi[F].getGroups(_).map(_.groups).pipe(fs2.Stream.evals(_)))
+            .map(group => Group(group.id.value, group.name))
+            .compile
+            .toList
+            .map(_.toNel)
 
       }
 
