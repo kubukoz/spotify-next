@@ -37,6 +37,7 @@ trait Spotify[F[_]] {
   def dropTrack: F[Unit]
   def fastForward(percentage: Int): F[Unit]
   def jumpSection: F[Unit]
+  def switch: F[Unit]
 }
 
 object Spotify {
@@ -54,7 +55,7 @@ object Spotify {
 
   import Error.*
 
-  def instance[F[_]: Playback: UserOutput: Concurrent: SpotifyApi](client: Client[F]): Spotify[F] =
+  def instance[F[_]: Playback: UserOutput: Concurrent: SpotifyApi: Switch](client: Client[F]): Spotify[F] =
     new Spotify[F] {
 
       private def requirePlaylist[A](player: Player[Option[PlayerContext], A]): F[Player[PlayerContext.playlist, A]] =
@@ -136,6 +137,8 @@ object Spotify {
         }
         .void
 
+      val switch: F[Unit] = Switch[F].switch
+
     }
 
   trait Playback[F[_]] {
@@ -146,12 +149,11 @@ object Spotify {
   object Playback {
     def apply[F[_]](using F: Playback[F]): Playback[F] = F
 
-    def spotifyInstance[F[_]: SpotifyApi]: Playback[F] = new Playback[F] {
+    def spotifyInstance[F[_]: SpotifyApi]: Playback[F] = new:
       val nextTrack: F[Unit] = SpotifyApi[F].nextTrack()
       def seek(ms: Int): F[Unit] = SpotifyApi[F].seek(ms)
-    }
 
-    def sonosInstance[F[_]: SonosApi](group: SonosInfo.Group): Playback[F] = new Playback[F] {
+    def sonosInstance[F[_]: SonosApi](group: SonosInfo.Group): Playback[F] = new:
 
       val nextTrack: F[Unit] =
         SonosApi[F].nextTrack(GroupId(group.id))
@@ -159,13 +161,32 @@ object Spotify {
       def seek(ms: Int): F[Unit] =
         SonosApi[F].seek(GroupId(group.id), SeekInputBody(Milliseconds(ms)))
 
-    }
-
-    def suspend[F[_]: FlatMap](choose: F[Playback[F]]): Playback[F] = new Playback[F] {
+    def suspend[F[_]: FlatMap](choose: F[Playback[F]]): Playback[F] = new:
       def nextTrack: F[Unit] = choose.flatMap(_.nextTrack)
       def seek(ms: Int): F[Unit] = choose.flatMap(_.seek(ms))
-    }
 
+  }
+
+  trait Switch[F[_]] {
+    def switch: F[Unit]
+  }
+
+  object Switch {
+    def apply[F[_]](using F: Switch[F]): Switch[F] = F
+
+    def spotifyInstance[F[_]: SpotifyApi: FlatMap]: Switch[F] = new:
+
+      val switch: F[Unit] = SpotifyApi[F]
+        .getAvailableDevices()
+        .map(_.devices.take(1).map(_.id))
+        .flatMap(SpotifyApi[F].transferPlayback)
+
+    def sonosInstance[F[_]: SonosApi](group: SonosInfo.Group): Switch[F] = new:
+      val switch: F[Unit] =
+        SonosApi[F].play(GroupId(group.id))
+
+    def suspend[F[_]: FlatMap](choose: F[Switch[F]]): Switch[F] = new:
+      val switch: F[Unit] = choose.flatMap(_.switch)
   }
 
   trait DeviceInfo[F[_]] {

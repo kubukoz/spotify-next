@@ -35,6 +35,7 @@ import com.kubukoz.next.util.Config.RefreshToken
 import org.http4s.MediaType
 import org.http4s.Charset
 import org.http4s.headers.`Content-Type`
+import com.kubukoz.next.Spotify.SonosInfo.Group
 
 object Program {
 
@@ -101,18 +102,27 @@ object Program {
 
         SpotifyChoice
           .choose[F]
-          .map(
-            _.map(
-              _.fold(
-                room => Spotify.Playback.sonosInstance[F](room),
-                Spotify.Playback.spotifyInstance[F]
-              )
-            )
-          )
-          .map(Spotify.Playback.suspend(_))
-          .map { playback =>
-            given Spotify.Playback[F] = playback
+          .map { choice =>
+            given Spotify.Playback[F] = Spotify
+              .Playback
+              .suspend {
+                choice.map(
+                  _.fold(
+                    sonos = room => Spotify.Playback.sonosInstance[F](room),
+                    spotify = Spotify.Playback.spotifyInstance[F]
+                  )
+                )
+              }
 
+            given Spotify.Switch[F] = Spotify.Switch.suspend {
+              choice.map(
+                _.fold(
+                  // flipped order
+                  sonos = _ => Spotify.Switch.spotifyInstance[F],
+                  spotify = Spotify.Switch.sonosInstance[F](Group("RINCON_7828CA925D6601400:3149079976", "Living Room"))
+                )
+              )
+            }
             Spotify.instance[F](spotifyClient)
           }
       }

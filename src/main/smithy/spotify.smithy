@@ -16,6 +16,7 @@ operation TransferPlayback {
 
 structure TransferPlaybackInput {
   @jsonName("device_ids")
+  @required
   deviceIds: DeviceIds
 }
 
@@ -32,6 +33,7 @@ operation GetAvailableDevices {
 }
 
 structure GetAvailableDevicesOutput {
+  @required
   devices: Devices
 }
 
@@ -40,7 +42,9 @@ list Devices {
 }
 
 structure Device {
+  @required
   id: DeviceId,
+  @required
   name: String
 }
 
