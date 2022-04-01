@@ -14,6 +14,7 @@ function _sn() {
     'f:alias for `forward`'
     'j:alias for `jump`'
     'repl:Run application in interactive mode'
+    'switch:Switch device (Spotify/Sonos)'
   )
 
   _arguments "1: :{_describe 'command' cmds}" '*:: :->args'
@@ -59,6 +60,10 @@ function _sn() {
       ;;
 
     repl)
+      _arguments -C $help
+      ;;
+
+    switch)
       _arguments -C $help
       ;;
 
