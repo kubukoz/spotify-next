@@ -31,6 +31,7 @@ import org.http4s.client.Client
 
 import scala.concurrent.duration.*
 import scala.util.chaining.*
+import cats.data.NonEmptyList
 
 trait Spotify[F[_]] {
   def skipTrack: F[Unit]
@@ -174,16 +175,34 @@ object Spotify {
   object Switch {
     def apply[F[_]](using F: Switch[F]): Switch[F] = F
 
-    def spotifyInstance[F[_]: SpotifyApi: FlatMap]: Switch[F] = new:
+    def spotifyInstance[F[_]: SpotifyApi: FlatMap: UserOutput]: Switch[F] = new:
 
-      val switch: F[Unit] = SpotifyApi[F]
-        .getAvailableDevices()
-        .map(_.devices.take(1).map(_.id))
-        .flatMap(SpotifyApi[F].transferPlayback)
-
-    def sonosInstance[F[_]: SonosApi](group: SonosInfo.Group): Switch[F] = new:
       val switch: F[Unit] =
-        SonosApi[F].play(GroupId(group.id))
+        SpotifyApi[F]
+          .getAvailableDevices()
+          .map(_.devices.toNel)
+          .flatMap {
+            case None =>
+              UserOutput[F].print(UserMessage.NoDevices)
+
+            case Some(devices) =>
+              val device = devices.head
+              UserOutput[F].print(UserMessage.SwitchingPlayback(PlaybackTarget.Spotify(device))) *>
+                SpotifyApi[F].transferPlayback(List(device.id))
+          }
+
+    def sonosInstance[F[_]: SonosApi: SonosInfo: UserOutput: FlatMap]: Switch[F] = new:
+
+      val switch: F[Unit] =
+        SonosInfo[F].zones.flatMap {
+          case None => UserOutput[F].print(UserMessage.SonosNotFound)
+
+          case Some(groups) =>
+            val group = groups.head
+
+            UserOutput[F].print(UserMessage.SwitchingPlayback(PlaybackTarget.Sonos(group))) *>
+              SonosApi[F].play(GroupId(group.id))
+        }
 
     def suspend[F[_]: FlatMap](choose: F[Switch[F]]): Switch[F] = new:
       val switch: F[Unit] = choose.flatMap(_.switch)
@@ -203,7 +222,7 @@ object Spotify {
   }
 
   trait SonosInfo[F[_]] {
-    def zones: F[List[SonosInfo.Group]]
+    def zones: F[Option[NonEmptyList[SonosInfo.Group]]]
   }
 
   object SonosInfo {
@@ -211,17 +230,19 @@ object Spotify {
 
     case class Group(id: String, name: String)
 
-    def instance[F[_]: UserOutput: SonosApi](using MonadError[F, ?]): SonosInfo[F] =
+    def instance[F[_]: UserOutput: SonosApi](using MonadError[F, ?], fs2.Compiler[F, F]): SonosInfo[F] =
       new SonosInfo[F] {
 
-        def zones: F[List[SonosInfo.Group]] = UserOutput[F].print(UserMessage.CheckingSonos) *>
-          SonosApi[F].getHouseholds().flatMap {
-            _.households.flatTraverse { household =>
-              SonosApi[F].getGroups(household.id).map {
-                _.groups.map(group => Group(group.id.value, group.name))
-              }
-            }
-          }
+        val zones: F[Option[NonEmptyList[SonosInfo.Group]]] = UserOutput[F].print(UserMessage.CheckingSonos) *>
+          fs2
+            .Stream
+            .evals(SonosApi[F].getHouseholds().map(_.households))
+            .map(_.id)
+            .flatMap(SonosApi[F].getGroups(_).map(_.groups).pipe(fs2.Stream.evals(_)))
+            .map(group => Group(group.id.value, group.name))
+            .compile
+            .toList
+            .map(_.toNel)
 
       }
 

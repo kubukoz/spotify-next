@@ -50,7 +50,7 @@ object SpotifyChoice {
           val roomF: F[Option[SonosInfo.Group]] =
             OptionT(lastSonosRoom.get)
               .orElse(
-                OptionT(SonosInfo[F].zones.map(_.toNel)).semiflatMap(extractRoom)
+                OptionT(SonosInfo[F].zones).semiflatMap(extractRoom)
               )
               .value
 

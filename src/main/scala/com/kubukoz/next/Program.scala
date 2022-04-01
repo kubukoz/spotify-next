@@ -36,6 +36,8 @@ import org.http4s.MediaType
 import org.http4s.Charset
 import org.http4s.headers.`Content-Type`
 import com.kubukoz.next.Spotify.SonosInfo.Group
+import com.kubukoz.next.Spotify.SonosInfo
+import com.kubukoz.next.Spotify.DeviceInfo
 
 object Program {
 
@@ -100,6 +102,15 @@ object Program {
         given Spotify.DeviceInfo[F] = Spotify.DeviceInfo.instance(spotifyClient)
         given Spotify.SonosInfo[F] = Spotify.SonosInfo.instance[F]
 
+        given Spotify.Switch[F] = Spotify.Switch.suspend {
+          DeviceInfo[F]
+            .isRestricted
+            .map {
+              case true  => Spotify.Switch.spotifyInstance[F]
+              case false => Spotify.Switch.sonosInstance[F]
+            }
+        }
+
         SpotifyChoice
           .choose[F]
           .map { choice =>
@@ -114,15 +125,6 @@ object Program {
                 )
               }
 
-            given Spotify.Switch[F] = Spotify.Switch.suspend {
-              choice.map(
-                _.fold(
-                  // flipped order
-                  sonos = _ => Spotify.Switch.spotifyInstance[F],
-                  spotify = Spotify.Switch.sonosInstance[F](Group("RINCON_7828CA925D6601400:3149079976", "Living Room"))
-                )
-              )
-            }
             Spotify.instance[F](spotifyClient)
           }
       }

@@ -11,6 +11,8 @@ import org.http4s.Uri
 import fs2.io.file.Path
 import cats.data.NonEmptyList
 import com.kubukoz.next.Spotify.SonosInfo
+import com.kubukoz.next.Spotify.SonosInfo.Group
+import com.kubukoz.next.spotify.Device
 
 enum UserMessage {
   case GoToUri(uri: Uri)
@@ -22,7 +24,9 @@ enum UserMessage {
   // playback
   case SwitchingToNext
   case RemovingCurrentTrack(player: Player[PlayerContext.playlist, Item.track])
+  case NoDevices
   case TooCloseToEnd
+  case SwitchingPlayback(target: PlaybackTarget)
   case Jumping(sectionNumber: Int, sectionsTotal: Int, percentTotal: Int)
   case Seeking(desiredProgressPercent: Int)
 
@@ -32,6 +36,11 @@ enum UserMessage {
   case SonosFound(groups: NonEmptyList[SonosInfo.Group], group: SonosInfo.Group)
   case DeviceRestricted
   case DirectControl
+}
+
+enum PlaybackTarget {
+  case Spotify(device: Device)
+  case Sonos(group: Group)
 }
 
 trait UserOutput[F[_]] {
@@ -62,6 +71,14 @@ object UserOutput {
         show"Jumping to section $sectionNumber/$sectionsTotal ($percentTotal%)"
       case CheckingSonos                                       => show"Checking if Sonos API is available at $sonosBaseUrl..."
       case SonosNotFound                                       => "Sonos not found, using fallback"
+      case NoDevices                                           => "No Spotify devices found, can't switch playback"
+      case SwitchingPlayback(target)                           =>
+        val targetString = target match
+          case PlaybackTarget.Spotify(device) => show"Spotify (${device.name}, ID: ${device.id.value})"
+          case PlaybackTarget.Sonos(group)    => show"Sonos (${group.name}, ID: ${group.id})"
+
+        show"Switching playback to $targetString"
+
       case SonosFound(groups, group) => show"Found ${groups.size} zone(s), will use group ${group.name} (${group.id})"
       case DeviceRestricted          => "Device restricted, trying to switch to Sonos API control..."
       case DirectControl             => "Switching to direct Spotify API control..."
