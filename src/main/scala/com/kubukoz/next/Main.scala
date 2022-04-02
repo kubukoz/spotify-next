@@ -43,7 +43,8 @@ object Choice {
         Opts.subcommand("s", "Alias for `skip`")(Opts(SkipTrack)),
         Opts.subcommand("d", "Alias for `drop`")(Opts(DropTrack)),
         Opts.subcommand("f", "Alias for `forward`")(ffOpts),
-        Opts.subcommand("j", "Alias for `jump`")(Opts(JumpSection))
+        Opts.subcommand("j", "Alias for `jump`")(Opts(JumpSection)),
+        Opts.subcommand("w", "Alias for `switch`")(Opts(Switch))
       )
       .reduceK
 

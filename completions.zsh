@@ -43,6 +43,10 @@ function _sn() {
       _arguments -C $help
       ;;
 
+    switch)
+      _arguments -C $help
+      ;;
+
     s)
       _arguments -C $help
       ;;
@@ -59,11 +63,11 @@ function _sn() {
       _arguments -C $help
       ;;
 
-    repl)
+    w)
       _arguments -C $help
       ;;
 
-    switch)
+    repl)
       _arguments -C $help
       ;;
 
