@@ -87,7 +87,7 @@ object App {
       .map { case (value, index) =>
         stonks(StonksProps("red"))(
           s"stonks $value",
-          onClick := (handleClicked.unsafeRunSync _),
+          onClick := handleClicked.unsafeRunSync _,
           key := index.toString
         )
       }
