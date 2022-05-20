@@ -132,7 +132,7 @@ val root =
         "org.http4s" %% "http4s-blaze-client" % "0.23.11",
         "org.http4s" %% "http4s-circe" % "0.23.11",
         "ch.qos.logback" % "logback-classic" % "1.2.11",
-        "io.circe" %% "circe-parser" % "0.14.1",
+        "io.circe" %% "circe-parser" % "0.14.2",
         "dev.optics" %% "monocle-core" % "3.1.0"
       ),
       buildInfoKeys := Seq[BuildInfoKey](version),
