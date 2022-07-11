@@ -126,7 +126,7 @@ val root =
       libraryDependencies ++= Seq(
         "com.disneystreaming.smithy4s" %% "smithy4s-http4s" % smithy4sVersion.value,
         "org.typelevel" %% "cats-mtl" % "1.2.1",
-        "com.monovore" %% "decline-effect" % "2.2.0",
+        "com.monovore" %% "decline-effect" % "2.3.0",
         "org.http4s" %% "http4s-dsl" % "0.23.11",
         "org.http4s" %% "http4s-blaze-server" % "0.23.11",
         "org.http4s" %% "http4s-blaze-client" % "0.23.11",
