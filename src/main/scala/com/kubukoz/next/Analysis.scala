@@ -2,7 +2,7 @@ package com.kubukoz.next
 
 import com.kubukoz.next.spotify.AudioAnalysis
 import com.kubukoz.next.spotify.SpotifyApi
-import com.kubukoz.next.api.spotify.TrackUri
+import com.kubukoz.next.client.spotify.TrackUri
 import cats.effect.kernel.Ref
 import cats.FlatMap
 import cats.implicits.*

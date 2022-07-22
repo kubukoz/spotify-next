@@ -7,15 +7,21 @@ import cats.implicits.*
 import com.kubukoz.next.Spotify.DeviceInfo
 import com.kubukoz.next.Spotify.SonosInfo
 import com.kubukoz.next.api.sonos
-import com.kubukoz.next.api.spotify.Item
-import com.kubukoz.next.api.spotify.Player
-import com.kubukoz.next.api.spotify.PlayerContext
-import com.kubukoz.next.api.spotify.TrackUri
+import com.kubukoz.next.client.spotify.Item
+import com.kubukoz.next.client.spotify.Player
+import com.kubukoz.next.client.spotify.PlayerContext
+import com.kubukoz.next.client.spotify.TrackUri
 import io.circe.syntax.*
 import scala.concurrent.duration.*
 import cats.data.NonEmptyList
 
+trait SpotifyChoice[F[_]] {
+  def choose: F[SpotifyChoice.Choice]
+}
+
 object SpotifyChoice {
+
+  def apply[F[_]](implicit F: SpotifyChoice[F]): SpotifyChoice[F] = F
 
   enum Choice {
     case Sonos(room: SonosInfo.Group)
@@ -34,7 +40,7 @@ object SpotifyChoice {
     * The result returned can differ between calls to the inner F, but will share state with all calls of the inner F inside the same outer
     * F.
     */
-  def choose[F[_]: Concurrent: UserOutput: DeviceInfo: SonosInfo]: F[F[Choice]] =
+  def choose[F[_]: Concurrent: UserOutput: DeviceInfo: SonosInfo]: F[SpotifyChoice[F]] =
     Ref[F].of(false).flatMap { isRestrictedRef =>
       Ref[F].of(Option.empty[SonosInfo.Group]).map { lastSonosRoom =>
         val spotifyInstanceF = lastSonosRoom.set(None).as(Choice.Spotify)
@@ -70,7 +76,7 @@ object SpotifyChoice {
             else UserMessage.DirectControl
           }
 
-        DeviceInfo[F]
+        val doChoose = DeviceInfo[F]
           .isRestricted
           .flatTap { newValue =>
             isRestrictedRef.getAndSet(newValue).flatMap { oldValue =>
@@ -81,6 +87,9 @@ object SpotifyChoice {
             ifTrue = OptionT(sonosInstanceF).getOrElseF(spotifyInstanceF),
             ifFalse = spotifyInstanceF
           )
+
+        new:
+          val choose: F[Choice] = doChoose
       }
     }
 

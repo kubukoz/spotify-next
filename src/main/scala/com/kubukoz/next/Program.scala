@@ -100,39 +100,27 @@ object Program {
         given SpotifyApi[F] = spotifyApi
         given SonosApi[F] = sonosApi
 
-        given Spotify.DeviceInfo[F] = Spotify.DeviceInfo.instance(spotifyClient)
-        given Spotify.SonosInfo[F] = Spotify.SonosInfo.instance[F]
-
-        given Spotify.Switch[F] = Spotify.Switch.suspend {
-          DeviceInfo[F]
-            .isRestricted
-            .map {
-              case true  => Spotify.Switch.spotifyInstance[F]
-              case false => Spotify.Switch.sonosInstance[F]
-            }
-        }
-
-        val playbackF = SpotifyChoice
-          .choose[F]
-          .map { choice =>
-            Spotify
-              .Playback
-              .suspend {
-                choice.map(
-                  _.fold(
-                    sonos = room => Spotify.Playback.sonosInstance[F](room),
-                    spotify = Spotify.Playback.spotifyInstance[F]
-                  )
-                )
-              }
-
-          }
-
-        for {
-          given Spotify.Playback[F] <- playbackF
-          given Analysis[F]         <- Analysis.cached(Analysis.instance[F])
-        } yield Spotify.instance[F](spotifyClient)
+        makeSpotifyInternal[F]
       }
     }
+
+  def makeSpotifyInternal[F[_]: UserOutput: Concurrent: SpotifyApi: SonosApi]: F[Spotify[F]] = {
+    given Spotify.DeviceInfo[F] = Spotify.DeviceInfo.instance
+    given Spotify.SonosInfo[F] = Spotify.SonosInfo.instance[F]
+
+    given Spotify.Switch[F] = Spotify.Switch.suspend {
+      DeviceInfo[F]
+        .isRestricted
+        .map {
+          case true  => Spotify.Switch.spotifyInstance[F]
+          case false => Spotify.Switch.sonosInstance[F]
+        }
+    }
+
+    for {
+      given Spotify.Playback[F] <- SpotifyChoice.choose[F].map(Spotify.Playback.makeFromChoice[F])
+      given Analysis[F]         <- Analysis.cached(Analysis.instance[F])
+    } yield Spotify.instance[F]
+  }
 
 }

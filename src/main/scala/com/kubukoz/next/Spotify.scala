@@ -8,10 +8,10 @@ import cats.effect.Concurrent
 import cats.effect.Ref
 import cats.implicits.*
 import com.kubukoz.next.api.sonos
-import com.kubukoz.next.api.spotify.Item
-import com.kubukoz.next.api.spotify.Player
-import com.kubukoz.next.api.spotify.PlayerContext
-import com.kubukoz.next.api.spotify.TrackUri
+import com.kubukoz.next.client.spotify.Item
+import com.kubukoz.next.client.spotify.Player
+import com.kubukoz.next.client.spotify.PlayerContext
+import com.kubukoz.next.client.spotify.TrackUri
 import com.kubukoz.next.sonos.GroupId
 import com.kubukoz.next.sonos.Milliseconds
 import com.kubukoz.next.sonos.SeekInputBody
@@ -56,27 +56,29 @@ object Spotify {
 
   import Error.*
 
-  def instance[F[_]: Playback: UserOutput: Concurrent: SpotifyApi: Switch: Analysis](client: Client[F]): Spotify[F] =
+  def instance[F[_]: Playback: UserOutput: Concurrent: SpotifyApi: Switch: Analysis]: Spotify[F] =
     new Spotify[F] {
 
-      private def requirePlaylist[A](player: Player[Option[PlayerContext], A]): F[Player[PlayerContext.playlist, A]] =
+      private def requirePlaylist[A](player: Player[Option[PlayerContext], A]): F[Player[PlayerContext.Playlist, A]] =
         player
           .unwrapContext
           .liftTo[F](NoContext)
-          .flatMap(_.narrowContext[PlayerContext.playlist].liftTo[F])
+          .flatMap(_.narrowContext[PlayerContext.Playlist].liftTo[F])
 
-      private def requireTrack[A](player: Player[A, Option[Item]]): F[Player[A, Item.track]] =
+      private def requireTrack[A](player: Player[A, Option[Item]]): F[Player[A, Item.Track]] =
         player
           .unwrapItem
           .liftTo[F](NoItem)
-          .flatMap(_.narrowItem[Item.track].liftTo[F])
+          .flatMap(_.narrowItem[Item.Track].liftTo[F])
 
       val skipTrack: F[Unit] =
         UserOutput[F].print(UserMessage.SwitchingToNext) *>
           Playback[F].nextTrack
 
+      private val getPlayer = SpotifyApi[F].getPlayer().map(Player.fromApiPlayer)
+
       val dropTrack: F[Unit] =
-        methods.player[F](client).flatMap(requirePlaylist(_)).flatMap(requireTrack).flatMap { player =>
+        getPlayer.flatMap(requirePlaylist(_)).flatMap(requireTrack).flatMap { player =>
           val trackUri = player.item.uri
           val playlistId = player.context.uri.playlist
 
@@ -86,32 +88,30 @@ object Spotify {
         }
 
       def fastForward(percentage: Int): F[Unit] =
-        methods
-          .player[F](client)
+        getPlayer
           .flatMap(requireTrack)
           .fproduct { player =>
-            val currentLength = player.progress_ms
-            val totalLength = player.item.duration_ms
-            ((currentLength * 100 / totalLength) + percentage)
+            val currentLength = player.progress
+            val totalLength = player.item.duration
+            ((currentLength * 100 / totalLength) + percentage).toInt
           }
           .flatMap {
             case (_, desiredProgressPercent) if desiredProgressPercent >= 100 =>
               UserOutput[F].print(UserMessage.TooCloseToEnd) *>
-                Playback[F].seek(0)
+                Playback[F].seek(0.millis)
 
             case (player, desiredProgressPercent) =>
-              val desiredProgressMs = desiredProgressPercent * player.item.duration_ms / 100
+              val desiredProgress = desiredProgressPercent * player.item.duration / 100
               UserOutput[F].print(UserMessage.Seeking(desiredProgressPercent)) *>
-                Playback[F].seek(desiredProgressMs)
+                Playback[F].seek(desiredProgress)
           }
 
-      def jumpSection: F[Unit] = methods
-        .player[F](client)
+      def jumpSection: F[Unit] = getPlayer
         .flatMap(requireTrack)
         .flatMap { player =>
           val track = player.item
 
-          val currentLength = player.progress_ms.millis
+          val currentLength = player.progress
 
           Analysis[F]
             .getAnalysis(track.uri)
@@ -121,7 +121,7 @@ object Spotify {
                 .zipWithIndex
                 .find { case (section, _) => section.startSeconds.seconds > currentLength }
                 .traverse { case (section, index) =>
-                  val percentage = (section.startSeconds.seconds * 100 / track.duration_ms.millis).toInt
+                  val percentage = (section.startSeconds.seconds * 100 / track.duration).toInt
 
                   UserOutput[F].print(
                     UserMessage.Jumping(
@@ -130,10 +130,10 @@ object Spotify {
                       percentTotal = percentage
                     )
                   ) *>
-                    Playback[F].seek(section.startSeconds.seconds.toMillis.toInt)
+                    Playback[F].seek(section.startSeconds.seconds)
                 }
                 .pipe(OptionT(_))
-                .getOrElseF(UserOutput[F].print(UserMessage.TooCloseToEnd) *> Playback[F].seek(0))
+                .getOrElseF(UserOutput[F].print(UserMessage.TooCloseToEnd) *> Playback[F].seek(0.millis))
             }
         }
         .void
@@ -144,7 +144,7 @@ object Spotify {
 
   trait Playback[F[_]] {
     def nextTrack: F[Unit]
-    def seek(ms: Int): F[Unit]
+    def seek(progress: FiniteDuration): F[Unit]
   }
 
   object Playback {
@@ -152,19 +152,35 @@ object Spotify {
 
     def spotifyInstance[F[_]: SpotifyApi]: Playback[F] = new:
       val nextTrack: F[Unit] = SpotifyApi[F].nextTrack()
-      def seek(ms: Int): F[Unit] = SpotifyApi[F].seek(ms)
+      def seek(progress: FiniteDuration): F[Unit] = SpotifyApi[F].seek(progress.toMillis.toInt)
 
     def sonosInstance[F[_]: SonosApi](group: SonosInfo.Group): Playback[F] = new:
 
       val nextTrack: F[Unit] =
         SonosApi[F].nextTrack(GroupId(group.id))
 
-      def seek(ms: Int): F[Unit] =
-        SonosApi[F].seek(GroupId(group.id), SeekInputBody(Milliseconds(ms)))
+      def seek(progress: FiniteDuration): F[Unit] =
+        SonosApi[F].seek(GroupId(group.id), SeekInputBody(Milliseconds(progress.toMillis.toInt)))
 
     def suspend[F[_]: FlatMap](choose: F[Playback[F]]): Playback[F] = new:
       def nextTrack: F[Unit] = choose.flatMap(_.nextTrack)
-      def seek(ms: Int): F[Unit] = choose.flatMap(_.seek(ms))
+      def seek(progress: FiniteDuration): F[Unit] = choose.flatMap(_.seek(progress))
+
+    def makeFromChoice[F[_]: SpotifyApi: SonosApi: FlatMap](
+      choice: SpotifyChoice[F]
+    ): Playback[F] =
+      Spotify
+        .Playback
+        .suspend {
+          choice
+            .choose
+            .map(
+              _.fold(
+                sonos = room => Spotify.Playback.sonosInstance[F](room),
+                spotify = Spotify.Playback.spotifyInstance[F]
+              )
+            )
+        }
 
   }
 
@@ -186,9 +202,9 @@ object Spotify {
               UserOutput[F].print(UserMessage.NoDevices)
 
             case Some(devices) =>
-              val device = devices.head
+              val device = devices.find(_.id.isDefined).getOrElse(sys.error("no valid device found"))
               UserOutput[F].print(UserMessage.SwitchingPlayback(PlaybackTarget.Spotify(device))) *>
-                SpotifyApi[F].transferPlayback(List(device.id))
+                SpotifyApi[F].transferPlayback(List(device.id.getOrElse(sys.error("impossible"))))
           }
 
     def sonosInstance[F[_]: SonosApi: SonosInfo: UserOutput: FlatMap]: Switch[F] = new:
@@ -215,8 +231,8 @@ object Spotify {
   object DeviceInfo {
     def apply[F[_]](using F: DeviceInfo[F]): DeviceInfo[F] = F
 
-    def instance[F[_]: Concurrent](client: Client[F]): DeviceInfo[F] = new DeviceInfo[F] {
-      val isRestricted: F[Boolean] = methods.player[F](client).map(_.device.is_restricted)
+    def instance[F[_]: Concurrent: SpotifyApi]: DeviceInfo[F] = new DeviceInfo[F] {
+      val isRestricted: F[Boolean] = SpotifyApi[F].getPlayer().map(_.device.isRestricted)
     }
 
   }
@@ -244,16 +260,6 @@ object Spotify {
             .toList
             .map(_.toNel)
 
-      }
-
-  }
-
-  private object methods {
-
-    def player[F[_]: Concurrent](client: Client[F]): F[Player[Option[PlayerContext], Option[Item]]] =
-      client.expectOr(com.kubukoz.next.api.spotify.baseUri / "v1" / "me" / "player") {
-        case response if response.status === Status.NoContent => NotPlaying.pure[F].widen
-        case response                                         => InvalidStatus(response.status).pure[F].widen
       }
 
   }

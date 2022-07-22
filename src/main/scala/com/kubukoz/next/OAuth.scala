@@ -1,8 +1,8 @@
 package com.kubukoz.next
 
 import cats.implicits.*
-import com.kubukoz.next.api.spotify.RefreshedTokenResponse
-import com.kubukoz.next.api.spotify.TokenResponse
+import com.kubukoz.next.client.spotify.RefreshedTokenResponse
+import com.kubukoz.next.client.spotify.TokenResponse
 import com.kubukoz.next.util.Config
 import com.kubukoz.next.util.Config.RefreshToken
 import com.kubukoz.next.util.Config.Token
