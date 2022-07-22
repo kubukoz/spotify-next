@@ -65,14 +65,14 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
       given Config.Ask[F] = ConfigLoader[F].configAsk
       _                     <- dummy
       // obviously quite a lot of duplication here...
-      spotifyLogin = Login.blaze[F](OAuth.fromKernel[F](rawClient, OAuth.spotify))
+      spotifyLogin = Login.ember[F](OAuth.fromKernel[F](rawClient, OAuth.spotify))
       spotifyLoginProcess = LoginProcess
                               .instance[F](
                                 spotifyLogin,
                                 Config.spotifyTokensLens
                               )
                               .orRefresh(RefreshTokenProcess.instance("Spotify", spotifyLogin, Config.spotifyTokensLens))
-      sonosLogin = Login.blaze[F](OAuth.fromKernel[F](rawClient, OAuth.sonos))
+      sonosLogin = Login.ember[F](OAuth.fromKernel[F](rawClient, OAuth.sonos))
       sonosLoginProcess = LoginProcess
                             .instance[F](
                               sonosLogin,

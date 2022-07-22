@@ -15,7 +15,6 @@ import com.kubukoz.next.api.sonos
 import fs2.io.file.Files
 import monocle.Getter
 import org.http4s.client.Client
-import org.http4s.blaze.client.BlazeClientBuilder
 import org.http4s.client.middleware.FollowRedirect
 import org.http4s.client.middleware.RequestLogger
 import org.http4s.client.middleware.ResponseLogger
@@ -38,6 +37,7 @@ import org.http4s.headers.`Content-Type`
 import com.kubukoz.next.Spotify.SonosInfo.Group
 import com.kubukoz.next.Spotify.SonosInfo
 import com.kubukoz.next.Spotify.DeviceInfo
+import org.http4s.ember.client.EmberClientBuilder
 
 object Program {
 
@@ -73,8 +73,9 @@ object Program {
     }
 
   def makeBasicClient[F[_]: Async]: Resource[F, Client[F]] =
-    BlazeClientBuilder[F]
-      .resource
+    EmberClientBuilder
+      .default[F]
+      .build
       .map(FollowRedirect(maxRedirects = 5))
       .map(RequestLogger(logHeaders = true, logBody = true))
       .map(ResponseLogger(logHeaders = true, logBody = true))

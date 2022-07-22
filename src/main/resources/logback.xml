@@ -13,7 +13,5 @@
         <appender-ref ref="ASYNC"/>
     </root>
 
-    <logger name="org.http4s.server.blaze.Http1ServerStage" level="OFF"/>
-    <logger name="org.http4s.blaze.channel.nio1.NIO1HeadStage" level="OFF"/>
 
 </configuration>

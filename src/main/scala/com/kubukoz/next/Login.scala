@@ -10,8 +10,9 @@ import com.kubukoz.next.util.Config.Token
 import org.http4s.HttpRoutes
 import org.http4s.dsl.Http4sDsl
 import org.http4s.implicits.*
-import org.http4s.blaze.server.BlazeServerBuilder
 import cats.MonadThrow
+import com.comcast.ip4s.*
+import org.http4s.ember.server.EmberServerBuilder
 
 trait Login[F[_]] {
   def server: F[OAuth.Tokens]
@@ -21,7 +22,7 @@ trait Login[F[_]] {
 object Login {
   def apply[F[_]](using F: Login[F]): Login[F] = F
 
-  def blaze[F[_]: UserOutput: Config.Ask: Async](
+  def ember[F[_]: UserOutput: Config.Ask: Async](
     oauth: OAuth[F]
   ): Login[F] =
     new Login[F] {
@@ -29,10 +30,11 @@ object Login {
       def refreshToken(token: RefreshToken): F[Token] = oauth.refreshToken(token)
 
       def mkServer(config: Config, route: HttpRoutes[F]) =
-        BlazeServerBuilder[F]
+        EmberServerBuilder
+          .default[F]
           .withHttpApp(route.orNotFound)
-          .bindHttp(port = config.loginPort)
-          .resource
+          .withPort(config.loginPort)
+          .build
 
       val server: F[OAuth.Tokens] =
         (Config.ask[F], Deferred[F, OAuth.Tokens], Deferred[F, Unit])

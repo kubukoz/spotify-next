@@ -86,6 +86,8 @@ object spotify {
       contextLens[Ctx2]
         .modifyF[F](ev.apply)(this)
 
+    import monocle.syntax.all.*
+
     def unwrapItem[F[_], Item2](
       using ev: _Item <:< F[Item2],
       fFunctor: Functor[F]
