@@ -111,10 +111,10 @@ object Program {
             }
         }
 
-        SpotifyChoice
+        val playbackF = SpotifyChoice
           .choose[F]
           .map { choice =>
-            given Spotify.Playback[F] = Spotify
+            Spotify
               .Playback
               .suspend {
                 choice.map(
@@ -125,8 +125,12 @@ object Program {
                 )
               }
 
-            Spotify.instance[F](spotifyClient)
           }
+
+        for {
+          given Spotify.Playback[F] <- playbackF
+          given Analysis[F]         <- Analysis.cached(Analysis.instance[F])
+        } yield Spotify.instance[F](spotifyClient)
       }
     }
 

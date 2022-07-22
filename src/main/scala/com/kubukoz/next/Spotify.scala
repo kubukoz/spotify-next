@@ -56,7 +56,7 @@ object Spotify {
 
   import Error.*
 
-  def instance[F[_]: Playback: UserOutput: Concurrent: SpotifyApi: Switch](client: Client[F]): Spotify[F] =
+  def instance[F[_]: Playback: UserOutput: Concurrent: SpotifyApi: Switch: Analysis](client: Client[F]): Spotify[F] =
     new Spotify[F] {
 
       private def requirePlaylist[A](player: Player[Option[PlayerContext], A]): F[Player[PlayerContext.playlist, A]] =
@@ -113,8 +113,8 @@ object Spotify {
 
           val currentLength = player.progress_ms.millis
 
-          SpotifyApi[F]
-            .getAudioAnalysis(track.uri.id)
+          Analysis[F]
+            .getAnalysis(track.uri)
             .flatMap { analysis =>
               analysis
                 .sections
