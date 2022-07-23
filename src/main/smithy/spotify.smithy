@@ -1,11 +1,13 @@
 namespace com.kubukoz.next.spotify
 
 use smithy4s.api#simpleRestJson
+use com.kubukoz.next.sonos#GetGroupsOutput
+use smithy4s.api#discriminated
 
 @simpleRestJson
 service SpotifyApi {
   version: "0.0.0",
-  operations: [NextTrack, Seek, RemoveTrack, GetAudioAnalysis, TransferPlayback, GetAvailableDevices]
+  operations: [NextTrack, Seek, RemoveTrack, GetAudioAnalysis, TransferPlayback, GetAvailableDevices, GetPlayer]
 }
 
 @http(method: "PUT", uri: "/v1/me/player")
@@ -42,10 +44,12 @@ list Devices {
 }
 
 structure Device {
-  @required
   id: DeviceId,
   @required
-  name: String
+  name: String,
+  @jsonName("is_restricted")
+  @required
+  isRestricted: Boolean,
 }
 
 @http(method: "POST", uri: "/v1/me/player/next")
@@ -113,4 +117,61 @@ structure Section {
   @required
   @jsonName("start")
   startSeconds: Double
+}
+
+@http(method: "GET", uri: "/v1/me/player")
+@readonly
+operation GetPlayer {
+  output: GetPlayerOutput
+}
+
+structure GetPlayerOutput {
+  context: PlayerContext,
+  item: PlayerItem,
+  @required
+  @jsonName("progress_ms")
+  progressMillis: Integer,
+  @required
+  device: Device
+}
+
+@discriminated("type")
+union PlayerContext {
+  playlist: PlaylistContext,
+  album: AlbumContext,
+  artist: ArtistContext,
+}
+
+structure PlaylistContext {
+  @required
+  href: String,
+  @required
+  uri: String
+}
+
+structure AlbumContext {
+  @required
+  href: String,
+}
+
+structure ArtistContext {
+  @required
+  href: String,
+}
+
+@discriminated("type")
+union PlayerItem {
+  track: TrackItem,
+}
+
+structure TrackItem {
+  @required
+  uri: String,
+
+  @required
+  @jsonName("duration_ms")
+  durationMs: Integer,
+
+  @required
+  name: String
 }

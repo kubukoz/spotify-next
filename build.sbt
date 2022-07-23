@@ -15,7 +15,7 @@ inThisBuild(
 )
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
-(ThisBuild / scalaVersion) := "3.1.1"
+(ThisBuild / scalaVersion) := "3.1.2"
 
 ThisBuild / githubWorkflowJavaVersions := Seq(JavaSpec.graalvm("21.3.0", "11"))
 ThisBuild / githubWorkflowTargetTags := Seq("v*")
@@ -50,7 +50,7 @@ def crossPlugin(x: sbt.librarymanagement.ModuleID) = compilerPlugin(x.cross(Cros
 
 val addCompilerPlugins = libraryDependencies ++= {
   List(
-    crossPlugin("org.polyvariant" % "better-tostring" % "0.3.14")
+    crossPlugin("org.polyvariant" % "better-tostring" % "0.3.15")
   )
 }
 
@@ -64,7 +64,7 @@ val commonSettings = Seq(
     // "2000"
   ),
   libraryDependencies ++= Seq(
-    "org.typelevel" %%% "cats-effect" % "3.3.9",
+    "org.typelevel" %%% "cats-effect" % "3.3.14",
     "org.scalameta" %%% "munit" % "0.7.29" % Test,
     "org.typelevel" %% "munit-cats-effect-3" % "1.0.7" % Test
   ),
@@ -125,14 +125,14 @@ val root =
     .settings(
       libraryDependencies ++= Seq(
         "com.disneystreaming.smithy4s" %% "smithy4s-http4s" % smithy4sVersion.value,
-        "org.typelevel" %% "cats-mtl" % "1.2.1",
-        "com.monovore" %% "decline-effect" % "2.2.0",
-        "org.http4s" %% "http4s-dsl" % "0.23.11",
-        "org.http4s" %% "http4s-blaze-server" % "0.23.11",
-        "org.http4s" %% "http4s-blaze-client" % "0.23.11",
-        "org.http4s" %% "http4s-circe" % "0.23.11",
+        "org.typelevel" %% "cats-mtl" % "1.3.0",
+        "com.monovore" %% "decline-effect" % "2.3.0",
+        "org.http4s" %% "http4s-dsl" % "0.23.13",
+        "org.http4s" %% "http4s-ember-server" % "0.23.12",
+        "org.http4s" %% "http4s-ember-client" % "0.23.12",
+        "org.http4s" %% "http4s-circe" % "0.23.13",
         "ch.qos.logback" % "logback-classic" % "1.2.11",
-        "io.circe" %% "circe-parser" % "0.14.1",
+        "io.circe" %% "circe-parser" % "0.14.2",
         "dev.optics" %% "monocle-core" % "3.1.0"
       ),
       buildInfoKeys := Seq[BuildInfoKey](version),

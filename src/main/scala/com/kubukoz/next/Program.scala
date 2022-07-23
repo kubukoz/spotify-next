@@ -15,7 +15,6 @@ import com.kubukoz.next.api.sonos
 import fs2.io.file.Files
 import monocle.Getter
 import org.http4s.client.Client
-import org.http4s.blaze.client.BlazeClientBuilder
 import org.http4s.client.middleware.FollowRedirect
 import org.http4s.client.middleware.RequestLogger
 import org.http4s.client.middleware.ResponseLogger
@@ -38,6 +37,7 @@ import org.http4s.headers.`Content-Type`
 import com.kubukoz.next.Spotify.SonosInfo.Group
 import com.kubukoz.next.Spotify.SonosInfo
 import com.kubukoz.next.Spotify.DeviceInfo
+import org.http4s.ember.client.EmberClientBuilder
 
 object Program {
 
@@ -73,8 +73,9 @@ object Program {
     }
 
   def makeBasicClient[F[_]: Async]: Resource[F, Client[F]] =
-    BlazeClientBuilder[F]
-      .resource
+    EmberClientBuilder
+      .default[F]
+      .build
       .map(FollowRedirect(maxRedirects = 5))
       .map(RequestLogger(logHeaders = true, logBody = true))
       .map(ResponseLogger(logHeaders = true, logBody = true))
@@ -99,35 +100,27 @@ object Program {
         given SpotifyApi[F] = spotifyApi
         given SonosApi[F] = sonosApi
 
-        given Spotify.DeviceInfo[F] = Spotify.DeviceInfo.instance(spotifyClient)
-        given Spotify.SonosInfo[F] = Spotify.SonosInfo.instance[F]
-
-        given Spotify.Switch[F] = Spotify.Switch.suspend {
-          DeviceInfo[F]
-            .isRestricted
-            .map {
-              case true  => Spotify.Switch.spotifyInstance[F]
-              case false => Spotify.Switch.sonosInstance[F]
-            }
-        }
-
-        SpotifyChoice
-          .choose[F]
-          .map { choice =>
-            given Spotify.Playback[F] = Spotify
-              .Playback
-              .suspend {
-                choice.map(
-                  _.fold(
-                    sonos = room => Spotify.Playback.sonosInstance[F](room),
-                    spotify = Spotify.Playback.spotifyInstance[F]
-                  )
-                )
-              }
-
-            Spotify.instance[F](spotifyClient)
-          }
+        makeSpotifyInternal[F]
       }
     }
+
+  def makeSpotifyInternal[F[_]: UserOutput: Concurrent: SpotifyApi: SonosApi]: F[Spotify[F]] = {
+    given Spotify.DeviceInfo[F] = Spotify.DeviceInfo.instance
+    given Spotify.SonosInfo[F] = Spotify.SonosInfo.instance[F]
+
+    given Spotify.Switch[F] = Spotify.Switch.suspend {
+      DeviceInfo[F]
+        .isRestricted
+        .map {
+          case true  => Spotify.Switch.spotifyInstance[F]
+          case false => Spotify.Switch.sonosInstance[F]
+        }
+    }
+
+    for {
+      given Spotify.Playback[F] <- SpotifyChoice.choose[F].map(Spotify.Playback.makeFromChoice[F])
+      given Analysis[F]         <- Analysis.cached(Analysis.instance[F])
+    } yield Spotify.instance[F]
+  }
 
 }

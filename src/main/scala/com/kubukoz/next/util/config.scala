@@ -5,13 +5,15 @@ import io.circe.Decoder
 import io.circe.Encoder
 import cats.implicits.*
 import monocle.Lens
+import com.comcast.ip4s.*
+import io.circe.syntax.*
 
 final case class Config(
   clientId: String,
   clientSecret: String,
   sonosClientId: String,
   sonosClientSecret: String,
-  loginPort: Int,
+  loginPort: Port,
   token: Option[Config.Token],
   refreshToken: Option[Config.RefreshToken],
   sonosToken: Option[Config.Token],
@@ -21,7 +23,9 @@ final case class Config(
 }
 
 object Config extends AskFor[Config] {
-  val defaultPort: Int = 4321
+  val defaultPort: Port = port"4321"
+
+  given Codec[Port] = Codec.from(Decoder[Int].emap(Port.fromInt(_).toRight("Couldn't parse port")), _.value.asJson)
 
   val spotifyTokensLens: Lens[Config, (Option[Token], Option[RefreshToken])] =
     Lens[Config, (Option[Token], Option[RefreshToken])](cfg => (cfg.token, cfg.refreshToken)) { case (token, refreshToken) =>

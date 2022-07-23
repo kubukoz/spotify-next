@@ -28,7 +28,7 @@ class SpotifyChoiceTests extends munit.CatsEffectSuite {
       def isRestricted: IO[Boolean] = IO.pure(true)
     }
 
-    SpotifyChoice.choose[IO].flatten.map {
+    SpotifyChoice.choose[IO].flatMap(_.choose).map {
       assertEquals(_, Sonos(home))
     }
   }
@@ -37,7 +37,7 @@ class SpotifyChoiceTests extends munit.CatsEffectSuite {
       def isRestricted: IO[Boolean] = IO.pure(false)
     }
 
-    SpotifyChoice.choose[IO].flatten.map {
+    SpotifyChoice.choose[IO].flatMap(_.choose).map {
       assertEquals(_, Spotify)
     }
   }
@@ -48,8 +48,8 @@ class SpotifyChoiceTests extends munit.CatsEffectSuite {
 
       SpotifyChoice
         .choose[IO]
-        .flatMap { choose =>
-          choose *> available.set(true) *> choose
+        .flatMap { choice =>
+          choice.choose *> available.set(true) *> choice.choose
         }
         .map {
           assertEquals(_, Spotify)
@@ -63,8 +63,8 @@ class SpotifyChoiceTests extends munit.CatsEffectSuite {
 
       SpotifyChoice
         .choose[IO]
-        .flatMap { choose =>
-          choose *> available.set(false) *> choose
+        .flatMap { choice =>
+          choice.choose *> available.set(false) *> choice.choose
         }
         .map {
           assertEquals(_, Sonos(home))
