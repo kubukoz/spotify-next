@@ -15,7 +15,7 @@ inThisBuild(
 )
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
-(ThisBuild / scalaVersion) := "3.1.2"
+(ThisBuild / scalaVersion) := "3.1.3"
 
 ThisBuild / githubWorkflowJavaVersions := Seq(JavaSpec.graalvm("21.3.0", "11"))
 ThisBuild / githubWorkflowTargetTags := Seq("v*")
