@@ -4,9 +4,9 @@ import cats.Show
 import cats.effect.std
 import cats.implicits.*
 import cats.~>
-import com.kubukoz.next.api.spotify.Item
-import com.kubukoz.next.api.spotify.Player
-import com.kubukoz.next.api.spotify.PlayerContext
+import com.kubukoz.next.client.spotify.Item
+import com.kubukoz.next.client.spotify.Player
+import com.kubukoz.next.client.spotify.PlayerContext
 import org.http4s.Uri
 import fs2.io.file.Path
 import cats.data.NonEmptyList
@@ -23,7 +23,7 @@ enum UserMessage {
 
   // playback
   case SwitchingToNext
-  case RemovingCurrentTrack(player: Player[PlayerContext.playlist, Item.track])
+  case RemovingCurrentTrack(player: Player[PlayerContext.Playlist, Item.Track])
   case NoDevices
   case TooCloseToEnd
   case SwitchingPlayback(target: PlaybackTarget)
@@ -74,7 +74,7 @@ object UserOutput {
       case NoDevices                                           => "No Spotify devices found, can't switch playback"
       case SwitchingPlayback(target)                           =>
         val targetString = target match
-          case PlaybackTarget.Spotify(device) => show"Spotify (${device.name}, ID: ${device.id.value})"
+          case PlaybackTarget.Spotify(device) => show"Spotify (${device.name}, ID: ${device.id.map(_.value)})"
           case PlaybackTarget.Sonos(group)    => show"Sonos (${group.name}, ID: ${group.id})"
 
         show"Switching playback to $targetString"
