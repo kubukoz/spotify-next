@@ -92,7 +92,7 @@ object Spotify {
           .fproduct { player =>
             val currentLength = player.progress_ms
             val totalLength = player.item.duration_ms
-            (currentLength * 100 / totalLength) + percentage
+            ((currentLength * 100 / totalLength) + percentage)
           }
           .flatMap {
             case (_, desiredProgressPercent) if desiredProgressPercent >= 100 =>
