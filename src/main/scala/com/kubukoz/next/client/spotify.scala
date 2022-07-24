@@ -34,8 +34,10 @@ object spotify {
   }
 
   enum Item {
-    case Track(uri: TrackUri, duration: FiniteDuration, name: String)
+    case Track(uri: TrackUri, duration: FiniteDuration, name: String, artists: List[Artist])
   }
+
+  final case class Artist(name: String)
 
   object Item {
 
@@ -44,7 +46,8 @@ object spotify {
         Item.Track(
           TrackUri.decode(track.uri).fold(s => throw new Exception(s), identity),
           track.durationMs.millis,
-          track.name
+          track.name,
+          artists = track.artists.map(a => Artist(a.name))
         )
     }
 

@@ -58,6 +58,13 @@ object Spotify {
 
   def instance[F[_]: Playback: UserOutput: Concurrent: SpotifyApi: Switch: Analysis]: Spotify[F] =
     new Spotify[F] {
+      private val getPlayer = SpotifyApi[F].getPlayer().map(Player.fromApiPlayer)
+
+      private val showNowPlaying = getPlayer.flatMap { player =>
+        player.item.traverse_ { case track: Item.Track =>
+          UserOutput[F].print(UserMessage.NowPlaying(track))
+        }
+      }
 
       private def requirePlaylist[A](player: Player[Option[PlayerContext], A]): F[Player[PlayerContext.Playlist, A]] =
         player
@@ -72,10 +79,9 @@ object Spotify {
           .flatMap(_.narrowItem[Item.Track].liftTo[F])
 
       val skipTrack: F[Unit] =
-        UserOutput[F].print(UserMessage.SwitchingToNext) *>
-          Playback[F].nextTrack
-
-      private val getPlayer = SpotifyApi[F].getPlayer().map(Player.fromApiPlayer)
+        UserOutput[F].print(UserMessage.SwitchingToNext)
+          *> Playback[F].nextTrack
+          <* showNowPlaying
 
       val dropTrack: F[Unit] =
         getPlayer.flatMap(requirePlaylist(_)).flatMap(requireTrack).flatMap { player =>
@@ -85,7 +91,7 @@ object Spotify {
           UserOutput[F].print(UserMessage.RemovingCurrentTrack(player)) *>
             skipTrack *>
             SpotifyApi[F].removeTrack(playlistId, List(Track(trackUri.toFullUri)))
-        }
+        } <* showNowPlaying
 
       def fastForward(percentage: Int): F[Unit] =
         getPlayer
@@ -119,7 +125,7 @@ object Spotify {
               analysis
                 .sections
                 .zipWithIndex
-                .find { case (section, _) => section.startSeconds.seconds > currentLength }
+                .find { case (section, _) => section.startSeconds.seconds > (currentLength + 1.second) }
                 .traverse { case (section, index) =>
                   val percentage = (section.startSeconds.seconds * 100 / track.duration).toInt
 

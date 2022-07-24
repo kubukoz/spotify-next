@@ -173,5 +173,17 @@ structure TrackItem {
   durationMs: Integer,
 
   @required
+  name: String,
+
+  @required
+  artists: Artists
+}
+
+list Artists {
+  member: Artist
+}
+
+structure Artist {
+  @required
   name: String
 }

@@ -20,6 +20,7 @@ enum UserMessage {
   case SavedConfig(path: Path)
   case SavedToken
   case RefreshedToken(kind: String)
+  case NowPlaying(track: Item.Track)
 
   // playback
   case SwitchingToNext
@@ -63,6 +64,9 @@ object UserOutput {
       case SavedToken                           => "Saved token to file"
       case RefreshedToken(kind: String)         => s"Refreshed $kind token"
       case SwitchingToNext                      => "Switching to next track"
+      case NowPlaying(track)                    => s"""Now playing: ${track.name}
+                                                 |by ${track.artists.mkString(", ")}
+                                                 |URI: ${track.uri.toFullUri}""".stripMargin
       case RemovingCurrentTrack(player)         =>
         show"""Removing track "${player.item.name}" (${player.item.uri.toFullUri}) from playlist ${player.context.uri.playlist}"""
       case TooCloseToEnd                        => "Too close to song's ending, rewinding to beginning"
