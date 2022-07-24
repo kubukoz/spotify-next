@@ -65,7 +65,7 @@ object UserOutput {
       case RefreshedToken(kind: String)         => s"Refreshed $kind token"
       case SwitchingToNext                      => "Switching to next track"
       case NowPlaying(track)                    => s"""Now playing: ${track.name}
-                                                 |by ${track.artists.mkString(", ")}
+                                                 |by ${track.artists.map(_.name).mkString(", ")}
                                                  |URI: ${track.uri.toFullUri}""".stripMargin
       case RemovingCurrentTrack(player)         =>
         show"""Removing track "${player.item.name}" (${player.item.uri.toFullUri}) from playlist ${player.context.uri.playlist}"""
