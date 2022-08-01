@@ -90,7 +90,7 @@ object Spotify {
 
           UserOutput[F].print(UserMessage.RemovingCurrentTrack(player)) *>
             skipTrack *>
-            SpotifyApi[F].removeTrack(playlistId, List(Track(trackUri.toFullUri)))
+            SpotifyApi[F].removeTrack(playlistId, List(Track(trackUri)))
         }
 
       def fastForward(percentage: Int): F[Unit] =

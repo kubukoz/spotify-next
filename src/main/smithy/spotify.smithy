@@ -3,6 +3,8 @@ namespace com.kubukoz.next.spotify
 use smithy4s.api#simpleRestJson
 use com.kubukoz.next.sonos#GetGroupsOutput
 use smithy4s.api#discriminated
+use smithy4s.meta#refinement
+use smithy4s.meta#unwrap
 
 @simpleRestJson
 service SpotifyApi {
@@ -85,9 +87,33 @@ list Tracks {
   member: Track
 }
 
+@refinement("targetType": "com.kubukoz.next.client.spotify.TrackUri", "providerInstance": "com.kubukoz.next.client.spotify.TrackUri.provider")
+@trait
+structure trackUriFormat {}
+
+@trackUriFormat
+@unwrap
+string TrackUri
+
+@refinement("targetType": "com.kubukoz.next.client.spotify.PlaylistUri", "providerInstance": "com.kubukoz.next.client.spotify.PlaylistUri.provider")
+@trait
+structure playlistUriFormat {}
+
+@playlistUriFormat
+@unwrap
+string PlaylistUri
+
+@refinement("targetType": "org.http4s.Uri", "providerInstance": "com.kubukoz.next.util.UriProvider.provider")
+@trait
+structure uriFormat {}
+
+@uriFormat
+@unwrap
+string Uri
+
 structure Track {
   @required
-  uri: String
+  uri: TrackUri
 }
 
 
@@ -144,19 +170,19 @@ union PlayerContext {
 
 structure PlaylistContext {
   @required
-  href: String,
+  href: Uri,
   @required
-  uri: String
+  uri: PlaylistUri
 }
 
 structure AlbumContext {
   @required
-  href: String,
+  href: Uri,
 }
 
 structure ArtistContext {
   @required
-  href: String,
+  href: Uri,
 }
 
 @discriminated("type")
@@ -166,7 +192,7 @@ union PlayerItem {
 
 structure TrackItem {
   @required
-  uri: String,
+  uri: TrackUri,
 
   @required
   @jsonName("duration_ms")
