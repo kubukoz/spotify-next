@@ -131,7 +131,7 @@ val root =
         "org.http4s" %% "http4s-ember-server" % "0.23.12",
         "org.http4s" %% "http4s-ember-client" % "0.23.12",
         "org.http4s" %% "http4s-circe" % "0.23.13",
-        "ch.qos.logback" % "logback-classic" % "1.2.11",
+        "ch.qos.logback" % "logback-classic" % "1.4.0",
         "io.circe" %% "circe-parser" % "0.14.2",
         "dev.optics" %% "monocle-core" % "3.1.0"
       ),
