@@ -32,6 +32,7 @@ import org.http4s.client.Client
 import scala.concurrent.duration.*
 import scala.util.chaining.*
 import cats.data.NonEmptyList
+import com.kubukoz.next.client.spotify.PlaylistUri
 
 trait Spotify[F[_]] {
   def skipTrack: F[Unit]
@@ -39,6 +40,7 @@ trait Spotify[F[_]] {
   def fastForward(percentage: Int): F[Unit]
   def jumpSection: F[Unit]
   def switch: F[Unit]
+  def move: F[Unit]
 }
 
 object Spotify {
@@ -56,7 +58,7 @@ object Spotify {
 
   import Error.*
 
-  def instance[F[_]: Playback: UserOutput: Concurrent: SpotifyApi: Switch: Analysis]: Spotify[F] =
+  def instance[F[_]: Playback: UserOutput: Concurrent: SpotifyApi: Switch: Analysis: ConfigLoader]: Spotify[F] =
     new Spotify[F] {
       private val getPlayer = SpotifyApi[F].getPlayer().map(Player.fromApiPlayer)
 
@@ -145,6 +147,18 @@ object Spotify {
         .void
 
       val switch: F[Unit] = Switch[F].switch
+
+      val move: F[Unit] = getPlayer.flatMap(requirePlaylist(_)).flatMap(requireTrack).flatMap { player =>
+        val trackUri = player.item.uri
+        val playlistId = player.context.uri.playlist
+
+        ConfigLoader[F].loadConfig.map(_.targetPlaylist).flatMap { targetPlaylist =>
+          UserOutput[F].print(UserMessage.MovingCurrentTrack(player, targetPlaylist)) *>
+            SpotifyApi[F].addItemsToPlaylist(targetPlaylist.playlist, List(trackUri.toFullUri)) *>
+            skipTrack *>
+            SpotifyApi[F].removeTrack(playlistId, List(Track(trackUri.toFullUri)))
+        }
+      }
 
     }
 

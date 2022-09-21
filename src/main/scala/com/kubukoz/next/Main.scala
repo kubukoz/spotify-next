@@ -14,6 +14,8 @@ import com.monovore.decline.effect.*
 import cats.effect.implicits.*
 import java.io.EOFException
 import LoginProcess.given
+import org.typelevel.log4cats.Logger
+import org.typelevel.log4cats.slf4j.Slf4jLogger
 
 enum Choice {
   case Login
@@ -22,6 +24,7 @@ enum Choice {
   case FastForward(percentage: Int)
   case JumpSection
   case Switch
+  case Move
 }
 
 object Choice {
@@ -39,12 +42,14 @@ object Choice {
           ffOpts
         ),
         Opts.subcommand("switch", "Switch device (Spotify/Sonos)")(Opts(Switch)),
+        Opts.subcommand("move", "Move song to playlist A")(Opts(Move)),
         Opts.subcommand("jump", "Fast forward the current track to the next section")(Opts(JumpSection)),
         Opts.subcommand("s", "Alias for `skip`")(Opts(SkipTrack)),
         Opts.subcommand("d", "Alias for `drop`")(Opts(DropTrack)),
         Opts.subcommand("f", "Alias for `forward`")(ffOpts),
         Opts.subcommand("j", "Alias for `jump`")(Opts(JumpSection)),
-        Opts.subcommand("w", "Alias for `switch`")(Opts(Switch))
+        Opts.subcommand("w", "Alias for `switch`")(Opts(Switch)),
+        Opts.subcommand("m", "Alias for `move`")(Opts(Move))
       )
       .reduceK
 
@@ -53,8 +58,9 @@ object Choice {
 object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: Gather great music.", version = BuildInfo.version) {
 
   import Program.*
+  given Logger[IO] = Slf4jLogger.getLogger[IO]
 
-  def makeProgram[F[_]: Async: Console]: Resource[F, Runner[F]] = {
+  def makeProgram[F[_]: Async: Console: Logger]: Resource[F, Runner[F]] = {
     given UserOutput[F] = UserOutput.toConsole(sonos.baseUri)
 
     val dummy = Async[F].unit.toResource

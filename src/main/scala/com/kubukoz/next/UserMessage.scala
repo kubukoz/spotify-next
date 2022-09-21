@@ -13,6 +13,7 @@ import cats.data.NonEmptyList
 import com.kubukoz.next.Spotify.SonosInfo
 import com.kubukoz.next.Spotify.SonosInfo.Group
 import com.kubukoz.next.spotify.Device
+import com.kubukoz.next.client.spotify.PlaylistUri
 
 enum UserMessage {
   case GoToUri(uri: Uri)
@@ -25,6 +26,7 @@ enum UserMessage {
   // playback
   case SwitchingToNext
   case RemovingCurrentTrack(player: Player[PlayerContext.Playlist, Item.Track])
+  case MovingCurrentTrack(player: Player[PlayerContext.Playlist, Item.Track], targetPlaylist: PlaylistUri)
   case NoDevices
   case TooCloseToEnd
   case SwitchingPlayback(target: PlaybackTarget)
@@ -63,18 +65,22 @@ object UserOutput {
       def cyan: String = colored(Console.CYAN)
 
     val stringify: UserMessage => String = {
-      case GoToUri(uri)                         => show"Go to $uri"
-      case ConfigFileNotFound(path, validInput) => show"Didn't find config file at $path. Should I create one? ($validInput/n)"
-      case SavedConfig(path)                    => show"Saved config to new file at $path"
-      case SavedToken                           => "Saved token to file"
-      case RefreshedToken(kind: String)         => s"Refreshed $kind token"
-      case SwitchingToNext                      => "Switching to next track"
-      case NowPlaying(track)                    => s"""Now playing: ${track.name.green} by ${track.artists.map(_.name.cyan).mkString(", ")}
+      case GoToUri(uri)                               => show"Go to $uri"
+      case ConfigFileNotFound(path, validInput)       => show"Didn't find config file at $path. Should I create one? ($validInput/n)"
+      case SavedConfig(path)                          => show"Saved config to new file at $path"
+      case SavedToken                                 => "Saved token to file"
+      case RefreshedToken(kind: String)               => s"Refreshed $kind token"
+      case SwitchingToNext                            => "Switching to next track"
+      case NowPlaying(track)                          => s"""Now playing: ${track.name.green} by ${track.artists.map(_.name.cyan).mkString(", ")}
                                                       |URI: ${track.uri.toFullUri}""".stripMargin
-      case RemovingCurrentTrack(player)         =>
+      case RemovingCurrentTrack(player)               =>
         show"""Removing track "${player.item.name}" (${player.item.uri.toFullUri}) from playlist ${player.context.uri.playlist}"""
-      case TooCloseToEnd                        => "Too close to song's ending, rewinding to beginning"
-      case Seeking(desiredProgressPercent)      => show"Seeking to $desiredProgressPercent%"
+      case MovingCurrentTrack(player, targetPlaylist) =>
+        show"""Moving track "${player
+            .item
+            .name}" (${player.item.uri.toFullUri}) from playlist ${player.context.uri.playlist} to playlist ${targetPlaylist.playlist}"""
+      case TooCloseToEnd                              => "Too close to song's ending, rewinding to beginning"
+      case Seeking(desiredProgressPercent)            => show"Seeking to $desiredProgressPercent%"
       case Jumping(sectionNumber, sectionsTotal, percentTotal) =>
         show"Jumping to section $sectionNumber/$sectionsTotal ($percentTotal%)"
       case CheckingSonos                                       => show"Checking if Sonos API is available at $sonosBaseUrl..."

@@ -1,3 +1,5 @@
+$version: "2"
+
 namespace com.kubukoz.next.spotify
 
 use smithy4s.api#simpleRestJson
@@ -7,7 +9,16 @@ use smithy4s.api#discriminated
 @simpleRestJson
 service SpotifyApi {
   version: "0.0.0",
-  operations: [NextTrack, Seek, RemoveTrack, GetAudioAnalysis, TransferPlayback, GetAvailableDevices, GetPlayer]
+  operations: [
+    NextTrack,
+    Seek,
+    RemoveTrack,
+    GetAudioAnalysis,
+    TransferPlayback,
+    GetAvailableDevices,
+    GetPlayer,
+    AddItemsToPlaylist
+  ]
 }
 
 @http(method: "PUT", uri: "/v1/me/player")
@@ -186,4 +197,22 @@ list Artists {
 structure Artist {
   @required
   name: String
+}
+
+@http(method: "POST", uri: "/v1/playlists/{playlistId}/tracks")
+operation AddItemsToPlaylist {
+  input := {
+    @httpLabel
+    @required
+    playlistId: String,
+
+    @required
+    @httpPayload
+    uris: Uris
+  }
+}
+
+@length(min: 1, max: 100)
+list Uris {
+  member: String
 }

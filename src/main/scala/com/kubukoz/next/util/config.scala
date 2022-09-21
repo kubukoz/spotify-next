@@ -7,6 +7,7 @@ import cats.implicits.*
 import monocle.Lens
 import com.comcast.ip4s.*
 import io.circe.syntax.*
+import com.kubukoz.next.client.spotify.PlaylistUri
 
 final case class Config(
   clientId: String,
@@ -20,6 +21,10 @@ final case class Config(
   sonosRefreshToken: Option[Config.RefreshToken]
 ) derives Codec.AsObject {
   def redirectUri: String = show"http://localhost:$loginPort/login"
+
+  // https://open.spotify.com/playlist/3Xzu9f7hVoT8udYlxHvaoK?si=535de7cf02244ab1
+  // todo: make customizable
+  def targetPlaylist: PlaylistUri = PlaylistUri("3Xzu9f7hVoT8udYlxHvaoK", user = None)
 }
 
 object Config extends AskFor[Config] {

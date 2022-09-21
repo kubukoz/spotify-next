@@ -128,11 +128,18 @@ object spotify {
 
   }
 
-  final case class PlaylistUri(playlist: String, user: Option[String])
+  final case class PlaylistUri(playlist: String, user: Option[String]) {
+
+    def toFullUri: String = user match {
+      case Some(user) => s"spotify:user:$user:playlist:$playlist"
+      case None       => s"spotify:playlist:$playlist"
+    }
+
+  }
 
   object PlaylistUri {
 
-    def decode(s: String) = s match {
+    def decode(s: String): Either[String, PlaylistUri] = s match {
       case s"spotify:user:$userId:playlist:$playlistId" => PlaylistUri(playlistId, userId.some).asRight
       case s"spotify:playlist:$playlistId"              => PlaylistUri(playlistId, none).asRight
       case literallyAnythingElse                        => (literallyAnythingElse + " is not a playlist URI").asLeft

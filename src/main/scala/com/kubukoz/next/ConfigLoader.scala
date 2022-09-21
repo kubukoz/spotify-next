@@ -46,7 +46,17 @@ object ConfigLoader {
         clientSecret      <- ConsoleRead.readWithPrompt[F, String]("Client secret")
         sonosClientId     <- ConsoleRead.readWithPrompt[F, String]("Sonos Client ID")
         sonosClientSecret <- ConsoleRead.readWithPrompt[F, String]("Sonos Client secret")
-      } yield Config(clientId, clientSecret, sonosClientId, sonosClientSecret, Config.defaultPort, none, none, none, none)
+      } yield Config(
+        clientId = clientId,
+        clientSecret = clientSecret,
+        sonosClientId = sonosClientId,
+        sonosClientSecret = sonosClientSecret,
+        loginPort = Config.defaultPort,
+        token = none,
+        refreshToken = none,
+        sonosToken = none,
+        sonosRefreshToken = none
+      )
 
     underlying =>
       new ConfigLoader[F] {
