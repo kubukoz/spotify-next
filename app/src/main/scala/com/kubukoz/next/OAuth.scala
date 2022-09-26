@@ -39,14 +39,19 @@ object OAuth {
     private val baseUri = uri"https://accounts.spotify.com"
 
     def refreshToken(token: RefreshToken): F[Token] =
-      client
-        .fetchAs[RefreshedTokenResponse](kernel.refreshToken(token))
+      kernel
+        .refreshToken(token)
+        .flatMap(
+          client
+            .fetchAs[RefreshedTokenResponse](_)
+        )
         .map(_.access_token)
         .map(Token(_))
 
     def getTokens(code: Code): F[Tokens] =
-      client
-        .expect[TokenResponse](kernel.getTokens(code))
+      kernel
+        .getTokens(code)
+        .flatMap(client.expect[TokenResponse](_))
         .map { response =>
           Tokens(Token(response.access_token), RefreshToken(response.refresh_token))
         }

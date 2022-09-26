@@ -95,12 +95,15 @@ object Program {
   def sonosMiddlewares[F[_]: MonadCancelThrow]: Client[F] => Client[F] =
     middlewares.defaultContentType(`Content-Type`(MediaType.application.json, Charset.`UTF-8`))
 
-  def makeSpotify[F[_]: UserOutput: ConfigLoader: Concurrent](spotifyClient: Client[F], sonosClient: Client[F]): F[Spotify[F]] =
+  def makeSpotify[F[_]: UserOutput: ConfigLoader: Concurrent](spotifyClient: Client[F], sonosClient: Client[F]): F[Spotify[F]] = {
+    val spotifyBaseUri = com.kubukoz.next.api.spotify.baseUri
+
     for {
-      given SpotifyApi[F] <- SimpleRestJsonBuilder(SpotifyApiGen).client[F](spotifyClient, com.kubukoz.next.api.spotify.baseUri).liftTo[F]
-      given SonosApi[F]   <- SimpleRestJsonBuilder(SonosApiGen).client[F](sonosClient, sonos.baseUri).liftTo[F]
+      given SpotifyApi[F] <- SimpleRestJsonBuilder(SpotifyApiGen).client[F](spotifyClient).uri(spotifyBaseUri).use.liftTo[F]
+      given SonosApi[F]   <- SimpleRestJsonBuilder(SonosApiGen).client[F](sonosClient).uri(sonos.baseUri).use.liftTo[F]
       result              <- makeSpotifyInternal[F]
     } yield result
+  }
 
   def makeSpotifyInternal[F[_]: UserOutput: SpotifyApi: SonosApi: ConfigLoader: Concurrent]: F[Spotify[F]] = {
     given Spotify.DeviceInfo[F] = Spotify.DeviceInfo.instance

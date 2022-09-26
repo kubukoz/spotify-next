@@ -15,9 +15,8 @@ inThisBuild(
 )
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
-(ThisBuild / scalaVersion) := "3.1.2"
+ThisBuild / scalaVersion := "3.2.0"
 
-ThisBuild / githubWorkflowJavaVersions := Seq(JavaSpec.graalvm("21.3.0", "11"))
 ThisBuild / githubWorkflowTargetTags := Seq("v*")
 ThisBuild / githubWorkflowPublishTargetBranches := List(RefPredicate.StartsWith(Ref.Tag("v")), RefPredicate.Equals(Ref.Branch("main")))
 
@@ -65,8 +64,8 @@ val commonSettings = Seq(
   ),
   libraryDependencies ++= Seq(
     "org.typelevel" %%% "cats-effect" % "3.3.14",
-    "org.scalameta" %%% "munit" % "0.7.29" % Test,
-    "org.typelevel" %% "munit-cats-effect-3" % "1.0.7" % Test
+    "org.scalameta" %%% "munit" % "1.0.0-M6" % Test,
+    "org.typelevel" %%% "munit-cats-effect" % "2.0.0-M3" % Test
   ),
   addCompilerPlugins,
   Compile / doc / sources := Nil
@@ -118,29 +117,52 @@ val front = project
   .dependsOn(core)
  */
 
+val app = crossProject(JVMPlatform, NativePlatform)
+  .crossType(CrossType.Pure)
+  .settings(commonSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      // temp
+      "com.disneystreaming.smithy4s" %%% "smithy4s-core" % smithy4sVersion.value,
+      // waiting
+      "com.disneystreaming.smithy4s" %%% "smithy4s-http4s" % smithy4sVersion.value,
+      "org.typelevel" %%% "cats-mtl" % "1.3.0",
+      "com.monovore" %%% "decline-effect" % "2.3.1-SNAPSHOT",
+      "org.http4s" %%% "http4s-dsl" % "0.23.16",
+      "org.http4s" %%% "http4s-ember-server" % "0.23.16",
+      "org.http4s" %%% "http4s-ember-client" % "0.23.16",
+      "org.http4s" %%% "http4s-circe" % "0.23.16",
+      "io.circe" %%% "circe-parser" % "0.14.3",
+      "org.typelevel" %%% "log4cats-noop" % "2.5.0"
+      // waiting
+      // "dev.optics" %%% "monocle-core" % "3.1.0"
+    ),
+    buildInfoKeys := Seq[BuildInfoKey](version),
+    buildInfoPackage := "com.kubukoz.next"
+  )
+  .settings(name := "spotify-next")
+  .enablePlugins(BuildInfoPlugin)
+  .settings(
+    Compile / smithy4sInputDir := (ThisBuild / baseDirectory).value / "app" / "src" / "main" / "smithy"
+  )
+  .enablePlugins(Smithy4sCodegenPlugin)
+  .jvmConfigure(
+    _.settings(
+      libraryDependencies ++= Seq(
+        "ch.qos.logback" % "logback-classic" % "1.2.11"
+      )
+    ).enablePlugins(JavaAppPackaging)
+  )
+  .nativeConfigure(
+    _.settings(
+      libraryDependencies ++= Seq(
+        "com.armanbilge" %%% "epollcat" % "0.1.1"
+      )
+    )
+  )
+
 val root =
   project
     .in(file("."))
-    .settings(commonSettings)
-    .settings(
-      libraryDependencies ++= Seq(
-        "com.disneystreaming.smithy4s" %% "smithy4s-http4s" % smithy4sVersion.value,
-        "org.typelevel" %% "cats-mtl" % "1.3.0",
-        "com.monovore" %% "decline-effect" % "2.3.0",
-        "org.http4s" %% "http4s-dsl" % "0.23.13",
-        "org.http4s" %% "http4s-ember-server" % "0.23.12",
-        "org.http4s" %% "http4s-ember-client" % "0.23.12",
-        "org.http4s" %% "http4s-circe" % "0.23.13",
-        "ch.qos.logback" % "logback-classic" % "1.2.11",
-        "io.circe" %% "circe-parser" % "0.14.2",
-        "dev.optics" %% "monocle-core" % "3.1.0"
-      ),
-      buildInfoKeys := Seq[BuildInfoKey](version),
-      buildInfoPackage := "com.kubukoz.next"
-    )
-    .settings(name := "spotify-next")
-    .enablePlugins(BuildInfoPlugin)
-    .enablePlugins(JavaAppPackaging)
-    .enablePlugins(Smithy4sCodegenPlugin)
-// .dependsOn(core)
-// .aggregate(core /* , front */ )
+    .enablePlugins(NoPublishPlugin)
+    .aggregate(app.componentProjects.map(p => p: ProjectReference): _*)
