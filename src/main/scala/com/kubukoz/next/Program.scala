@@ -38,6 +38,7 @@ import com.kubukoz.next.Spotify.SonosInfo.Group
 import com.kubukoz.next.Spotify.SonosInfo
 import com.kubukoz.next.Spotify.DeviceInfo
 import org.http4s.ember.client.EmberClientBuilder
+import org.typelevel.log4cats.Logger
 
 object Program {
 
@@ -72,13 +73,13 @@ object Program {
         .apply(ConfigLoader.default[F](p))
     }
 
-  def makeBasicClient[F[_]: Async]: Resource[F, Client[F]] =
+  def makeBasicClient[F[_]: Async: Logger]: Resource[F, Client[F]] =
     EmberClientBuilder
       .default[F]
       .build
       .map(FollowRedirect(maxRedirects = 5))
-      .map(RequestLogger(logHeaders = true, logBody = true))
-      .map(ResponseLogger(logHeaders = true, logBody = true))
+      .map(RequestLogger(logHeaders = true, logBody = true, logAction = Some(Logger[F].debug(_: String))))
+      .map(ResponseLogger(logHeaders = true, logBody = true, logAction = Some(Logger[F].debug(_: String))))
 
   def apiClient[F[_]: Console: ConfigLoader: MonadCancelThrow](
     loginProcess: LoginProcess[F],
@@ -94,17 +95,14 @@ object Program {
   def sonosMiddlewares[F[_]: MonadCancelThrow]: Client[F] => Client[F] =
     middlewares.defaultContentType(`Content-Type`(MediaType.application.json, Charset.`UTF-8`))
 
-  def makeSpotify[F[_]: UserOutput: Concurrent](spotifyClient: Client[F], sonosClient: Client[F]): F[Spotify[F]] =
-    SimpleRestJsonBuilder(SpotifyApiGen).client[F](spotifyClient, com.kubukoz.next.api.spotify.baseUri).liftTo[F].flatMap { spotifyApi =>
-      SimpleRestJsonBuilder(SonosApiGen).client[F](sonosClient, sonos.baseUri).liftTo[F].flatMap { sonosApi =>
-        given SpotifyApi[F] = spotifyApi
-        given SonosApi[F] = sonosApi
+  def makeSpotify[F[_]: UserOutput: ConfigLoader: Concurrent](spotifyClient: Client[F], sonosClient: Client[F]): F[Spotify[F]] =
+    for {
+      given SpotifyApi[F] <- SimpleRestJsonBuilder(SpotifyApiGen).client[F](spotifyClient, com.kubukoz.next.api.spotify.baseUri).liftTo[F]
+      given SonosApi[F]   <- SimpleRestJsonBuilder(SonosApiGen).client[F](sonosClient, sonos.baseUri).liftTo[F]
+      result              <- makeSpotifyInternal[F]
+    } yield result
 
-        makeSpotifyInternal[F]
-      }
-    }
-
-  def makeSpotifyInternal[F[_]: UserOutput: Concurrent: SpotifyApi: SonosApi]: F[Spotify[F]] = {
+  def makeSpotifyInternal[F[_]: UserOutput: SpotifyApi: SonosApi: ConfigLoader: Concurrent]: F[Spotify[F]] = {
     given Spotify.DeviceInfo[F] = Spotify.DeviceInfo.instance
     given Spotify.SonosInfo[F] = Spotify.SonosInfo.instance[F]
 

@@ -148,7 +148,7 @@ object spotify {
 
   object PlaylistUri {
 
-    def decode(s: String) = s match {
+    def decode(s: String): Either[String, PlaylistUri] = s match {
       case s"spotify:user:$userId:playlist:$playlistId" => PlaylistUri(playlistId, userId.some).asRight
       case s"spotify:playlist:$playlistId"              => PlaylistUri(playlistId, none).asRight
       case literallyAnythingElse                        => (literallyAnythingElse + " is not a playlist URI").asLeft

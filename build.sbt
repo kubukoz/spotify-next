@@ -50,7 +50,7 @@ def crossPlugin(x: sbt.librarymanagement.ModuleID) = compilerPlugin(x.cross(Cros
 
 val addCompilerPlugins = libraryDependencies ++= {
   List(
-    crossPlugin("org.polyvariant" % "better-tostring" % "0.3.15")
+    crossPlugin("org.polyvariant" % "better-tostring" % "0.3.17")
   )
 }
 

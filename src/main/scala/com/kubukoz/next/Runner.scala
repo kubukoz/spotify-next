@@ -14,6 +14,7 @@ object Runner {
     case Choice.FastForward(p) => Spotify[F].fastForward(p)
     case Choice.JumpSection    => Spotify[F].jumpSection
     case Choice.Switch         => Spotify[F].switch
+    case Choice.Move           => Spotify[F].move
   }
 
 }

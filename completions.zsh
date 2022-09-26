@@ -9,12 +9,15 @@ function _sn() {
     'drop:Drop current track from the current playlist and skip to the next track'
     'forward:Fast forward the current track by a percentage of its length (10% by default)'
     'jump:Fast forward the current track to the next section'
+    'switch:Switch device (Spotify/Sonos)'
+    'move:Move song to playlist A'
     's:alias for `skip`'
     'd:alias for `drop`'
     'f:alias for `forward`'
     'j:alias for `jump`'
+    'w:alias for `switch`'
+    'm:alias for `move`'
     'repl:Run application in interactive mode'
-    'switch:Switch device (Spotify/Sonos)'
   )
 
   _arguments "1: :{_describe 'command' cmds}" '*:: :->args'
@@ -43,6 +46,10 @@ function _sn() {
       _arguments -C $help
       ;;
 
+    move)
+      _arguments -C $help
+      ;;
+
     switch)
       _arguments -C $help
       ;;
@@ -64,6 +71,10 @@ function _sn() {
       ;;
 
     w)
+      _arguments -C $help
+      ;;
+
+    m)
       _arguments -C $help
       ;;
 
