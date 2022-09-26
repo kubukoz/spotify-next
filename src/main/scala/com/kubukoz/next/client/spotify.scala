@@ -17,6 +17,12 @@ import scala.reflect.TypeTest
 import org.http4s.implicits.*
 import scala.concurrent.duration.*
 import com.kubukoz.next.spotify.GetPlayerOutput
+import com.kubukoz.next.spotify.TrackUri
+import com.kubukoz.next.spotify.TrackUriFormat
+import com.kubukoz.next.spotify.PlaylistUri
+import com.kubukoz.next.spotify.PlaylistUriFormat
+import smithy4s.RefinementProvider
+import smithy4s.Refinement
 
 object spotify {
 
@@ -31,6 +37,9 @@ object spotify {
       case s                         => s"Not a spotify:track:{trackId}: $s".asLeft
     }
 
+    implicit val provider: RefinementProvider[TrackUriFormat, String, TrackUri] =
+      Refinement.drivenBy[TrackUriFormat].apply(decode, _.toFullUri)
+
   }
 
   enum Item {
@@ -44,7 +53,7 @@ object spotify {
     def fromApiItem(item: com.kubukoz.next.spotify.PlayerItem) = item match {
       case com.kubukoz.next.spotify.PlayerItem.TrackCase(track) =>
         Item.Track(
-          TrackUri.decode(track.uri).fold(s => throw new Exception(s), identity),
+          track.uri,
           track.durationMs.millis,
           track.name,
           artists = track.artists.map(a => Artist(a.name))
@@ -117,13 +126,13 @@ object spotify {
       ctx match {
         case com.kubukoz.next.spotify.PlayerContext.PlaylistCase(playlist) =>
           PlayerContext.Playlist(
-            Uri.unsafeFromString(playlist.href),
-            PlaylistUri.decode(playlist.uri).fold(e => throw new Exception(e), identity)
+            playlist.href,
+            playlist.uri
           )
         case com.kubukoz.next.spotify.PlayerContext.AlbumCase(album)       =>
-          PlayerContext.Album(Uri.unsafeFromString(album.href))
+          PlayerContext.Album(album.href)
         case com.kubukoz.next.spotify.PlayerContext.ArtistCase(artist)     =>
-          PlayerContext.Artist(Uri.unsafeFromString(artist.href))
+          PlayerContext.Artist(artist.href)
       }
 
   }
@@ -144,6 +153,9 @@ object spotify {
       case s"spotify:playlist:$playlistId"              => PlaylistUri(playlistId, none).asRight
       case literallyAnythingElse                        => (literallyAnythingElse + " is not a playlist URI").asLeft
     }
+
+    implicit val provider: RefinementProvider[PlaylistUriFormat, String, PlaylistUri] =
+      Refinement.drivenBy[PlaylistUriFormat].apply(decode, _.toFullUri)
 
   }
 
