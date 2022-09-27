@@ -15,7 +15,9 @@ import cats.effect.implicits.*
 import java.io.EOFException
 import LoginProcess.given
 import org.typelevel.log4cats.Logger
-import org.typelevel.log4cats.slf4j.Slf4jLogger
+// import org.typelevel.log4cats.slf4j.Slf4jLogger
+import org.typelevel.log4cats.noop.NoOpLogger
+import cats.effect.unsafe.IORuntime
 
 enum Choice {
   case Login
@@ -57,19 +59,19 @@ object Choice {
 
 object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: Gather great music.", version = BuildInfo.version) {
 
+  override protected def runtime: IORuntime = RuntimePlatform.default
+
   import Program.*
-  given Logger[IO] = Slf4jLogger.getLogger[IO]
+  given Logger[IO] = NoOpLogger[IO]
+  // given Logger[IO] = Slf4jLogger.getLogger[IO]
 
   def makeProgram[F[_]: Async: Console: Logger]: Resource[F, Runner[F]] = {
     given UserOutput[F] = UserOutput.toConsole(sonos.baseUri)
-
-    val dummy = Async[F].unit.toResource
 
     for {
       given ConfigLoader[F] <- makeLoader[F].toResource
       rawClient             <- makeBasicClient[F]
       given Config.Ask[F] = ConfigLoader[F].configAsk
-      _                     <- dummy
       // obviously quite a lot of duplication here...
       spotifyLogin = Login.ember[F](OAuth.fromKernel[F](rawClient, OAuth.spotify))
       spotifyLoginProcess = LoginProcess
