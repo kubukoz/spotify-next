@@ -151,6 +151,7 @@ union PlayerContext {
   playlist: PlaylistContext,
   album: AlbumContext,
   artist: ArtistContext,
+  collection: Unit
 }
 
 structure PlaylistContext {

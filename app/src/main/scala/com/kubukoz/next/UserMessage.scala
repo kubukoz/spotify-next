@@ -14,6 +14,7 @@ import com.kubukoz.next.Spotify.SonosInfo
 import com.kubukoz.next.Spotify.SonosInfo.Group
 import com.kubukoz.next.spotify.Device
 import com.kubukoz.next.client.spotify.PlaylistUri
+import org.polyvariant.colorize.string.ColorizedString
 
 enum UserMessage {
   case GoToUri(uri: Uri)
@@ -59,10 +60,13 @@ object UserOutput {
 
     import UserMessage.*
 
-    extension (s: String)
-      def colored(color: String): String = s"${color}$s${Console.RESET}"
-      def green: String = colored(Console.GREEN)
-      def cyan: String = colored(Console.CYAN)
+    import org.polyvariant.colorize.*
+
+    extension [A](as: List[A]) {
+      def intercalate(sep: A): List[A] = as.flatMap(List(_, sep)).dropRight(1)
+    }
+
+    extension (c: List[ColorizedString]) def merged: ColorizedString = c.foldLeft(ColorizedString.empty)(_ ++ _)
 
     val stringify: UserMessage => String = {
       case GoToUri(uri)                               => show"Go to $uri"
@@ -71,8 +75,9 @@ object UserOutput {
       case SavedToken                                 => "Saved token to file"
       case RefreshedToken(kind: String)               => s"Refreshed $kind token"
       case SwitchingToNext                            => "Switching to next track"
-      case NowPlaying(track)                          => s"""Now playing: ${track.name.green} by ${track.artists.map(_.name.cyan).mkString(", ")}
-                                                      |URI: ${track.uri.toFullUri}""".stripMargin
+      case NowPlaying(track)                          =>
+        colorize"""Now playing: ${track.name.green} by ${track.artists.map(_.name.cyan).intercalate(", ": ColorizedString).merged}
+                                                      |URI: ${track.uri.toFullUri}""".render.stripMargin
       case RemovingCurrentTrack(player)               =>
         show"""Removing track "${player.item.name}" (${player.item.uri.toFullUri}) from playlist ${player.context.uri.playlist}"""
       case MovingCurrentTrack(player, targetPlaylist) =>

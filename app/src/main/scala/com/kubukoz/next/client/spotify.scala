@@ -109,6 +109,7 @@ object spotify {
     case Playlist(href: Uri, uri: PlaylistUri)
     case Album(href: Uri)
     case Artist(href: Uri)
+    case CollectionCase
   }
 
   object PlayerContext {
@@ -124,6 +125,8 @@ object spotify {
           PlayerContext.Album(Uri.unsafeFromString(album.href))
         case com.kubukoz.next.spotify.PlayerContext.ArtistCase(artist)     =>
           PlayerContext.Artist(Uri.unsafeFromString(artist.href))
+        case com.kubukoz.next.spotify.PlayerContext.CollectionCase         =>
+          CollectionCase
       }
 
   }
