@@ -131,7 +131,7 @@ val app = crossProject(JVMPlatform, NativePlatform)
       "org.http4s" %%% "http4s-circe" % "0.23.16",
       "io.circe" %%% "circe-parser" % "0.14.3",
       "org.typelevel" %%% "log4cats-noop" % "2.5.0",
-      "org.polyvariant" %%% "colorize" % "0.3.0"
+      "org.polyvariant" %%% "colorize" % "0.3.2"
       // waiting
       // "dev.optics" %%% "monocle-core" % "3.1.0"
     ),

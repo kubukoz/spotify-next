@@ -68,7 +68,7 @@ object UserOutput {
 
     extension (c: List[ColorizedString]) def merged: ColorizedString = c.foldLeft(ColorizedString.empty)(_ ++ _)
 
-    val stringify: UserMessage => String = {
+    val stringify: UserMessage => ColorizedString = {
       case GoToUri(uri)                               => show"Go to $uri"
       case ConfigFileNotFound(path, validInput)       => show"Didn't find config file at $path. Should I create one? ($validInput/n)"
       case SavedConfig(path)                          => show"Saved config to new file at $path"
@@ -77,7 +77,7 @@ object UserOutput {
       case SwitchingToNext                            => "Switching to next track"
       case NowPlaying(track)                          =>
         colorize"""Now playing: ${track.name.green} by ${track.artists.map(_.name.cyan).intercalate(", ": ColorizedString).merged}
-                                                      |URI: ${track.uri.toFullUri}""".render.stripMargin
+                  |URI: ${track.uri.toFullUri}""".stripMargin
       case RemovingCurrentTrack(player)               =>
         show"""Removing track "${player.item.name}" (${player.item.uri.toFullUri}) from playlist ${player.context.uri.playlist}"""
       case MovingCurrentTrack(player, targetPlaylist) =>
@@ -103,7 +103,7 @@ object UserOutput {
       case DirectControl             => "Switching to direct Spotify API control..."
     }
 
-    msg => std.Console[F].println(stringify(msg))
+    msg => std.Console[F].println(stringify(msg).render)
   }
 
 }
