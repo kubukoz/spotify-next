@@ -68,11 +68,13 @@ object Spotify {
         }
       }
 
-      private def requirePlaylist[A](player: Player[Option[PlayerContext], A]): F[Player[PlayerContext.Playlist, A]] =
+      private def requireContext[A](player: Player[Option[PlayerContext], A]): F[Player[PlayerContext, A]] =
         player
           .unwrapContext
           .liftTo[F](NoContext)
-          .flatMap(_.narrowContext[PlayerContext.Playlist].liftTo[F])
+
+      private def requirePlaylist[A](player: Player[PlayerContext, A]): F[Player[PlayerContext.Playlist, A]] =
+        player.narrowContext[PlayerContext.Playlist].liftTo[F]
 
       private def requireTrack[A](player: Player[A, Option[Item]]): F[Player[A, Item.Track]] =
         player
@@ -86,14 +88,18 @@ object Spotify {
           <* showNowPlaying
 
       val dropTrack: F[Unit] =
-        getPlayer.flatMap(requirePlaylist(_)).flatMap(requireTrack).flatMap { player =>
-          val trackUri = player.item.uri
-          val playlistId = player.context.uri.playlist
+        getPlayer
+          .flatMap(requireContext)
+          .flatMap(requirePlaylist)
+          .flatMap(requireTrack)
+          .flatMap { player =>
+            val trackUri = player.item.uri
+            val playlistId = player.context.uri.playlist
 
-          UserOutput[F].print(UserMessage.RemovingCurrentTrack(player)) *>
-            skipTrack *>
-            SpotifyApi[F].removeTrack(playlistId, List(Track(trackUri.toFullUri)))
-        }
+            UserOutput[F].print(UserMessage.RemovingCurrentTrack(player)) *>
+              skipTrack *>
+              SpotifyApi[F].removeTrack(playlistId, List(Track(trackUri.toFullUri)))
+          }
 
       def fastForward(percentage: Int): F[Unit] =
         getPlayer
@@ -148,15 +154,18 @@ object Spotify {
 
       val switch: F[Unit] = Switch[F].switch
 
-      val move: F[Unit] = getPlayer.flatMap(requirePlaylist(_)).flatMap(requireTrack).flatMap { player =>
+      val move: F[Unit] = getPlayer.flatMap(requireContext).flatMap(requireTrack).flatMap { player =>
         val trackUri = player.item.uri
-        val playlistId = player.context.uri.playlist
 
         ConfigLoader[F].loadConfig.map(_.targetPlaylist).flatMap { targetPlaylist =>
           UserOutput[F].print(UserMessage.MovingCurrentTrack(player, targetPlaylist)) *>
             SpotifyApi[F].addItemsToPlaylist(targetPlaylist.playlist, List(trackUri.toFullUri)) *>
             skipTrack *>
-            SpotifyApi[F].removeTrack(playlistId, List(Track(trackUri.toFullUri)))
+            requirePlaylist(player).flatMap { playlistPlayer =>
+              val playlistId = playlistPlayer.context.uri.playlist
+              UserOutput[F].print(UserMessage.RemovingCurrentTrack(playlistPlayer)) *>
+                SpotifyApi[F].removeTrack(playlistId, List(Track(trackUri.toFullUri)))
+            }
         }
       }
 

@@ -27,7 +27,7 @@ enum UserMessage {
   // playback
   case SwitchingToNext
   case RemovingCurrentTrack(player: Player[PlayerContext.Playlist, Item.Track])
-  case MovingCurrentTrack(player: Player[PlayerContext.Playlist, Item.Track], targetPlaylist: PlaylistUri)
+  case MovingCurrentTrack(player: Player[PlayerContext, Item.Track], targetPlaylist: PlaylistUri)
   case NoDevices
   case TooCloseToEnd
   case SwitchingPlayback(target: PlaybackTarget)
@@ -81,9 +81,9 @@ object UserOutput {
       case RemovingCurrentTrack(player)               =>
         show"""Removing track "${player.item.name}" (${player.item.uri.toFullUri}) from playlist ${player.context.uri.playlist}"""
       case MovingCurrentTrack(player, targetPlaylist) =>
-        show"""Moving track "${player
+        show"""Adding track "${player
             .item
-            .name}" (${player.item.uri.toFullUri}) from playlist ${player.context.uri.playlist} to playlist ${targetPlaylist.playlist}"""
+            .name}" (${player.item.uri.toFullUri}) to playlist ${targetPlaylist.playlist}"""
       case TooCloseToEnd                              => "Too close to song's ending, rewinding to beginning"
       case Seeking(desiredProgressPercent)            => show"Seeking to $desiredProgressPercent%"
       case Jumping(sectionNumber, sectionsTotal, percentTotal) =>
