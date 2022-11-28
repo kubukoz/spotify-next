@@ -8,6 +8,6 @@ addSbtPlugin("ch.epfl.scala" % "sbt-scalajs-bundler" % "0.20.0")
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.11.0")
 addSbtPlugin("com.codecommit" % "sbt-github-actions" % "0.14.2")
 
-addSbtPlugin("com.disneystreaming.smithy4s" % "smithy4s-sbt-codegen" % "0.16.8")
+addSbtPlugin("com.disneystreaming.smithy4s" % "smithy4s-sbt-codegen" % "0.16.10")
 addSbtPlugin("org.scala-native" % "sbt-scala-native" % "0.4.7")
 addSbtPlugin("org.portable-scala" % "sbt-scala-native-crossproject" % "1.2.0")
