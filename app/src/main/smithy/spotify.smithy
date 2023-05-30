@@ -2,8 +2,8 @@ $version: "2"
 
 namespace com.kubukoz.next.spotify
 
-use smithy4s.api#discriminated
-use smithy4s.api#simpleRestJson
+use alloy#discriminated
+use alloy#simpleRestJson
 
 @simpleRestJson
 service SpotifyApi {
