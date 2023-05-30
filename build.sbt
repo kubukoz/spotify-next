@@ -141,7 +141,7 @@ val app = crossProject(JVMPlatform, NativePlatform)
   .settings(name := "spotify-next")
   .enablePlugins(BuildInfoPlugin)
   .settings(
-    Compile / smithy4sInputDir := (ThisBuild / baseDirectory).value / "app" / "src" / "main" / "smithy"
+    Compile / smithy4sInputDirs := Seq((ThisBuild / baseDirectory).value / "app" / "src" / "main" / "smithy")
   )
   .enablePlugins(Smithy4sCodegenPlugin)
   .jvmConfigure(
