@@ -18,6 +18,13 @@ import org.typelevel.log4cats.Logger
 // import org.typelevel.log4cats.slf4j.Slf4jLogger
 import org.typelevel.log4cats.noop.NoOpLogger
 import cats.effect.unsafe.IORuntime
+import fs2.io.file.Files
+import fs2.io.net.Network
+import org.http4s.client.Client
+import cats.effect.Concurrent
+import monocle.Lens
+import com.kubukoz.next.util.Config.RefreshToken
+import com.kubukoz.next.util.Config.Token
 
 enum Choice {
   case Login
@@ -65,28 +72,29 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
   given Logger[IO] = NoOpLogger[IO]
   // given Logger[IO] = Slf4jLogger.getLogger[IO]
 
-  def makeProgram[F[_]: Async: Console: Logger]: Resource[F, Runner[F]] = {
+  def makeLogin[F[_]: Config.Ask: ConfigLoader: UserOutput: Async](
+    name: String,
+    rawClient: Client[F],
+    oauthKernel: OAuth.Kernel[F]
+  )(
+    tokensLens: Lens[Config, (Option[Token], Option[RefreshToken])]
+  ) = {
+    val login = Login.ember[F](OAuth.fromKernel[F](rawClient, oauthKernel))
+
+    LoginProcess
+      .instance[F](login, tokensLens)
+      .orRefresh(RefreshTokenProcess.instance(name, login, tokensLens))
+  }
+
+  def makeProgram[F[_]: Async: Network: Files: Console: Logger]: Resource[F, Runner[F]] = {
     given UserOutput[F] = UserOutput.toConsole(sonos.baseUri)
 
     for {
       given ConfigLoader[F] <- makeLoader[F].toResource
       rawClient             <- makeBasicClient[F]
       given Config.Ask[F] = ConfigLoader[F].configAsk
-      // obviously quite a lot of duplication here...
-      spotifyLogin = Login.ember[F](OAuth.fromKernel[F](rawClient, OAuth.spotify))
-      spotifyLoginProcess = LoginProcess
-                              .instance[F](
-                                spotifyLogin,
-                                Config.spotifyTokensLens
-                              )
-                              .orRefresh(RefreshTokenProcess.instance("Spotify", spotifyLogin, Config.spotifyTokensLens))
-      sonosLogin = Login.ember[F](OAuth.fromKernel[F](rawClient, OAuth.sonos))
-      sonosLoginProcess = LoginProcess
-                            .instance[F](
-                              sonosLogin,
-                              Config.sonosTokensLens
-                            )
-                            .orRefresh(RefreshTokenProcess.instance("Sonos", sonosLogin, Config.sonosTokensLens))
+      spotifyLoginProcess = makeLogin("Spotify", rawClient, OAuth.spotify)(Config.spotifyTokensLens)
+      sonosLoginProcess = makeLogin("Sonos", rawClient, OAuth.spotify)(Config.sonosTokensLens)
       given Spotify[F]      <-
         makeSpotify[F](
           apiClient(
@@ -99,9 +107,7 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
             _.sonosToken
           ).andThen(sonosMiddlewares).apply(rawClient)
         ).toResource
-    } yield Runner.instance[F](
-      LoginProcess.combineAll(spotifyLoginProcess :: sonosLoginProcess :: Nil)
-    )
+    } yield Runner.instance[F](spotifyLoginProcess |+| sonosLoginProcess)
 
   }
 

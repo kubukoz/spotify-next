@@ -39,6 +39,7 @@ import com.kubukoz.next.Spotify.SonosInfo
 import com.kubukoz.next.Spotify.DeviceInfo
 import org.http4s.ember.client.EmberClientBuilder
 import org.typelevel.log4cats.Logger
+import fs2.io.net.Network
 
 object Program {
 
@@ -73,7 +74,7 @@ object Program {
         .apply(ConfigLoader.default[F](p))
     }
 
-  def makeBasicClient[F[_]: Async: Logger]: Resource[F, Client[F]] =
+  def makeBasicClient[F[_]: Async: Network: Logger]: Resource[F, Client[F]] =
     EmberClientBuilder
       .default[F]
       .build
