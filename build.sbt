@@ -15,7 +15,7 @@ inThisBuild(
 )
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
-ThisBuild / scalaVersion := "3.2.1"
+ThisBuild / scalaVersion := "3.3.0"
 
 ThisBuild / githubWorkflowTargetTags := Seq("v*")
 ThisBuild / githubWorkflowPublishTargetBranches := List(RefPredicate.StartsWith(Ref.Tag("v")), RefPredicate.Equals(Ref.Branch("main")))
@@ -63,8 +63,8 @@ val commonSettings = Seq(
     // "2000"
   ),
   libraryDependencies ++= Seq(
-    "org.typelevel" %%% "cats-effect" % "3.3.14",
-    "org.scalameta" %%% "munit" % "1.0.0-M6" % Test,
+    "org.typelevel" %%% "cats-effect" % "3.5.0",
+    "org.scalameta" %%% "munit" % "1.0.0-M7" % Test,
     "org.typelevel" %%% "munit-cats-effect" % "2.0.0-M3" % Test
   ),
   addCompilerPlugins,
@@ -123,14 +123,14 @@ val app = crossProject(JVMPlatform, NativePlatform)
   .settings(
     libraryDependencies ++= Seq(
       "com.disneystreaming.smithy4s" %%% "smithy4s-http4s" % smithy4sVersion.value,
-      "org.typelevel" %%% "cats-mtl" % "1.3.0",
-      "com.monovore" %%% "decline-effect" % "2.3.1",
-      "org.http4s" %%% "http4s-dsl" % "0.23.16",
-      "org.http4s" %%% "http4s-ember-server" % "0.23.16",
-      "org.http4s" %%% "http4s-ember-client" % "0.23.16",
-      "org.http4s" %%% "http4s-circe" % "0.23.16",
-      "io.circe" %%% "circe-parser" % "0.14.3",
-      "org.typelevel" %%% "log4cats-noop" % "2.5.0",
+      "org.typelevel" %%% "cats-mtl" % "1.3.1",
+      "com.monovore" %%% "decline-effect" % "2.4.1",
+      "org.http4s" %%% "http4s-dsl" % "0.23.19",
+      "org.http4s" %%% "http4s-ember-server" % "0.23.19",
+      "org.http4s" %%% "http4s-ember-client" % "0.23.19",
+      "org.http4s" %%% "http4s-circe" % "0.23.19",
+      "io.circe" %%% "circe-parser" % "0.14.5",
+      "org.typelevel" %%% "log4cats-noop" % "2.6.0",
       "org.polyvariant" %%% "colorize" % "0.3.2"
       // waiting
       // "dev.optics" %%% "monocle-core" % "3.1.0"
@@ -141,7 +141,7 @@ val app = crossProject(JVMPlatform, NativePlatform)
   .settings(name := "spotify-next")
   .enablePlugins(BuildInfoPlugin)
   .settings(
-    Compile / smithy4sInputDir := (ThisBuild / baseDirectory).value / "app" / "src" / "main" / "smithy"
+    Compile / smithy4sInputDirs := Seq((ThisBuild / baseDirectory).value / "app" / "src" / "main" / "smithy")
   )
   .enablePlugins(Smithy4sCodegenPlugin)
   .jvmConfigure(

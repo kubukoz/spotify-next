@@ -8,6 +8,7 @@ import com.kubukoz.next.util.Config.RefreshToken
 import com.kubukoz.next.util.Config.Token
 import cats.Applicative
 import cats.Foldable
+import cats.kernel.Monoid
 
 trait LoginProcess[F[_]] {
   def login: F[Unit]
@@ -31,11 +32,15 @@ object LoginProcess {
 
   }
 
-  def combineAll[F[_]: Applicative, G[_]: Foldable](
-    loginProcesses: G[LoginProcess[F]]
-  ): LoginProcess[F] = new LoginProcess[F] {
-    val login: F[Unit] = loginProcesses.traverse_(_.login)
-  }
+  given [F[_]: Applicative]: Monoid[LoginProcess[F]] with
+
+    override val empty: LoginProcess[F] = new LoginProcess[F] {
+      val login: F[Unit] = Applicative[F].unit
+    }
+
+    override def combine(x: LoginProcess[F], y: LoginProcess[F]): LoginProcess[F] = new LoginProcess[F] {
+      val login: F[Unit] = x.login *> y.login
+    }
 
   extension [F[_]: Monad](loginProcess: LoginProcess[F])
 

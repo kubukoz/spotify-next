@@ -14,9 +14,7 @@ import com.kubukoz.next.client.spotify.PlayerContext
 import com.kubukoz.next.client.spotify.TrackUri
 import com.kubukoz.next.sonos.GroupId
 import com.kubukoz.next.sonos.Milliseconds
-import com.kubukoz.next.sonos.SeekInputBody
 import com.kubukoz.next.sonos.SonosApi
-import com.kubukoz.next.spotify.AudioAnalysis
 import com.kubukoz.next.spotify.SpotifyApi
 import com.kubukoz.next.spotify.Track
 import io.circe.syntax.*
@@ -189,7 +187,7 @@ object Spotify {
         SonosApi[F].nextTrack(GroupId(group.id))
 
       def seek(progress: FiniteDuration): F[Unit] =
-        SonosApi[F].seek(GroupId(group.id), SeekInputBody(Milliseconds(progress.toMillis.toInt)))
+        SonosApi[F].seek(GroupId(group.id), Milliseconds(progress.toMillis.toInt))
 
     def suspend[F[_]: FlatMap](choose: F[Playback[F]]): Playback[F] = new:
       def nextTrack: F[Unit] = choose.flatMap(_.nextTrack)
