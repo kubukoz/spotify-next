@@ -94,7 +94,7 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
       rawClient             <- makeBasicClient[F]
       given Config.Ask[F] = ConfigLoader[F].configAsk
       spotifyLoginProcess = makeLogin("Spotify", rawClient, OAuth.spotify)(Config.spotifyTokensLens)
-      sonosLoginProcess = makeLogin("Sonos", rawClient, OAuth.spotify)(Config.sonosTokensLens)
+      sonosLoginProcess = makeLogin("Sonos", rawClient, OAuth.sonos)(Config.sonosTokensLens)
       given Spotify[F]      <-
         makeSpotify[F](
           apiClient(
