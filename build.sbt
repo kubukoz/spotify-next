@@ -154,7 +154,7 @@ val app = crossProject(JVMPlatform, NativePlatform)
   .nativeConfigure(
     _.settings(
       libraryDependencies ++= Seq(
-        "com.armanbilge" %%% "epollcat" % "0.1.1"
+        "com.armanbilge" %%% "epollcat" % "0.1.5"
       )
     )
   )
