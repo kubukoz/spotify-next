@@ -119,7 +119,14 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
 
   val runRepl: IO[Unit] = {
     // EOF thrown on Ctrl+D
-    val prompt = IO.print("next> ") *> IO.readLine.map(_.some).recover { case _: EOFException => none[String] }
+    val prompt = IO.print("next> ") *>
+      fs2
+        .io
+        .stdinUtf8[IO](4096)
+        .through(fs2.text.lines[IO])
+        .head
+        .compile
+        .last
 
     val input = fs2
       .Stream
