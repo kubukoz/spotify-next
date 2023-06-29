@@ -63,7 +63,7 @@ val commonSettings = Seq(
     // "2000"
   ),
   libraryDependencies ++= Seq(
-    "org.typelevel" %%% "cats-effect" % "3.5.0",
+    "org.typelevel" %%% "cats-effect" % "3.5.1",
     "org.scalameta" %%% "munit" % "1.0.0-M7" % Test,
     "org.typelevel" %%% "munit-cats-effect" % "2.0.0-M3" % Test
   ),
