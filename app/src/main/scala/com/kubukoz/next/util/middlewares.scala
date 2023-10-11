@@ -71,8 +71,7 @@ object middlewares {
     client =>
       Client[F] { req =>
         getToken.toResource.flatMap {
-          // `eval` is type annotated as a workaround for https://github.com/lampepfl/dotty/issues/14333
-          case None        => Resource.eval[F, Unit](warnEmptyToken) *> client.run(req)
+          case None        => Resource.eval(warnEmptyToken) *> client.run(req)
           case Some(token) => client.run(withToken(token.value.trim)(req))
         }
       }
