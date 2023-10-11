@@ -100,8 +100,8 @@ object Program {
     val spotifyBaseUri = com.kubukoz.next.api.spotify.baseUri
 
     for {
-      given SpotifyApi[F] <- SimpleRestJsonBuilder(SpotifyApiGen).client[F](spotifyClient).uri(spotifyBaseUri).use.liftTo[F]
-      given SonosApi[F]   <- SimpleRestJsonBuilder(SonosApiGen).client[F](sonosClient).uri(sonos.baseUri).use.liftTo[F]
+      given SpotifyApi[F] <- SimpleRestJsonBuilder(SpotifyApiGen).client[F](spotifyClient).uri(spotifyBaseUri).make.liftTo[F]
+      given SonosApi[F]   <- SimpleRestJsonBuilder(SonosApiGen).client[F](sonosClient).uri(sonos.baseUri).make.liftTo[F]
       result              <- makeSpotifyInternal[F]
     } yield result
   }
