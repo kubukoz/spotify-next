@@ -40,6 +40,9 @@ import com.kubukoz.next.Spotify.DeviceInfo
 import org.http4s.ember.client.EmberClientBuilder
 import org.typelevel.log4cats.Logger
 import fs2.io.net.Network
+import org.http4s.client.middleware.Retry
+import org.http4s.client.middleware.RetryPolicy
+import concurrent.duration.*
 
 object Program {
 
@@ -81,6 +84,7 @@ object Program {
       .map(FollowRedirect(maxRedirects = 5))
       .map(RequestLogger(logHeaders = true, logBody = true, logAction = Some(Logger[F].debug(_: String))))
       .map(ResponseLogger(logHeaders = true, logBody = true, logAction = Some(Logger[F].debug(_: String))))
+      .map(Retry.create[F](policy = RetryPolicy(RetryPolicy.exponentialBackoff(maxWait = 5.seconds, maxRetry = 5))))
 
   def apiClient[F[_]: Console: ConfigLoader: MonadCancelThrow](
     loginProcess: LoginProcess[F],
