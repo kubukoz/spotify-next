@@ -32,23 +32,51 @@ object Config extends AskFor[Config] {
 
   given Codec[Port] = Codec.from(Decoder[Int].emap(Port.fromInt(_).toRight("Couldn't parse port")), _.value.asJson)
 
-  val spotifyTokensLens: Lens[Config, (Option[Token], Option[RefreshToken])] =
-    Lens[Config, (Option[Token], Option[RefreshToken])](cfg => (cfg.token, cfg.refreshToken)) { case (token, refreshToken) =>
+  val spotifyTokensLens: Lens[
+    Config,
+    (
+      Option[Token],
+      Option[RefreshToken]
+    )
+  ] =
+    Lens[
+      Config,
+      (
+        Option[Token],
+        Option[RefreshToken]
+      )
+    ](cfg => (cfg.token, cfg.refreshToken)) { case (token, refreshToken) =>
       _.copy(token = token, refreshToken = refreshToken)
     }
 
-  val sonosTokensLens: Lens[Config, (Option[Token], Option[RefreshToken])] =
-    Lens[Config, (Option[Token], Option[RefreshToken])](cfg => (cfg.sonosToken, cfg.sonosRefreshToken)) { case (token, refreshToken) =>
+  val sonosTokensLens: Lens[
+    Config,
+    (
+      Option[Token],
+      Option[RefreshToken]
+    )
+  ] =
+    Lens[
+      Config,
+      (
+        Option[Token],
+        Option[RefreshToken]
+      )
+    ](cfg => (cfg.sonosToken, cfg.sonosRefreshToken)) { case (token, refreshToken) =>
       _.copy(sonosToken = token, sonosRefreshToken = refreshToken)
     }
 
-  final case class Token(value: String) extends AnyVal
+  final case class Token(
+    value: String
+  ) extends AnyVal
 
   object Token {
     given Codec[Token] = Codec.from(Decoder[String].map(apply), Encoder[String].contramap(_.value))
   }
 
-  final case class RefreshToken(value: String) extends AnyVal
+  final case class RefreshToken(
+    value: String
+  ) extends AnyVal
 
   object RefreshToken {
     given Codec[RefreshToken] = Codec.from(Decoder[String].map(apply), Encoder[String].contramap(_.value))

@@ -45,7 +45,9 @@ ThisBuild / libraryDependencySchemes ++= Seq(
   "io.circe" %% "circe-parser" % "early-semver"
 )
 
-def crossPlugin(x: sbt.librarymanagement.ModuleID) = compilerPlugin(x.cross(CrossVersion.full))
+def crossPlugin(
+  x: sbt.librarymanagement.ModuleID
+) = compilerPlugin(x.cross(CrossVersion.full))
 
 val addCompilerPlugins = libraryDependencies ++= {
   List(
@@ -56,6 +58,7 @@ val addCompilerPlugins = libraryDependencies ++= {
 val commonSettings = Seq(
   scalacOptions -= "-Xfatal-warnings",
   scalacOptions ++= List(
+    "-no-indent",
     "-rewrite",
     "-source",
     "future-migration"

@@ -27,7 +27,11 @@ enum Choice {
   case Login
   case SkipTrack
   case DropTrack
-  case FastForward(percentage: Int)
+
+  case FastForward(
+    percentage: Int
+  )
+
   case JumpSection
   case Switch
   case Move
@@ -74,7 +78,13 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
     rawClient: Client[F],
     oauthKernel: OAuth.Kernel[F]
   )(
-    tokensLens: Lens[Config, (Option[Token], Option[RefreshToken])]
+    tokensLens: Lens[
+      Config,
+      (
+        Option[Token],
+        Option[RefreshToken]
+      )
+    ]
   ) = {
     val login = Login.ember[F](OAuth.fromKernel[F](rawClient, oauthKernel))
 
@@ -134,7 +144,9 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
       .map(_.split("\\s+").toList)
       .onComplete(fs2.Stream.exec(IO.println("Bye!")))
 
-    def reportError(e: Throwable): IO[Unit] =
+    def reportError(
+      e: Throwable
+    ): IO[Unit] =
       Console[IO].errorln("Command failed with exception: ") *> IO(e.printStackTrace())
 
     fs2.Stream.exec(IO.println("Loading REPL...")) ++

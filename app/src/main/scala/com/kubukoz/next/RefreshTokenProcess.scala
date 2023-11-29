@@ -13,12 +13,21 @@ trait RefreshTokenProcess[F[_]] {
 }
 
 object RefreshTokenProcess {
-  def apply[F[_]](using F: RefreshTokenProcess[F]): RefreshTokenProcess[F] = F
+
+  def apply[F[_]](
+    using F: RefreshTokenProcess[F]
+  ): RefreshTokenProcess[F] = F
 
   def instance[F[_]: UserOutput: ConfigLoader: MonadThrow](
     kind: String,
     loginAlg: Login[F],
-    tokensLens: Lens[Config, (Option[Token], Option[RefreshToken])]
+    tokensLens: Lens[
+      Config,
+      (
+        Option[Token],
+        Option[RefreshToken]
+      )
+    ]
   ): RefreshTokenProcess[F] = new RefreshTokenProcess[F] {
 
     val refreshTokenGetter = tokensLens.asGetter.map(_._2)

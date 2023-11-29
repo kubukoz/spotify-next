@@ -23,7 +23,9 @@ object middlewares {
   )(
     using fs2.Compiler[F, F]
   ): Client[F] => Client[F] = {
-    def doBeforeRetry(response: Response[F]) = {
+    def doBeforeRetry(
+      response: Response[F]
+    ) = {
       val showBody = response.bodyText.compile.string.flatMap(Console[F].println)
 
       Resource.eval(
@@ -42,7 +44,9 @@ object middlewares {
       }
   }
 
-  def logFailedResponse[F[_]: Console: MonadCancelThrow](using fs2.Compiler[F, F]): Client[F] => Client[F] = { client =>
+  def logFailedResponse[F[_]: Console: MonadCancelThrow](
+    using fs2.Compiler[F, F]
+  ): Client[F] => Client[F] = { client =>
     Client[F] { req =>
       client.run(req).evalMap {
         case response if response.status.isSuccess => response.pure[F]
@@ -57,12 +61,16 @@ object middlewares {
     }
   }
 
-  def withToken[F[_]: MonadCancelThrow: Console](getToken: F[Option[Token]]): Client[F] => Client[F] = {
+  def withToken[F[_]: MonadCancelThrow: Console](
+    getToken: F[Option[Token]]
+  ): Client[F] => Client[F] = {
 
     val warnEmptyToken =
       Console[F].println("Loaded token is empty, any API calls will probably have to be retried...")
 
-    def withToken(token: String): Request[F] => Request[F] =
+    def withToken(
+      token: String
+    ): Request[F] => Request[F] =
       _.putHeaders(Authorization(Credentials.Token(AuthScheme.Bearer, token)))
 
     client =>
@@ -74,7 +82,9 @@ object middlewares {
       }
   }
 
-  def defaultContentType[F[_]: MonadCancelThrow](tpe: `Content-Type`): Client[F] => Client[F] = client =>
+  def defaultContentType[F[_]: MonadCancelThrow](
+    tpe: `Content-Type`
+  ): Client[F] => Client[F] = client =>
     Client[F] { req =>
       client
         .run(

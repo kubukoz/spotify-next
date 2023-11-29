@@ -14,13 +14,22 @@ trait SpotifyChoice[F[_]] {
 
 object SpotifyChoice {
 
-  def apply[F[_]](implicit F: SpotifyChoice[F]): SpotifyChoice[F] = F
+  def apply[F[_]](
+    implicit F: SpotifyChoice[F]
+  ): SpotifyChoice[F] = F
 
   enum Choice {
-    case Sonos(room: SonosInfo.Group)
+
+    case Sonos(
+      room: SonosInfo.Group
+    )
+
     case Spotify
 
-    def fold[A](sonos: SonosInfo.Group => A, spotify: => A): A = this match {
+    def fold[A](
+      sonos: SonosInfo.Group => A,
+      spotify: => A
+    ): A = this match {
       case Sonos(room) => sonos(room)
       case Spotify     => spotify
     }
@@ -39,7 +48,9 @@ object SpotifyChoice {
         val spotifyInstanceF = lastSonosRoom.set(None).as(Choice.Spotify)
 
         val sonosInstanceF: F[Option[Choice]] = {
-          def extractRoom(groups: NonEmptyList[SonosInfo.Group]): F[SonosInfo.Group] = {
+          def extractRoom(
+            groups: NonEmptyList[SonosInfo.Group]
+          ): F[SonosInfo.Group] = {
             val group = groups.head
 
             UserOutput[F].print(UserMessage.SonosFound(groups, group)) *>
@@ -63,7 +74,9 @@ object SpotifyChoice {
             }
         }
 
-        def showChange(nowRestricted: Boolean): F[Unit] =
+        def showChange(
+          nowRestricted: Boolean
+        ): F[Unit] =
           UserOutput[F].print {
             if (nowRestricted) UserMessage.DeviceRestricted
             else UserMessage.DirectControl
@@ -81,8 +94,9 @@ object SpotifyChoice {
             ifFalse = spotifyInstanceF
           )
 
-        new:
+        new {
           val choose: F[Choice] = doChoose
+        }
       }
     }
 

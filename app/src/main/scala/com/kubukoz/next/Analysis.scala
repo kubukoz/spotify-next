@@ -8,26 +8,46 @@ import cats.implicits.*
 import cats.effect.kernel.MonadCancel
 
 trait Analysis[F[_]] {
-  def getAnalysis(trackUri: TrackUri): F[GetAudioAnalysisOutput]
+
+  def getAnalysis(
+    trackUri: TrackUri
+  ): F[GetAudioAnalysisOutput]
+
 }
 
 object Analysis {
 
-  def apply[F[_]](implicit F: Analysis[F]): Analysis[F] = F
+  def apply[F[_]](
+    implicit F: Analysis[F]
+  ): Analysis[F] = F
 
-  def instance[F[_]: SpotifyApi]: Analysis[F] = new:
-    def getAnalysis(trackUri: TrackUri): F[GetAudioAnalysisOutput] = SpotifyApi[F].getAudioAnalysis(trackUri.id)
+  def instance[F[_]: SpotifyApi]: Analysis[F] = new {
+
+    def getAnalysis(
+      trackUri: TrackUri
+    ): F[GetAudioAnalysisOutput] = SpotifyApi[F].getAudioAnalysis(trackUri.id)
+
+  }
 
   // "best-effort" cache of the underlying instance. Only has one slot and no concurrency guarantees.
-  def cached[F[_]: Ref.Make](underlying: Analysis[F])(using MonadCancel[F, ?]): F[Analysis[F]] = {
+  def cached[F[_]: Ref.Make](
+    underlying: Analysis[F]
+  )(
+    using MonadCancel[F, ?]
+  ): F[Analysis[F]] = {
     enum State {
       case Initial
-      case HasResult(key: TrackUri, result: GetAudioAnalysisOutput)
+      case HasResult(
+        key: TrackUri,
+        result: GetAudioAnalysisOutput
+      )
     }
 
     Ref[F].of(State.Initial: State).map { state =>
-      new:
-        def getAnalysis(trackUri: TrackUri): F[GetAudioAnalysisOutput] = MonadCancel[F].uncancelable { poll =>
+      new {
+        def getAnalysis(
+          trackUri: TrackUri
+        ): F[GetAudioAnalysisOutput] = MonadCancel[F].uncancelable { poll =>
           poll(state.get.flatMap {
             case State.HasResult(`trackUri`, result) => result.pure[F]
             case _                                   => underlying.getAnalysis(trackUri)
@@ -37,6 +57,7 @@ object Analysis {
               .as(analysis)
           }
         }
+      }
     }
   }
 

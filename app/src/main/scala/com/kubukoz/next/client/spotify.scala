@@ -14,13 +14,17 @@ import com.kubukoz.next.spotify.GetPlayerOutput
 
 object spotify {
 
-  final case class TrackUri(id: String) {
+  final case class TrackUri(
+    id: String
+  ) {
     def toFullUri: String = s"spotify:track:$id"
   }
 
   object TrackUri {
 
-    def decode(s: String) = s match {
+    def decode(
+      s: String
+    ) = s match {
       case s"spotify:track:$trackId" => TrackUri(trackId).asRight
       case s                         => s"Not a spotify:track:{trackId}: $s".asLeft
     }
@@ -28,14 +32,25 @@ object spotify {
   }
 
   enum Item {
-    case Track(uri: TrackUri, duration: FiniteDuration, name: String, artists: List[Artist])
+
+    case Track(
+      uri: TrackUri,
+      duration: FiniteDuration,
+      name: String,
+      artists: List[Artist]
+    )
+
   }
 
-  final case class Artist(name: String)
+  final case class Artist(
+    name: String
+  )
 
   object Item {
 
-    def fromApiItem(item: com.kubukoz.next.spotify.PlayerItem) = item match {
+    def fromApiItem(
+      item: com.kubukoz.next.spotify.PlayerItem
+    ) = item match {
       case com.kubukoz.next.spotify.PlayerItem.TrackCase(track) =>
         Item.Track(
           TrackUri.decode(track.uri).fold(s => throw new Exception(s), identity),
@@ -47,7 +62,11 @@ object spotify {
 
   }
 
-  final case class Player[_Ctx, _Item](context: _Ctx, item: _Item, progress: FiniteDuration) {
+  final case class Player[_Ctx, _Item](
+    context: _Ctx,
+    item: _Item,
+    progress: FiniteDuration
+  ) {
     private def itemLens[NewItem]: PLens[Player[_Ctx, _Item], Player[_Ctx, NewItem], _Item, NewItem] =
       PLens[Player[_Ctx, _Item], Player[_Ctx, NewItem], _Item, NewItem](_.item)(i => _.copy(item = i))
 
@@ -80,7 +99,9 @@ object spotify {
           case other                   => InvalidContext(other).asLeft
         }(this)
 
-    def narrowItem[DesiredItem <: _Item](using TypeTest[_Item, DesiredItem]): Either[InvalidItem[_Item], Player[_Ctx, DesiredItem]] =
+    def narrowItem[DesiredItem <: _Item](
+      using TypeTest[_Item, DesiredItem]
+    ): Either[InvalidItem[_Item], Player[_Ctx, DesiredItem]] =
       itemLens[DesiredItem].modifyF {
         case desired: DesiredItem => desired.asRight
         case other                => InvalidItem(other).asLeft
@@ -90,7 +111,9 @@ object spotify {
 
   object Player {
 
-    def fromApiPlayer(apiPlayer: GetPlayerOutput): Player[Option[PlayerContext], Option[Item]] =
+    def fromApiPlayer(
+      apiPlayer: GetPlayerOutput
+    ): Player[Option[PlayerContext], Option[Item]] =
       Player(
         context = apiPlayer.context.map(PlayerContext.fromApiContext),
         item = apiPlayer.item.map(Item.fromApiItem),
@@ -100,15 +123,28 @@ object spotify {
   }
 
   enum PlayerContext {
-    case Playlist(href: Uri, uri: PlaylistUri)
-    case Album(href: Uri)
-    case Artist(href: Uri)
+
+    case Playlist(
+      href: Uri,
+      uri: PlaylistUri
+    )
+
+    case Album(
+      href: Uri
+    )
+
+    case Artist(
+      href: Uri
+    )
+
     case CollectionCase
   }
 
   object PlayerContext {
 
-    def fromApiContext(ctx: com.kubukoz.next.spotify.PlayerContext): PlayerContext =
+    def fromApiContext(
+      ctx: com.kubukoz.next.spotify.PlayerContext
+    ): PlayerContext =
       ctx match {
         case com.kubukoz.next.spotify.PlayerContext.PlaylistCase(playlist) =>
           PlayerContext.Playlist(
@@ -125,7 +161,10 @@ object spotify {
 
   }
 
-  final case class PlaylistUri(playlist: String, user: Option[String]) {
+  final case class PlaylistUri(
+    playlist: String,
+    user: Option[String]
+  ) {
 
     def toFullUri: String = user match {
       case Some(user) => s"spotify:user:$user:playlist:$playlist"
@@ -136,7 +175,9 @@ object spotify {
 
   object PlaylistUri {
 
-    def decode(s: String): Either[String, PlaylistUri] = s match {
+    def decode(
+      s: String
+    ): Either[String, PlaylistUri] = s match {
       case s"spotify:user:$userId:playlist:$playlistId" => PlaylistUri(playlistId, userId.some).asRight
       case s"spotify:playlist:$playlistId"              => PlaylistUri(playlistId, none).asRight
       case literallyAnythingElse                        => (literallyAnythingElse + " is not a playlist URI").asLeft
@@ -144,7 +185,13 @@ object spotify {
 
   }
 
-  final case class TokenResponse(access_token: String, refresh_token: String) derives Codec.AsObject
+  final case class TokenResponse(
+    access_token: String,
+    refresh_token: String
+  ) derives Codec.AsObject
 
-  final case class RefreshedTokenResponse(access_token: String) derives Codec.AsObject
+  final case class RefreshedTokenResponse(
+    access_token: String
+  ) derives Codec.AsObject
+
 }

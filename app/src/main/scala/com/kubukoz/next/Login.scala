@@ -15,20 +15,32 @@ import fs2.io.net.Network
 
 trait Login[F[_]] {
   def server: F[OAuth.Tokens]
-  def refreshToken(token: RefreshToken): F[Token]
+
+  def refreshToken(
+    token: RefreshToken
+  ): F[Token]
+
 }
 
 object Login {
-  def apply[F[_]](using F: Login[F]): Login[F] = F
+
+  def apply[F[_]](
+    using F: Login[F]
+  ): Login[F] = F
 
   def ember[F[_]: UserOutput: Config.Ask: Network: Async](
     oauth: OAuth[F]
   ): Login[F] =
     new Login[F] {
 
-      def refreshToken(token: RefreshToken): F[Token] = oauth.refreshToken(token)
+      def refreshToken(
+        token: RefreshToken
+      ): F[Token] = oauth.refreshToken(token)
 
-      def mkServer(config: Config, route: HttpRoutes[F]) =
+      def mkServer(
+        config: Config,
+        route: HttpRoutes[F]
+      ) =
         EmberServerBuilder
           .default[F]
           .withHttpApp(route.orNotFound)
@@ -57,7 +69,10 @@ object Login {
 
     }
 
-  def routes[F[_]: MonadThrow](saveCode: OAuth.Code => F[Unit], finishServer: F[Unit]): HttpRoutes[F] = {
+  def routes[F[_]: MonadThrow](
+    saveCode: OAuth.Code => F[Unit],
+    finishServer: F[Unit]
+  ): HttpRoutes[F] = {
     val dsl = new Http4sDsl[F] {}
     import dsl.*
 

@@ -20,23 +20,49 @@ import cats.Monad
 
 trait OAuth[F[_]] {
   def getAuthorizeUri: F[Uri]
-  def getTokens(code: OAuth.Code): F[OAuth.Tokens]
-  def refreshToken(token: RefreshToken): F[Token]
+
+  def getTokens(
+    code: OAuth.Code
+  ): F[OAuth.Tokens]
+
+  def refreshToken(
+    token: RefreshToken
+  ): F[Token]
+
 }
 
 object OAuth {
-  final case class Code(value: String)
-  final case class Tokens(access: Token, refresh: RefreshToken)
+
+  final case class Code(
+    value: String
+  )
+
+  final case class Tokens(
+    access: Token,
+    refresh: RefreshToken
+  )
 
   trait Kernel[F[_]] {
     def getAuthorizeUri: F[Uri]
-    def getTokens(code: OAuth.Code): F[Request[F]]
-    def refreshToken(token: RefreshToken): F[Request[F]]
+
+    def getTokens(
+      code: OAuth.Code
+    ): F[Request[F]]
+
+    def refreshToken(
+      token: RefreshToken
+    ): F[Request[F]]
+
   }
 
-  def fromKernel[F[_]: Config.Ask: Concurrent](client: Client[F], kernel: Kernel[F]): OAuth[F] = new OAuth[F] {
+  def fromKernel[F[_]: Config.Ask: Concurrent](
+    client: Client[F],
+    kernel: Kernel[F]
+  ): OAuth[F] = new OAuth[F] {
 
-    def refreshToken(token: RefreshToken): F[Token] =
+    def refreshToken(
+      token: RefreshToken
+    ): F[Token] =
       kernel
         .refreshToken(token)
         .flatMap(
@@ -46,7 +72,9 @@ object OAuth {
         .map(_.access_token)
         .map(Token(_))
 
-    def getTokens(code: Code): F[Tokens] =
+    def getTokens(
+      code: Code
+    ): F[Tokens] =
       kernel
         .getTokens(code)
         .flatMap(client.expect[TokenResponse](_))
@@ -61,7 +89,9 @@ object OAuth {
 
     private val baseUri = uri"https://accounts.spotify.com"
 
-    def refreshToken(token: RefreshToken): F[Request[F]] = {
+    def refreshToken(
+      token: RefreshToken
+    ): F[Request[F]] = {
       val body = UrlForm(
         "grant_type" -> "refresh_token",
         "refresh_token" -> token.value
@@ -76,7 +106,9 @@ object OAuth {
         }
     }
 
-    def getTokens(code: Code): F[Request[F]] = Config.ask[F].map { config =>
+    def getTokens(
+      code: Code
+    ): F[Request[F]] = Config.ask[F].map { config =>
       Request[F](POST, baseUri / "api" / "token").withEntity(
         UrlForm(
           "grant_type" -> "authorization_code",
@@ -113,7 +145,9 @@ object OAuth {
   def sonos[F[_]: Config.Ask: Monad]: OAuth.Kernel[F] = new OAuth.Kernel[F] {
     private val baseUri = uri"https://api.sonos.com"
 
-    def refreshToken(token: RefreshToken): F[Request[F]] =
+    def refreshToken(
+      token: RefreshToken
+    ): F[Request[F]] =
       Config
         .ask[F]
         .map { config =>
@@ -127,7 +161,9 @@ object OAuth {
             .putHeaders(Authorization(BasicCredentials(config.sonosClientId, config.sonosClientSecret)))
         }
 
-    def getTokens(code: Code): F[Request[F]] = Config.ask[F].map { config =>
+    def getTokens(
+      code: Code
+    ): F[Request[F]] = Config.ask[F].map { config =>
       Request[F](POST, baseUri / "login" / "v3" / "oauth" / "access")
         .withEntity(
           UrlForm(

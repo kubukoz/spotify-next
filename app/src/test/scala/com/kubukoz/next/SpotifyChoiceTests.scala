@@ -19,7 +19,9 @@ class SpotifyChoiceTests extends munit.CatsEffectSuite {
     def zones: IO[Option[NonEmptyList[SonosInfo.Group]]] = NonEmptyList.one(home).some.pure[IO]
   }
 
-  def deviceInfo(available: RefSource[IO, Boolean]) = new DeviceInfo[IO] {
+  def deviceInfo(
+    available: RefSource[IO, Boolean]
+  ) = new DeviceInfo[IO] {
     def isRestricted: IO[Boolean] = available.get.map(!_)
   }
 

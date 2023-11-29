@@ -17,56 +17,122 @@ import com.kubukoz.next.client.spotify.PlaylistUri
 import org.polyvariant.colorize.string.ColorizedString
 
 enum UserMessage {
-  case GoToUri(uri: Uri)
-  case ConfigFileNotFound(path: Path, validInput: String)
-  case SavedConfig(path: Path)
+
+  case GoToUri(
+    uri: Uri
+  )
+
+  case ConfigFileNotFound(
+    path: Path,
+    validInput: String
+  )
+
+  case SavedConfig(
+    path: Path
+  )
+
   case SavedToken
-  case RefreshedToken(kind: String)
-  case NowPlaying(track: Item.Track)
+
+  case RefreshedToken(
+    kind: String
+  )
+
+  case NowPlaying(
+    track: Item.Track
+  )
 
   // playback
   case SwitchingToNext
-  case RemovingCurrentTrack(player: Player[PlayerContext.Playlist, Item.Track])
-  case MovingCurrentTrack(player: Player[PlayerContext, Item.Track], targetPlaylist: PlaylistUri)
+
+  case RemovingCurrentTrack(
+    player: Player[PlayerContext.Playlist, Item.Track]
+  )
+
+  case MovingCurrentTrack(
+    player: Player[PlayerContext, Item.Track],
+    targetPlaylist: PlaylistUri
+  )
+
   case NoDevices
   case TooCloseToEnd
-  case SwitchingPlayback(target: PlaybackTarget)
-  case Jumping(sectionNumber: Int, sectionsTotal: Int, percentTotal: Int)
-  case Seeking(desiredProgressPercent: Int)
+
+  case SwitchingPlayback(
+    target: PlaybackTarget
+  )
+
+  case Jumping(
+    sectionNumber: Int,
+    sectionsTotal: Int,
+    percentTotal: Int
+  )
+
+  case Seeking(
+    desiredProgressPercent: Int
+  )
 
   // sonos
   case CheckingSonos
   case SonosNotFound
-  case SonosFound(groups: NonEmptyList[SonosInfo.Group], group: SonosInfo.Group)
+
+  case SonosFound(
+    groups: NonEmptyList[SonosInfo.Group],
+    group: SonosInfo.Group
+  )
+
   case DeviceRestricted
   case DirectControl
 }
 
 enum PlaybackTarget {
-  case Spotify(device: Device)
-  case Sonos(group: Group)
+
+  case Spotify(
+    device: Device
+  )
+
+  case Sonos(
+    group: Group
+  )
+
 }
 
 trait UserOutput[F[_]] {
-  def print(msg: UserMessage): F[Unit]
-  def mapK[G[_]](fk: F ~> G): UserOutput[G] = msg => fk(print(msg))
+
+  def print(
+    msg: UserMessage
+  ): F[Unit]
+
+  def mapK[G[_]](
+    fk: F ~> G
+  ): UserOutput[G] = msg => fk(print(msg))
+
 }
 
 object UserOutput {
-  def apply[F[_]](using F: UserOutput[F]): UserOutput[F] = F
 
-  def toConsole[F[_]: std.Console](sonosBaseUrl: Uri): UserOutput[F] = {
+  def apply[F[_]](
+    using F: UserOutput[F]
+  ): UserOutput[F] = F
+
+  def toConsole[F[_]: std.Console](
+    sonosBaseUrl: Uri
+  ): UserOutput[F] = {
     given Show[Path] = Show.fromToString
 
     import UserMessage.*
 
     import org.polyvariant.colorize.*
 
-    extension [A](as: List[A]) {
-      def intercalate(sep: A): List[A] = as.flatMap(List(_, sep)).dropRight(1)
+    extension [A](
+      as: List[A]
+    ) {
+      def intercalate(
+        sep: A
+      ): List[A] = as.flatMap(List(_, sep)).dropRight(1)
     }
 
-    extension (c: List[ColorizedString]) def merged: ColorizedString = c.foldLeft(ColorizedString.empty)(_ ++ _)
+    extension (
+      c: List[ColorizedString]
+    ) def merged: ColorizedString = c.foldLeft(ColorizedString.empty)(_ ++ _)
 
     val stringify: UserMessage => ColorizedString = {
       case GoToUri(uri)                               => show"Go to $uri"
@@ -92,9 +158,10 @@ object UserOutput {
       case SonosNotFound                                       => "Sonos not found, using fallback"
       case NoDevices                                           => "No Spotify devices found, can't switch playback"
       case SwitchingPlayback(target)                           =>
-        val targetString = target match
+        val targetString = target match {
           case PlaybackTarget.Spotify(device) => show"Spotify (${device.name}, ID: ${device.id.map(_.value)})"
           case PlaybackTarget.Sonos(group)    => show"Sonos (${group.name}, ID: ${group.id})"
+        }
 
         show"Switching playback to $targetString"
 

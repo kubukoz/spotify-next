@@ -43,11 +43,18 @@ import concurrent.duration.*
 object Program {
 
   trait System[F[_]] {
-    def getenv(name: String): F[Option[String]]
+
+    def getenv(
+      name: String
+    ): F[Option[String]]
+
   }
 
   object System {
-    def apply[F[_]](using F: System[F]): System[F] = F
+
+    def apply[F[_]](
+      using F: System[F]
+    ): System[F] = F
 
     given [F[_]: Sync]: System[F] = name => Sync[F].delay(java.lang.System.getenv(name)).map(Option(_))
   }
@@ -96,7 +103,10 @@ object Program {
   def sonosMiddlewares[F[_]: MonadCancelThrow]: Client[F] => Client[F] =
     middlewares.defaultContentType(`Content-Type`(MediaType.application.json, Charset.`UTF-8`))
 
-  def makeSpotify[F[_]: UserOutput: ConfigLoader: Concurrent](spotifyClient: Client[F], sonosClient: Client[F]): F[Spotify[F]] = {
+  def makeSpotify[F[_]: UserOutput: ConfigLoader: Concurrent](
+    spotifyClient: Client[F],
+    sonosClient: Client[F]
+  ): F[Spotify[F]] = {
     val spotifyBaseUri = com.kubukoz.next.api.spotify.baseUri
 
     for {

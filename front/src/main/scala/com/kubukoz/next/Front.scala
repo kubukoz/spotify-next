@@ -19,7 +19,8 @@ import cats.effect.unsafe.implicits.*
 object Front {
 
   @JSExportTopLevel("main")
-  def main(): Unit = {
+  def main(
+  ): Unit = {
     if (LinkingInfo.developmentMode) {
       slinky.hot.initialize()
     }
@@ -61,21 +62,26 @@ object App {
     }
 
     // just a POC of using cats-effect here
-    Hooks.useEffect { () =>
-      val theIO = IO(handleClicked.unsafeRunSync()).delayBy(16.millis)
+    Hooks.useEffect {
+      (
+      ) =>
+        val theIO = IO(handleClicked.unsafeRunSync()).delayBy(16.millis)
 
-      // this could be a little nicer huh
-      val tok = new AtomicReference[IO[Unit]](IO.unit)
-      theIO.start.unsafeRunAsync {
-        _.traverse(fiber => IO(tok.set(fiber.cancel))).unsafeRunAndForget()
-      }
+        // this could be a little nicer huh
+        val tok = new AtomicReference[IO[Unit]](IO.unit)
+        theIO.start.unsafeRunAsync {
+          _.traverse(fiber => IO(tok.set(fiber.cancel))).unsafeRunAndForget()
+        }
 
-      () => IO(tok.get).flatten.unsafeRunAndForget()
+        (
+        ) => IO(tok.get).flatten.unsafeRunAndForget()
     }
 
     import slinky.styledcomponents.*
 
-    case class StonksProps(color: String)
+    case class StonksProps(
+      color: String
+    )
 
     val stonks = styled.button(css"""
       display: block;

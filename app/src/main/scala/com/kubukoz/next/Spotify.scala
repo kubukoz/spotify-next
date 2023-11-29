@@ -21,7 +21,11 @@ import concurrent.duration.*
 trait Spotify[F[_]] {
   def skipTrack: F[Unit]
   def dropTrack: F[Unit]
-  def fastForward(percentage: Int): F[Unit]
+
+  def fastForward(
+    percentage: Int
+  ): F[Unit]
+
   def jumpSection: F[Unit]
   def switch: F[Unit]
   def move: F[Unit]
@@ -29,15 +33,28 @@ trait Spotify[F[_]] {
 
 object Spotify {
 
-  def apply[F[_]](using F: Spotify[F]): Spotify[F] = F
+  def apply[F[_]](
+    using F: Spotify[F]
+  ): Spotify[F] = F
 
   enum Error extends Throwable {
     case NotPlaying
-    case InvalidStatus(status: Status)
+
+    case InvalidStatus(
+      status: Status
+    )
+
     case NoContext
     case NoItem
-    case InvalidContext[T](ctx: T)
-    case InvalidItem[T](item: T)
+
+    case InvalidContext[T](
+      ctx: T
+    )
+
+    case InvalidItem[T](
+      item: T
+    )
+
   }
 
   import Error.*
@@ -52,15 +69,21 @@ object Spotify {
         }
       }
 
-      private def requireContext[A](player: Player[Option[PlayerContext], A]): F[Player[PlayerContext, A]] =
+      private def requireContext[A](
+        player: Player[Option[PlayerContext], A]
+      ): F[Player[PlayerContext, A]] =
         player
           .unwrapContext
           .liftTo[F](NoContext)
 
-      private def requirePlaylist[A](player: Player[PlayerContext, A]): F[Player[PlayerContext.Playlist, A]] =
+      private def requirePlaylist[A](
+        player: Player[PlayerContext, A]
+      ): F[Player[PlayerContext.Playlist, A]] =
         player.narrowContext[PlayerContext.Playlist].liftTo[F]
 
-      private def requireTrack[A](player: Player[A, Option[Item]]): F[Player[A, Item.Track]] =
+      private def requireTrack[A](
+        player: Player[A, Option[Item]]
+      ): F[Player[A, Item.Track]] =
         player
           .unwrapItem
           .liftTo[F](NoItem)
@@ -85,7 +108,9 @@ object Spotify {
               SpotifyApi[F].removeTrack(playlistId, List(Track(trackUri.toFullUri)))
           }
 
-      def fastForward(percentage: Int): F[Unit] =
+      def fastForward(
+        percentage: Int
+      ): F[Unit] =
         getPlayer
           .flatMap(requireTrack)
           .fproduct { player =>
@@ -157,27 +182,52 @@ object Spotify {
 
   trait Playback[F[_]] {
     def nextTrack: F[Unit]
-    def seek(progress: FiniteDuration): F[Unit]
+
+    def seek(
+      progress: FiniteDuration
+    ): F[Unit]
+
   }
 
   object Playback {
-    def apply[F[_]](using F: Playback[F]): Playback[F] = F
 
-    def spotifyInstance[F[_]: SpotifyApi]: Playback[F] = new:
+    def apply[F[_]](
+      using F: Playback[F]
+    ): Playback[F] = F
+
+    def spotifyInstance[F[_]: SpotifyApi]: Playback[F] = new {
       val nextTrack: F[Unit] = SpotifyApi[F].nextTrack()
-      def seek(progress: FiniteDuration): F[Unit] = SpotifyApi[F].seek(progress.toMillis.toInt)
 
-    def sonosInstance[F[_]: SonosApi](group: SonosInfo.Group): Playback[F] = new:
+      def seek(
+        progress: FiniteDuration
+      ): F[Unit] = SpotifyApi[F].seek(progress.toMillis.toInt)
+
+    }
+
+    def sonosInstance[F[_]: SonosApi](
+      group: SonosInfo.Group
+    ): Playback[F] = new {
 
       val nextTrack: F[Unit] =
         SonosApi[F].nextTrack(GroupId(group.id))
 
-      def seek(progress: FiniteDuration): F[Unit] =
+      def seek(
+        progress: FiniteDuration
+      ): F[Unit] =
         SonosApi[F].seek(GroupId(group.id), Milliseconds(progress.toMillis.toInt))
 
-    def suspend[F[_]: FlatMap](choose: F[Playback[F]]): Playback[F] = new:
+    }
+
+    def suspend[F[_]: FlatMap](
+      choose: F[Playback[F]]
+    ): Playback[F] = new {
       def nextTrack: F[Unit] = choose.flatMap(_.nextTrack)
-      def seek(progress: FiniteDuration): F[Unit] = choose.flatMap(_.seek(progress))
+
+      def seek(
+        progress: FiniteDuration
+      ): F[Unit] = choose.flatMap(_.seek(progress))
+
+    }
 
     def makeFromChoice[F[_]: SpotifyApi: SonosApi: FlatMap](
       choice: SpotifyChoice[F]
@@ -202,9 +252,12 @@ object Spotify {
   }
 
   object Switch {
-    def apply[F[_]](using F: Switch[F]): Switch[F] = F
 
-    def spotifyInstance[F[_]: SpotifyApi: FlatMap: UserOutput]: Switch[F] = new:
+    def apply[F[_]](
+      using F: Switch[F]
+    ): Switch[F] = F
+
+    def spotifyInstance[F[_]: SpotifyApi: FlatMap: UserOutput]: Switch[F] = new {
 
       val switch: F[Unit] =
         SpotifyApi[F]
@@ -220,7 +273,9 @@ object Spotify {
                 SpotifyApi[F].transferPlayback(List(device.id.getOrElse(sys.error("impossible"))))
           }
 
-    def sonosInstance[F[_]: SonosApi: SonosInfo: UserOutput: FlatMap]: Switch[F] = new:
+    }
+
+    def sonosInstance[F[_]: SonosApi: SonosInfo: UserOutput: FlatMap]: Switch[F] = new {
 
       val switch: F[Unit] =
         SonosInfo[F].zones.flatMap {
@@ -233,8 +288,14 @@ object Spotify {
               SonosApi[F].play(GroupId(group.id))
         }
 
-    def suspend[F[_]: FlatMap](choose: F[Switch[F]]): Switch[F] = new:
+    }
+
+    def suspend[F[_]: FlatMap](
+      choose: F[Switch[F]]
+    ): Switch[F] = new {
       val switch: F[Unit] = choose.flatMap(_.switch)
+    }
+
   }
 
   trait DeviceInfo[F[_]] {
@@ -242,7 +303,10 @@ object Spotify {
   }
 
   object DeviceInfo {
-    def apply[F[_]](using F: DeviceInfo[F]): DeviceInfo[F] = F
+
+    def apply[F[_]](
+      using F: DeviceInfo[F]
+    ): DeviceInfo[F] = F
 
     def instance[F[_]: Concurrent: SpotifyApi]: DeviceInfo[F] = new DeviceInfo[F] {
       val isRestricted: F[Boolean] = SpotifyApi[F].getPlayer().map(_.device.isRestricted)
@@ -255,11 +319,20 @@ object Spotify {
   }
 
   object SonosInfo {
-    def apply[F[_]](using F: SonosInfo[F]): SonosInfo[F] = F
 
-    case class Group(id: String, name: String)
+    def apply[F[_]](
+      using F: SonosInfo[F]
+    ): SonosInfo[F] = F
 
-    def instance[F[_]: UserOutput: SonosApi](using MonadError[F, ?], fs2.Compiler[F, F]): SonosInfo[F] =
+    case class Group(
+      id: String,
+      name: String
+    )
+
+    def instance[F[_]: UserOutput: SonosApi](
+      using MonadError[F, ?],
+      fs2.Compiler[F, F]
+    ): SonosInfo[F] =
       new SonosInfo[F] {
 
         val zones: F[Option[NonEmptyList[SonosInfo.Group]]] = UserOutput[F].print(UserMessage.CheckingSonos) *>

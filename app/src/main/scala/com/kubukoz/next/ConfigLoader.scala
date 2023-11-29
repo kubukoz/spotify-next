@@ -17,27 +17,40 @@ import fs2.io.file.Path
 import fs2.io.file.Flags
 
 trait ConfigLoader[F[_]] {
-  def saveConfig(config: Config): F[Unit]
+
+  def saveConfig(
+    config: Config
+  ): F[Unit]
+
   def loadConfig: F[Config]
 }
 
 object ConfigLoader {
-  def apply[F[_]](using F: ConfigLoader[F]): ConfigLoader[F] = F
+
+  def apply[F[_]](
+    using F: ConfigLoader[F]
+  ): ConfigLoader[F] = F
 
   def cached[F[_]: Ref.Make: FlatMap]: ConfigLoader[F] => F[ConfigLoader[F]] =
     underlying =>
       underlying.loadConfig.flatMap(Ref[F].of(_)).map { ref =>
         new ConfigLoader[F] {
-          def saveConfig(config: Config): F[Unit] = underlying.saveConfig(config) *> ref.set(config)
+          def saveConfig(
+            config: Config
+          ): F[Unit] = underlying.saveConfig(config) *> ref.set(config)
           val loadConfig: F[Config] = ref.get
         }
       }
 
-  def withCreateFileIfMissing[F[_]: UserOutput: Console: MonadThrow](configPath: Path): ConfigLoader[F] => ConfigLoader[F] = {
+  def withCreateFileIfMissing[F[_]: UserOutput: Console: MonadThrow](
+    configPath: Path
+  ): ConfigLoader[F] => ConfigLoader[F] = {
 
     val validInput = "Y"
 
-    def askToCreateFile(originalException: NoSuchFileException): F[Config] =
+    def askToCreateFile(
+      originalException: NoSuchFileException
+    ): F[Config] =
       for {
         _                 <- UserOutput[F].print(UserMessage.ConfigFileNotFound(configPath, validInput))
         _                 <- Console[F].readLine.map(_.trim).ensure(originalException)(_.equalsIgnoreCase(validInput))
@@ -64,11 +77,17 @@ object ConfigLoader {
             UserOutput[F].print(UserMessage.SavedConfig(configPath))
         }
 
-        def saveConfig(config: Config): F[Unit] = underlying.saveConfig(config)
+        def saveConfig(
+          config: Config
+        ): F[Unit] = underlying.saveConfig(config)
       }
   }
 
-  def default[F[_]: Files: MonadThrow](configPath: Path)(using fs2.Compiler[F, F]): ConfigLoader[F] =
+  def default[F[_]: Files: MonadThrow](
+    configPath: Path
+  )(
+    using fs2.Compiler[F, F]
+  ): ConfigLoader[F] =
     new ConfigLoader[F] {
 
       private val createOrOverwriteFile: Pipe[F, Byte, Nothing] = bytes =>
@@ -77,7 +96,9 @@ object ConfigLoader {
             Files[F].writeAll(configPath, Flags.Write)
           )
 
-      def saveConfig(config: Config): F[Unit] =
+      def saveConfig(
+        config: Config
+      ): F[Unit] =
         fs2
           .Stream
           .emit(config)
@@ -97,6 +118,8 @@ object ConfigLoader {
 
     }
 
-  extension [F[_]: Applicative](cl: ConfigLoader[F]) def configAsk: Config.Ask[F] = Config.askLiftF(cl.loadConfig)
+  extension [F[_]: Applicative](
+    cl: ConfigLoader[F]
+  ) def configAsk: Config.Ask[F] = Config.askLiftF(cl.loadConfig)
 
 }
