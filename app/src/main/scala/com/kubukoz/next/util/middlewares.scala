@@ -15,9 +15,6 @@ import org.http4s.client.Client
 import org.http4s.headers.`Content-Type`
 import org.http4s.headers.Authorization
 import org.http4s.EntityEncoder
-import org.http4s.Uri.Path
-import java.nio.charset.StandardCharsets
-import org.http4s.Uri.Path.Segment
 
 object middlewares {
 

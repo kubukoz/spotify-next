@@ -6,13 +6,6 @@ import cats.effect.Ref
 import cats.implicits.*
 import com.kubukoz.next.Spotify.DeviceInfo
 import com.kubukoz.next.Spotify.SonosInfo
-import com.kubukoz.next.api.sonos
-import com.kubukoz.next.client.spotify.Item
-import com.kubukoz.next.client.spotify.Player
-import com.kubukoz.next.client.spotify.PlayerContext
-import com.kubukoz.next.client.spotify.TrackUri
-import io.circe.syntax.*
-import scala.concurrent.duration.*
 import cats.data.NonEmptyList
 
 trait SpotifyChoice[F[_]] {

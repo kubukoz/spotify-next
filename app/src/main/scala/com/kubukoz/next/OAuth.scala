@@ -36,8 +36,6 @@ object OAuth {
 
   def fromKernel[F[_]: Config.Ask: Concurrent](client: Client[F], kernel: Kernel[F]): OAuth[F] = new OAuth[F] {
 
-    private val baseUri = uri"https://accounts.spotify.com"
-
     def refreshToken(token: RefreshToken): F[Token] =
       kernel
         .refreshToken(token)

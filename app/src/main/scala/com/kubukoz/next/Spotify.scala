@@ -1,36 +1,22 @@
 package com.kubukoz.next
 
-import cats.ApplicativeError
 import cats.FlatMap
 import cats.MonadError
 import cats.data.OptionT
 import cats.effect.Concurrent
-import cats.effect.Ref
 import cats.implicits.*
-import com.kubukoz.next.api.sonos
 import com.kubukoz.next.client.spotify.Item
 import com.kubukoz.next.client.spotify.Player
 import com.kubukoz.next.client.spotify.PlayerContext
-import com.kubukoz.next.client.spotify.TrackUri
 import com.kubukoz.next.sonos.GroupId
 import com.kubukoz.next.sonos.Milliseconds
 import com.kubukoz.next.sonos.SonosApi
 import com.kubukoz.next.spotify.SpotifyApi
 import com.kubukoz.next.spotify.Track
-import io.circe.syntax.*
-import org.http4s.Method.DELETE
-import org.http4s.Method.POST
-import org.http4s.Method.PUT
-import org.http4s.Request
-import org.http4s.Status
-import org.http4s.Uri
-import org.http4s.circe.CirceEntityCodec.*
-import org.http4s.client.Client
-
-import scala.concurrent.duration.*
 import scala.util.chaining.*
 import cats.data.NonEmptyList
-import com.kubukoz.next.client.spotify.PlaylistUri
+import org.http4s.Status
+import concurrent.duration.*
 
 trait Spotify[F[_]] {
   def skipTrack: F[Unit]
