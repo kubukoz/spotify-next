@@ -1,20 +1,14 @@
 package com.kubukoz.next.client
 
-import scala.reflect.ClassTag
-import cats.data.NonEmptyList
 import com.kubukoz.next.Spotify.Error.*
 import io.circe.Codec
 import io.circe.Decoder
 import io.circe.Encoder
-import io.circe.syntax.*
 import monocle.PLens
-import org.http4s.EntityDecoder
 import org.http4s.Uri
 import cats.Functor
 import cats.implicits.*
-import cats.effect.Concurrent
 import scala.reflect.TypeTest
-import org.http4s.implicits.*
 import scala.concurrent.duration.*
 import com.kubukoz.next.spotify.GetPlayerOutput
 

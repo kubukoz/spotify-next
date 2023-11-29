@@ -7,7 +7,6 @@ import monocle.Lens
 import com.kubukoz.next.util.Config.RefreshToken
 import com.kubukoz.next.util.Config.Token
 import cats.Applicative
-import cats.Foldable
 import cats.kernel.Monoid
 
 trait LoginProcess[F[_]] {

@@ -12,16 +12,13 @@ import com.kubukoz.next.api.sonos
 import com.monovore.decline.*
 import com.monovore.decline.effect.*
 import cats.effect.implicits.*
-import java.io.EOFException
 import LoginProcess.given
 import org.typelevel.log4cats.Logger
-// import org.typelevel.log4cats.slf4j.Slf4jLogger
 import org.typelevel.log4cats.noop.NoOpLogger
 import cats.effect.unsafe.IORuntime
 import fs2.io.file.Files
 import fs2.io.net.Network
 import org.http4s.client.Client
-import cats.effect.Concurrent
 import monocle.Lens
 import com.kubukoz.next.util.Config.RefreshToken
 import com.kubukoz.next.util.Config.Token
@@ -72,7 +69,7 @@ object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: 
   given Logger[IO] = NoOpLogger[IO]
   // given Logger[IO] = Slf4jLogger.getLogger[IO]
 
-  def makeLogin[F[_]: Config.Ask: ConfigLoader: UserOutput: Async](
+  def makeLogin[F[_]: Config.Ask: ConfigLoader: UserOutput: Network: Async](
     name: String,
     rawClient: Client[F],
     oauthKernel: OAuth.Kernel[F]

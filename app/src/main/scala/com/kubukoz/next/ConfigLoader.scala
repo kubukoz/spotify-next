@@ -3,7 +3,6 @@ package com.kubukoz.next
 import com.kubukoz.next.util.Config
 import io.circe.syntax.*
 import io.circe.Printer
-import java.nio.file.StandardOpenOption
 import java.nio.file.NoSuchFileException
 import com.kubukoz.next.util.ConsoleRead
 import cats.effect.*

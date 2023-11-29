@@ -2,7 +2,6 @@ package com.kubukoz.next
 
 import cats.effect.kernel.Async
 import cats.effect.kernel.Deferred
-import cats.effect.kernel.Resource
 import cats.implicits.*
 import com.kubukoz.next.util.Config
 import com.kubukoz.next.util.Config.RefreshToken
@@ -11,8 +10,8 @@ import org.http4s.HttpRoutes
 import org.http4s.dsl.Http4sDsl
 import org.http4s.implicits.*
 import cats.MonadThrow
-import com.comcast.ip4s.*
 import org.http4s.ember.server.EmberServerBuilder
+import fs2.io.net.Network
 
 trait Login[F[_]] {
   def server: F[OAuth.Tokens]
@@ -22,7 +21,7 @@ trait Login[F[_]] {
 object Login {
   def apply[F[_]](using F: Login[F]): Login[F] = F
 
-  def ember[F[_]: UserOutput: Config.Ask: Async](
+  def ember[F[_]: UserOutput: Config.Ask: Network: Async](
     oauth: OAuth[F]
   ): Login[F] =
     new Login[F] {

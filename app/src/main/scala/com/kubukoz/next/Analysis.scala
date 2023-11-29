@@ -4,7 +4,6 @@ import com.kubukoz.next.spotify.GetAudioAnalysisOutput
 import com.kubukoz.next.spotify.SpotifyApi
 import com.kubukoz.next.client.spotify.TrackUri
 import cats.effect.kernel.Ref
-import cats.FlatMap
 import cats.implicits.*
 import cats.effect.kernel.MonadCancel
 
