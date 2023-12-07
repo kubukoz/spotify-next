@@ -13,3 +13,4 @@ front/build/
 # Local Netlify folder
 .netlify
 .smithy.lsp.log
+result
