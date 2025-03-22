@@ -13,9 +13,7 @@ import cats.implicits.*
 import com.kubukoz.next.Spotify.DeviceInfo
 import com.kubukoz.next.api.sonos
 import com.kubukoz.next.sonos.SonosApi
-import com.kubukoz.next.sonos.SonosApiGen
 import com.kubukoz.next.spotify.SpotifyApi
-import com.kubukoz.next.spotify.SpotifyApiGen
 import com.kubukoz.next.util.Config
 import com.kubukoz.next.util.Config.Token
 import com.kubukoz.next.util.middlewares
@@ -107,8 +105,8 @@ object Program {
     val spotifyBaseUri = com.kubukoz.next.api.spotify.baseUri
 
     for {
-      given SpotifyApi[F] <- SimpleRestJsonBuilder(SpotifyApiGen).client[F](spotifyClient).uri(spotifyBaseUri).make.liftTo[F]
-      given SonosApi[F]   <- SimpleRestJsonBuilder(SonosApiGen).client[F](sonosClient).uri(sonos.baseUri).make.liftTo[F]
+      given SpotifyApi[F] <- SimpleRestJsonBuilder(SpotifyApi).client[F](spotifyClient).uri(spotifyBaseUri).make.liftTo[F]
+      given SonosApi[F]   <- SimpleRestJsonBuilder(SonosApi).client[F](sonosClient).uri(sonos.baseUri).make.liftTo[F]
       result              <- makeSpotifyInternal[F]
     } yield result
   }
