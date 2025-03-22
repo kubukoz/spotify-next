@@ -7,7 +7,5 @@
       "com.disneystreaming.smithy4s:smithy4s-protocol:0.18.31"
     ],
     "repositories": []
-  },
-  "imports": ["./src/main/smithy"],
-  "mavenDependencies": ["com.disneystreaming.alloy:alloy-core:latest.release"]
+  }
 }
