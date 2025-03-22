@@ -128,7 +128,6 @@ object Program {
 
     for {
       given Spotify.Playback[F] <- SpotifyChoice.choose[F].map(Spotify.Playback.makeFromChoice[F])
-      given Analysis[F]         <- Analysis.cached(Analysis.instance[F])
     } yield Spotify.instance[F]
   }
 

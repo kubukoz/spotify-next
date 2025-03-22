@@ -2,7 +2,6 @@ package com.kubukoz.next
 
 import cats.FlatMap
 import cats.MonadError
-import cats.data.OptionT
 import cats.effect.Concurrent
 import cats.implicits.*
 import com.kubukoz.next.client.spotify.Item
@@ -26,7 +25,6 @@ trait Spotify[F[_]] {
     percentage: Int
   ): F[Unit]
 
-  def jumpSection: F[Unit]
   def switch: F[Unit]
   def move: F[Unit]
 }
@@ -59,7 +57,7 @@ object Spotify {
 
   import Error.*
 
-  def instance[F[_]: Playback: UserOutput: Concurrent: SpotifyApi: Switch: Analysis: ConfigLoader]: Spotify[F] =
+  def instance[F[_]: Playback: UserOutput: Concurrent: SpotifyApi: Switch: ConfigLoader]: Spotify[F] =
     new Spotify[F] {
       private val getPlayer = SpotifyApi[F].getPlayer().map(Player.fromApiPlayer)
 
@@ -128,38 +126,6 @@ object Spotify {
               UserOutput[F].print(UserMessage.Seeking(desiredProgressPercent)) *>
                 Playback[F].seek(desiredProgress)
           }
-
-      def jumpSection: F[Unit] = getPlayer
-        .flatMap(requireTrack)
-        .flatMap { player =>
-          val track = player.item
-
-          val currentLength = player.progress
-
-          Analysis[F]
-            .getAnalysis(track.uri)
-            .flatMap { analysis =>
-              analysis
-                .sections
-                .zipWithIndex
-                .find { case (section, _) => section.startSeconds.seconds > (currentLength + 1.second) }
-                .traverse { case (section, index) =>
-                  val percentage = (section.startSeconds.seconds * 100 / track.duration).toInt
-
-                  UserOutput[F].print(
-                    UserMessage.Jumping(
-                      sectionNumber = index + 1,
-                      sectionsTotal = analysis.sections.length,
-                      percentTotal = percentage
-                    )
-                  ) *>
-                    Playback[F].seek(section.startSeconds.seconds)
-                }
-                .pipe(OptionT(_))
-                .getOrElseF(UserOutput[F].print(UserMessage.TooCloseToEnd) *> Playback[F].seek(0.millis))
-            }
-        }
-        .void
 
       val switch: F[Unit] = Switch[F].switch
 
