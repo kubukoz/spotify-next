@@ -15,7 +15,7 @@ inThisBuild(
 )
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
-ThisBuild / scalaVersion := "3.3.1"
+ThisBuild / scalaVersion := "3.6.4"
 
 ThisBuild / githubWorkflowTargetTags := Seq("v*")
 ThisBuild / githubWorkflowPublishTargetBranches := List(RefPredicate.StartsWith(Ref.Tag("v")), RefPredicate.Equals(Ref.Branch("main")))
@@ -49,26 +49,22 @@ def crossPlugin(
   x: sbt.librarymanagement.ModuleID
 ) = compilerPlugin(x.cross(CrossVersion.full))
 
-val addCompilerPlugins = libraryDependencies ++= {
+val addCompilerPlugins = libraryDependencies ++=
   List(
     crossPlugin("org.polyvariant" % "better-tostring" % "0.3.17")
   )
-}
 
 val commonSettings = Seq(
   scalacOptions -= "-Xfatal-warnings",
   scalacOptions ++= List(
-    "-no-indent",
-    "-rewrite",
-    "-source",
-    "future-migration"
+    "-no-indent"
     // "-Ximport-suggestion-timeout",
     // "2000"
   ),
   libraryDependencies ++= Seq(
-    "org.typelevel" %%% "cats-effect" % "3.5.2",
-    "org.scalameta" %%% "munit" % "1.0.0-M10" % Test,
-    "org.typelevel" %%% "munit-cats-effect" % "2.0.0-M3" % Test
+    "org.typelevel" %%% "cats-effect" % "3.5.7",
+    "org.scalameta" %%% "munit" % "1.0.0" % Test,
+    "org.typelevel" %%% "munit-cats-effect" % "2.0.0" % Test
   ),
   addCompilerPlugins,
   Compile / doc / sources := Nil
@@ -126,14 +122,14 @@ val app = crossProject(JVMPlatform, NativePlatform)
   .settings(
     libraryDependencies ++= Seq(
       "com.disneystreaming.smithy4s" %%% "smithy4s-http4s" % smithy4sVersion.value,
-      "org.typelevel" %%% "cats-mtl" % "1.3.1",
+      "org.typelevel" %%% "cats-mtl" % "1.4.0",
       "com.monovore" %%% "decline-effect" % "2.4.1",
-      "org.http4s" %%% "http4s-dsl" % "0.23.23",
-      "org.http4s" %%% "http4s-ember-server" % "0.23.23",
-      "org.http4s" %%% "http4s-ember-client" % "0.23.23",
-      "org.http4s" %%% "http4s-circe" % "0.23.23",
-      "io.circe" %%% "circe-parser" % "0.14.6",
-      "org.typelevel" %%% "log4cats-noop" % "2.6.0",
+      "org.http4s" %%% "http4s-dsl" % "0.23.30",
+      "org.http4s" %%% "http4s-ember-server" % "0.23.30",
+      "org.http4s" %%% "http4s-ember-client" % "0.23.30",
+      "org.http4s" %%% "http4s-circe" % "0.23.30",
+      "io.circe" %%% "circe-parser" % "0.14.8",
+      "org.typelevel" %%% "log4cats-noop" % "2.7.0",
       "org.polyvariant" %%% "colorize" % "0.3.2"
       // waiting
       // "dev.optics" %%% "monocle-core" % "3.1.0"
@@ -150,7 +146,7 @@ val app = crossProject(JVMPlatform, NativePlatform)
   .jvmConfigure(
     _.settings(
       libraryDependencies ++= Seq(
-        "ch.qos.logback" % "logback-classic" % "1.2.11"
+        "ch.qos.logback" % "logback-classic" % "1.2.13"
       )
     ).enablePlugins(JavaAppPackaging)
   )
