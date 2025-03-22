@@ -1,11 +1,14 @@
 {
-  "version": "1.0",
-  "sources": ["app/src/main/smithy"],
-  "maven": {
-    "dependencies": [
-      "com.disneystreaming.alloy:alloy-core:0.3.13",
-      "com.disneystreaming.smithy4s:smithy4s-protocol:0.18.31"
+    "version" : "1.0",
+    "sources" : [
+        "smithy-models/src/main/smithy"
     ],
-    "repositories": []
-  }
+    "maven" : {
+        "dependencies" : [
+            "com.disneystreaming.alloy:alloy-core:0.3.13",
+            "com.disneystreaming.smithy4s:smithy4s-protocol:0.18.31"
+        ],
+        "repositories" : [
+        ]
+    }
 }

@@ -54,7 +54,7 @@ jobs:
         run: sbt '++ ${{ matrix.scala }}' test
 
       - name: Compress target directories
-        run: tar cf targets.tar target app/.jvm/target app/.native/target project/target
+        run: tar cf targets.tar app/.jvm/target target app/.native/target smithy-models/.native/target smithy-models/.jvm/target project/target
 
       - name: Upload target directories
         uses: actions/upload-artifact@v4

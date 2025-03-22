@@ -32,7 +32,6 @@ enum Choice {
     percentage: Int
   )
 
-  case JumpSection
   case Switch
   case Move
 }
@@ -53,11 +52,9 @@ object Choice {
         ),
         Opts.subcommand("switch", "Switch device (Spotify/Sonos)")(Opts(Switch)),
         Opts.subcommand("move", "Move song to playlist A")(Opts(Move)),
-        Opts.subcommand("jump", "Fast forward the current track to the next section")(Opts(JumpSection)),
         Opts.subcommand("s", "Alias for `skip`")(Opts(SkipTrack)),
         Opts.subcommand("d", "Alias for `drop`")(Opts(DropTrack)),
         Opts.subcommand("f", "Alias for `forward`")(ffOpts),
-        Opts.subcommand("j", "Alias for `jump`")(Opts(JumpSection)),
         Opts.subcommand("w", "Alias for `switch`")(Opts(Switch)),
         Opts.subcommand("m", "Alias for `move`")(Opts(Move))
       )

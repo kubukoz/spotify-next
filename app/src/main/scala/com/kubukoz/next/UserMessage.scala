@@ -60,12 +60,6 @@ enum UserMessage {
     target: PlaybackTarget
   )
 
-  case Jumping(
-    sectionNumber: Int,
-    sectionsTotal: Int,
-    percentTotal: Int
-  )
-
   case Seeking(
     desiredProgressPercent: Int
   )
@@ -152,12 +146,10 @@ object UserOutput {
             .name}" (${player.item.uri.toFullUri}) to playlist ${targetPlaylist.playlist}"""
       case TooCloseToEnd                              => "Too close to song's ending, rewinding to beginning"
       case Seeking(desiredProgressPercent)            => show"Seeking to $desiredProgressPercent%"
-      case Jumping(sectionNumber, sectionsTotal, percentTotal) =>
-        show"Jumping to section $sectionNumber/$sectionsTotal ($percentTotal%)"
-      case CheckingSonos                                       => show"Checking if Sonos API is available at $sonosBaseUrl..."
-      case SonosNotFound                                       => "Sonos not found, using fallback"
-      case NoDevices                                           => "No Spotify devices found, can't switch playback"
-      case SwitchingPlayback(target)                           =>
+      case CheckingSonos                              => show"Checking if Sonos API is available at $sonosBaseUrl..."
+      case SonosNotFound                              => "Sonos not found, using fallback"
+      case NoDevices                                  => "No Spotify devices found, can't switch playback"
+      case SwitchingPlayback(target)                  =>
         val targetString = target match {
           case PlaybackTarget.Spotify(device) => show"Spotify (${device.name}, ID: ${device.id.map(_.value)})"
           case PlaybackTarget.Sonos(group)    => show"Sonos (${group.name}, ID: ${group.id})"

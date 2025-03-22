@@ -12,7 +12,6 @@ service SpotifyApi {
         NextTrack
         Seek
         RemoveTrack
-        GetAudioAnalysis
         TransferPlayback
         GetAvailableDevices
         GetPlayer
@@ -93,31 +92,6 @@ list Tracks {
 structure Track {
     @required
     uri: String
-}
-
-@http(method: "GET", uri: "/v1/audio-analysis/{trackId}")
-@readonly
-operation GetAudioAnalysis {
-    input := {
-        @httpLabel
-        @required
-        trackId: String
-    }
-
-    output := {
-        @required
-        sections: Sections
-    }
-}
-
-list Sections {
-    member: Section
-}
-
-structure Section {
-    @required
-    @jsonName("start")
-    startSeconds: Double
 }
 
 @http(method: "GET", uri: "/v1/me/player")

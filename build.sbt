@@ -116,8 +116,23 @@ val front = project
   .dependsOn(core)
  */
 
+lazy val smithyModels = crossProject(JVMPlatform, NativePlatform)
+  .crossType(CrossType.Pure)
+  .in(file("smithy-models"))
+  .settings(
+    commonSettings,
+    libraryDependencies ++= Seq(
+      "com.disneystreaming.smithy4s" %%% "smithy4s-core" % smithy4sVersion.value
+    )
+  )
+  .enablePlugins(Smithy4sCodegenPlugin)
+  .settings(
+    Compile / smithy4sInputDirs := Seq((ThisBuild / baseDirectory).value / "smithy-models" / "src" / "main" / "smithy")
+  )
+
 val app = crossProject(JVMPlatform, NativePlatform)
   .crossType(CrossType.Pure)
+  .dependsOn(smithyModels)
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
@@ -139,10 +154,6 @@ val app = crossProject(JVMPlatform, NativePlatform)
   )
   .settings(name := "spotify-next")
   .enablePlugins(BuildInfoPlugin)
-  .settings(
-    Compile / smithy4sInputDirs := Seq((ThisBuild / baseDirectory).value / "app" / "src" / "main" / "smithy")
-  )
-  .enablePlugins(Smithy4sCodegenPlugin)
   .jvmConfigure(
     _.settings(
       libraryDependencies ++= Seq(
@@ -162,4 +173,4 @@ val root =
   project
     .in(file("."))
     .enablePlugins(NoPublishPlugin)
-    .aggregate(app.componentProjects.map(p => p: ProjectReference): _*)
+    .aggregate(List(app, smithyModels).flatMap(_.componentProjects).map(p => p: ProjectReference): _*)
