@@ -51,17 +51,17 @@ list Devices {
 
 structure Device {
     id: DeviceId
+
     @required
     name: String
+
     @jsonName("is_restricted")
     @required
     isRestricted: Boolean
 }
 
 @http(method: "POST", uri: "/v1/me/player/next")
-operation NextTrack {
-
-}
+operation NextTrack {}
 
 @http(method: "PUT", uri: "/v1/me/player/seek")
 @idempotent
@@ -80,6 +80,7 @@ operation RemoveTrack {
         @httpLabel
         @required
         playlistId: String
+
         @required
         tracks: Tracks
     }
@@ -102,6 +103,7 @@ operation GetAudioAnalysis {
         @required
         trackId: String
     }
+
     output := {
         @required
         sections: Sections
@@ -123,10 +125,13 @@ structure Section {
 operation GetPlayer {
     output := {
         context: PlayerContext
+
         item: PlayerItem
+
         @required
         @jsonName("progress_ms")
         progressMillis: Integer
+
         @required
         device: Device
     }
@@ -143,6 +148,7 @@ union PlayerContext {
 structure PlaylistContext {
     @required
     href: String
+
     @required
     uri: String
 }
@@ -165,11 +171,14 @@ union PlayerItem {
 structure TrackItem {
     @required
     uri: String
+
     @required
     @jsonName("duration_ms")
     durationMs: Integer
+
     @required
     name: String
+
     @required
     artists: Artists
 }
@@ -189,6 +198,7 @@ operation AddItemsToPlaylist {
         @httpLabel
         @required
         playlistId: String
+
         @required
         @httpPayload
         uris: Uris

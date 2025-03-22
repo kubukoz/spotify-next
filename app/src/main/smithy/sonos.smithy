@@ -42,6 +42,7 @@ operation Seek {
         @required
         @httpLabel
         groupId: GroupId
+
         @required
         positionMillis: Milliseconds
     }
@@ -77,6 +78,7 @@ operation GetGroups {
         @httpLabel
         householdId: HouseholdId
     }
+
     output := {
         @required
         groups: Groups
@@ -90,6 +92,7 @@ list Groups {
 structure Group {
     @required
     id: GroupId
+
     @required
     name: String
 }
