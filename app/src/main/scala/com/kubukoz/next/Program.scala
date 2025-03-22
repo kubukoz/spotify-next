@@ -11,7 +11,6 @@ import cats.effect.kernel.Ref
 import cats.effect.std.Console
 import cats.implicits.*
 import com.kubukoz.next.Spotify.DeviceInfo
-import com.kubukoz.next.Spotify.SonosInfo
 import com.kubukoz.next.api.sonos
 import com.kubukoz.next.sonos.SonosApi
 import com.kubukoz.next.sonos.SonosApiGen
@@ -35,8 +34,6 @@ import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.headers.`Content-Type`
 import org.typelevel.log4cats.Logger
 import smithy4s.http4s.SimpleRestJsonBuilder
-
-import java.lang.System
 
 import concurrent.duration.*
 

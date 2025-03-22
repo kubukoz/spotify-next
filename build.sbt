@@ -15,7 +15,7 @@ inThisBuild(
 )
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
-ThisBuild / scalaVersion := "3.3.1"
+ThisBuild / scalaVersion := "3.6.4"
 
 ThisBuild / githubWorkflowTargetTags := Seq("v*")
 ThisBuild / githubWorkflowPublishTargetBranches := List(RefPredicate.StartsWith(Ref.Tag("v")), RefPredicate.Equals(Ref.Branch("main")))
@@ -58,10 +58,7 @@ val addCompilerPlugins = libraryDependencies ++= {
 val commonSettings = Seq(
   scalacOptions -= "-Xfatal-warnings",
   scalacOptions ++= List(
-    "-no-indent",
-    "-rewrite",
-    "-source",
-    "future-migration"
+    "-no-indent"
     // "-Ximport-suggestion-timeout",
     // "2000"
   ),
