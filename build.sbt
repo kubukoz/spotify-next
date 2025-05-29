@@ -144,7 +144,7 @@ val app = crossProject(JVMPlatform, NativePlatform)
       "org.http4s" %%% "http4s-ember-client" % "0.23.30",
       "org.http4s" %%% "http4s-circe" % "0.23.30",
       "io.circe" %%% "circe-parser" % "0.14.8",
-      "org.typelevel" %%% "log4cats-noop" % "2.7.0",
+      "org.typelevel" %%% "log4cats-noop" % "2.7.1",
       "org.polyvariant" %%% "colorize" % "0.3.2"
       // waiting
       // "dev.optics" %%% "monocle-core" % "3.1.0"
