@@ -157,7 +157,7 @@ val app = crossProject(JVMPlatform, NativePlatform)
   .jvmConfigure(
     _.settings(
       libraryDependencies ++= Seq(
-        "ch.qos.logback" % "logback-classic" % "1.5.18"
+        "ch.qos.logback" % "logback-classic" % "1.5.19"
       )
     ).enablePlugins(JavaAppPackaging)
   )
