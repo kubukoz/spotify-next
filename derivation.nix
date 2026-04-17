@@ -5,7 +5,7 @@ let pname = "spotify-next"; in
 mkSbtDerivation {
   inherit pname;
   version = "0.1.0";
-  depsSha256 = "sha256-nPDkvJR87D1iiXIpivZCEB+yx4pE04PtjFd8rcNH54Q=";
+  depsSha256 = "sha256-5eu3lgUw9o0phd/LL4V+P8XP/8uSqhToi/DonqlCBQk=";
 
   buildInputs = [ which clang ];
   nativeBuildInputs = [ s2n-tls ];
@@ -16,11 +16,11 @@ mkSbtDerivation {
   src = gitignore-source.lib.gitignoreSource ./.;
 
   buildPhase = ''
-    sbt nativeLink
+    sbt appNative/nativeLink
   '';
 
   installPhase = ''
     mkdir -p $out/bin
-    cp app/.native/target/scala-3.3.1/spotify-next-out $out/bin/$pname
+    cp app/.native/target/scala-3.7.3/spotify-next $out/bin/$pname
   '';
 }

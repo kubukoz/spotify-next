@@ -15,7 +15,6 @@ import cats.effect.implicits.*
 import LoginProcess.given
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.noop.NoOpLogger
-import cats.effect.unsafe.IORuntime
 import fs2.io.file.Files
 import fs2.io.net.Network
 import org.http4s.client.Client
@@ -63,8 +62,6 @@ object Choice {
 }
 
 object Main extends CommandIOApp(name = "spotify-next", header = "spotify-next: Gather great music.", version = BuildInfo.version) {
-
-  override protected def runtime: IORuntime = RuntimePlatform.default
 
   import Program.*
   given Logger[IO] = NoOpLogger[IO]
