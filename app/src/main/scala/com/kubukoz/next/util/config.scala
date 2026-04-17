@@ -20,7 +20,7 @@ final case class Config(
   sonosToken: Option[Config.Token],
   sonosRefreshToken: Option[Config.RefreshToken]
 ) derives Codec.AsObject {
-  def redirectUri: String = show"http://localhost:$loginPort/login"
+  def redirectUri: String = show"http://127.0.0.1:$loginPort/login"
 
   // https://open.spotify.com/playlist/3Xzu9f7hVoT8udYlxHvaoK?si=535de7cf02244ab1
   // todo: make customizable
