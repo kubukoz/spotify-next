@@ -1,5 +1,5 @@
 {
-  inputs.nixpkgs.url = "github:nixos/nixpkgs";
+  inputs.nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
   inputs.flake-utils.url = "github:numtide/flake-utils";
   inputs.sbt-derivation.url = "github:zaninime/sbt-derivation";
   inputs.gitignore-source.url = "github:hercules-ci/gitignore.nix";
@@ -16,7 +16,7 @@
       in
       {
         devShells.default = pkgs.mkShell {
-          nativeBuildInputs = [ pkgs.s2n-tls ];
+          nativeBuildInputs = [ pkgs.s2n-tls pkgs.clang ];
         };
         packages.default = pkgs.callPackage ./derivation.nix { inherit (inputs) gitignore-source; };
       }

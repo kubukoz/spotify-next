@@ -62,9 +62,9 @@ val commonSettings = Seq(
     // "2000"
   ),
   libraryDependencies ++= Seq(
-    "org.typelevel" %%% "cats-effect" % "3.6.3",
+    "org.typelevel" %%% "cats-effect" % "3.7.0",
     "org.scalameta" %%% "munit" % "1.0.0" % Test,
-    "org.typelevel" %%% "munit-cats-effect" % "2.1.0" % Test
+    "org.typelevel" %%% "munit-cats-effect" % "2.2.0" % Test
   ),
   addCompilerPlugins,
   Compile / doc / sources := Nil
@@ -137,15 +137,15 @@ val app = crossProject(JVMPlatform, NativePlatform)
   .settings(
     libraryDependencies ++= Seq(
       "com.disneystreaming.smithy4s" %%% "smithy4s-http4s" % smithy4sVersion.value,
-      "org.typelevel" %%% "cats-mtl" % "1.4.0",
-      "com.monovore" %%% "decline-effect" % "2.4.1",
-      "org.http4s" %%% "http4s-dsl" % "0.23.30",
-      "org.http4s" %%% "http4s-ember-server" % "0.23.30",
-      "org.http4s" %%% "http4s-ember-client" % "0.23.30",
-      "org.http4s" %%% "http4s-circe" % "0.23.30",
-      "io.circe" %%% "circe-parser" % "0.14.8",
-      "org.typelevel" %%% "log4cats-noop" % "2.7.1",
-      "org.polyvariant" %%% "colorize" % "0.3.2"
+      "org.typelevel" %%% "cats-mtl" % "1.6.0",
+      "com.monovore" %%% "decline-effect" % "2.6.2",
+      "org.http4s" %%% "http4s-dsl" % "0.23.34",
+      "org.http4s" %%% "http4s-ember-server" % "0.23.34",
+      "org.http4s" %%% "http4s-ember-client" % "0.23.34",
+      "org.http4s" %%% "http4s-circe" % "0.23.34",
+      "io.circe" %%% "circe-parser" % "0.14.15",
+      "org.typelevel" %%% "log4cats-noop" % "2.8.0",
+      "org.polyvariant" %%% "colorize" % "0.4.0"
       // waiting
       // "dev.optics" %%% "monocle-core" % "3.1.0"
     ),
@@ -160,13 +160,6 @@ val app = crossProject(JVMPlatform, NativePlatform)
         "ch.qos.logback" % "logback-classic" % "1.5.18"
       )
     ).enablePlugins(JavaAppPackaging)
-  )
-  .nativeConfigure(
-    _.settings(
-      libraryDependencies ++= Seq(
-        "com.armanbilge" %%% "epollcat" % "0.1.7"
-      )
-    )
   )
 
 val root =
