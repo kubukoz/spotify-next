@@ -64,7 +64,7 @@ val commonSettings = Seq(
   libraryDependencies ++= Seq(
     "org.typelevel" %%% "cats-effect" % "3.7.0",
     "org.scalameta" %%% "munit" % "1.0.0" % Test,
-    "org.typelevel" %%% "munit-cats-effect" % "2.2.0" % Test
+    "org.typelevel" %%% "munit-cats-effect" % "2.2.1" % Test
   ),
   addCompilerPlugins,
   Compile / doc / sources := Nil
