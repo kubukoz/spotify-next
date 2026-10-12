@@ -137,7 +137,7 @@ val app = crossProject(JVMPlatform, NativePlatform)
   .settings(
     libraryDependencies ++= Seq(
       "com.disneystreaming.smithy4s" %%% "smithy4s-http4s" % smithy4sVersion.value,
-      "org.typelevel" %%% "cats-mtl" % "1.6.0",
+      "org.typelevel" %%% "cats-mtl" % "1.7.0",
       "com.monovore" %%% "decline-effect" % "2.6.2",
       "org.http4s" %%% "http4s-dsl" % "0.23.34",
       "org.http4s" %%% "http4s-ember-server" % "0.23.34",
